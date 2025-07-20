@@ -13,12 +13,12 @@ export default tseslint.config(
       parser: vueParser,
       parserOptions: {
         ecmaFeatures: {
-          jsx: true
+          jsx: true,
         },
         extraFileExtensions: ['.vue'],
-        parser: tseslint.parser
-      }
-    }
+        parser: tseslint.parser,
+      },
+    },
   },
   {
     files: ['**/*.{ts,mts,tsx,vue}'],
@@ -29,11 +29,16 @@ export default tseslint.config(
         'error',
         {
           script: {
-            lang: 'ts'
-          }
-        }
-      ]
-    }
+            lang: 'ts',
+          },
+        },
+      ],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_' },
+      ],
+      'no-undef': 'off',
+    },
   },
   eslintConfigPrettier
 )

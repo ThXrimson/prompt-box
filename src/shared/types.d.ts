@@ -3,48 +3,54 @@ export type RequireField<T, K extends keyof T> = Omit<T, K> &
 export type OptionalField<T, K extends keyof T> = Omit<T, K> &
   Partial<Pick<T, K>>
 
-export interface PromptExample {
+export interface Image {
+  id: string
+  fileName: string
+}
+
+export interface Example {
   /**
    * @description 数据库表 examples 中的主键 id
    */
-  id: number
+  id: string
   /**
-   * @description 示例的 prompt
+   * @description 示例的参数
    */
+  positivePrompt: string
+  negativePrompt: string
+  imageIDs: string[]
+}
+
+export interface Tag {
+  id: string
   text: string
-  images: string[]
 }
 
 export interface Prompt {
   /**
    * @description 数据库表 editors 中的主键 id
    */
-  id: number
+  id: string
   text: string
   translation: string
   description: string
-  tags: string[]
-  examples: PromptExample[]
+  tagIDs: string[]
+  exampleIDs: string[]
   insertTime: number
 }
 
-export interface EditorState {
-  id: number
-  prompts: string[]
-}
-
-export interface WorkspaceState {
+export interface Workspace {
   /**
    * @description 数据库表 workspace_states 中的主键 id
    */
-  id: number
+  id: string
   name: string
-  positiveEditor: EditorState
-  negativeEditor: EditorState
+  positiveEditor: string
+  negativeEditor: string
   /**
    * @description 当前 workspace 打开的 tag collections
    */
-  tagCollections: string[]
-  createTime: string
-  updateTime: string
+  tagIDs: string[]
+  createTime: number
+  updateTime: number
 }

@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: prompt-box
+appId: com.thxrimson.prompt_box
+productName: Prompt Box
 directories:
   buildResources: build
 files:
@@ -13,6 +13,9 @@ asarUnpack:
   - resources/**
 win:
   executableName: prompt-box
+  target:
+    - portable
+  compression: maximum
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
