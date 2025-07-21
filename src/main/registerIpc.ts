@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
+import { BrowserWindow, clipboard, dialog, ipcMain, session } from 'electron'
 import fs from 'fs/promises'
 import fileType from 'file-type'
 import { getImageDir } from './utils'
@@ -8,6 +8,7 @@ import * as ipcChannels from '@shared/ipc-channels'
 import log from 'electron-log/main'
 import Storage from './storage'
 import type { Image } from '@shared/types'
+import ElectronProxyAgent from 'electron-proxy-agent'
 
 export function registerIpc(): void {
   ipcMain.handle(ipcChannels.getAllPrompts, () =>
@@ -393,7 +394,12 @@ async function addImage(path: string): Promise<Image | null> {
   }
   try {
     const imageUrl = new URL(path)
-    const resp = await axios.get(imageUrl.toString(), {
+    const agent = new ElectronProxyAgent(session.defaultSession)
+    const axiosInstance = axios.create({
+      httpAgent: agent, // 用于 HTTP 请求
+      httpsAgent: agent, // 用于 HTTPS 请求
+    })
+    const resp = await axiosInstance.get(imageUrl.toString(), {
       responseType: 'arraybuffer',
     })
     if (resp && resp.data) {
@@ -449,8 +455,13 @@ async function deleteImageFromExample(
   imageID: string
 ): Promise<boolean> {
   try {
+    const fileName = Storage.getInstance().getImageByID(imageID)?.fileName
+    if (!fileName) {
+      log.error(`Image with ID ${imageID} not found`)
+      return false
+    }
+    fs.unlink(join(getImageDir(), fileName))
     Storage.getInstance().deleteImageFromExample(exampleID, imageID)
-    fs.unlink(join(getImageDir(), imageID))
     Storage.getInstance().deleteImage(imageID)
   } catch (error) {
     log.error(

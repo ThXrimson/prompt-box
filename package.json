@@ -20,7 +20,7 @@
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
-    "electron:generate-icons":"electron-icon-builder --input=./resources/icon.png --output=build --flatten"
+    "electron:generate-icons": "electron-icon-builder --input=./resources/icon.png --output=build --flatten"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -31,6 +31,7 @@
     "axios": "^1.10.0",
     "dayjs": "^1.11.13",
     "electron-log": "^5.4.1",
+    "electron-proxy-agent": "^1.2.1",
     "electron-updater": "^6.3.9",
     "element-plus": "^2.10.2",
     "file-type": "^21.0.0",
