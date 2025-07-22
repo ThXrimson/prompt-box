@@ -9,7 +9,20 @@
       />
     </div>
     <div>
-      <el-text class="edit-header">翻译</el-text>
+      <div class="flex gap-1">
+        <el-text class="edit-header">翻译</el-text>
+        <el-tooltip
+          content="点击使用 DeepLX 翻译"
+          :hide-after="0"
+          placement="top"
+        >
+          <el-button
+            link
+            :icon="TranslateIcon"
+            @click="handleTranslateByDeepLX"
+          />
+        </el-tooltip>
+      </div>
       <confirm-input
         :model-value="promptTranslation"
         placeholder="请输入翻译"
@@ -145,14 +158,6 @@
                 </div>
               </div>
             </div>
-            <!-- <div class="flex flex-col gap-1 justify-evenly">
-              <el-button
-                :icon="DeleteFilled"
-                type="danger"
-                class="self-center flex-1 min-h-0 ml-0!"
-                @click="handleDeleteExample(example.id)"
-              />
-            </div> -->
           </div>
         </div>
       </div>
@@ -188,6 +193,7 @@ import lodash from 'lodash'
 import ConfirmInput from '@renderer/components/ConfirmInput.vue'
 import type { Tag } from '@shared/types'
 import { watchArray } from '@vueuse/core'
+import TranslateIcon from '@renderer/icons/Prompt.vue'
 
 const tabs = ['positive', 'negative', 'extra'] as const
 const tabToField: Record<string, string> = {
@@ -288,7 +294,7 @@ watch(
         .map((id) => storage.getTagByID(id))
         .filter((tag): tag is Tag => tag !== undefined)
     } else {
-      ElMessage.warning('未找到对应的 Prompt')
+      ElMessage.warning('未找到对应的提示词')
     }
   },
   { immediate: true }
@@ -298,14 +304,31 @@ watch(
 async function handleChangeText(value: string): Promise<void> {
   const success = await storage.updatePromptText(props.promptId, value)
   if (!success) {
-    ElMessage.error('更新 Prompt 文本失败')
+    ElMessage.error('更新提示词文本失败')
   }
 }
 
 async function handleChangeTranslation(value: string): Promise<void> {
   const success = await storage.updatePromptTranslation(props.promptId, value)
   if (!success) {
-    ElMessage.error('更新 Prompt 翻译失败')
+    ElMessage.error('更新提示词翻译失败')
+  }
+}
+
+async function handleTranslateByDeepLX(): Promise<void> {
+  if (promptText.value) {
+    const result = await window.api.translateByDeepLX(promptText.value)
+    if (result) {
+      const success = await storage.updatePromptTranslation(
+        props.promptId,
+        result
+      )
+      if (!success) {
+        ElMessage.error('翻译失败')
+      }
+    } else {
+      ElMessage.error('翻译失败')
+    }
   }
 }
 

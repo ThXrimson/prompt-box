@@ -202,6 +202,9 @@ const api = {
   saveImageTo: async (imageID: string): Promise<boolean> => {
     return await ipcRenderer.invoke(ipcChannels.saveImageTo, imageID)
   },
+  translateByDeepLX: (text: string): Promise<string | null> => {
+    return ipcRenderer.invoke(ipcChannels.translateByDeepLX, text)
+  },
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

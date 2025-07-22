@@ -272,7 +272,6 @@ function handleConfirmAddPrompt(): void {
     return
   }
   storage.addPrompt({
-    id: crypto.randomUUID(),
     text: newPromptText.value,
   })
   newPromptText.value = ''

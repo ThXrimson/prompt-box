@@ -90,11 +90,14 @@
               class="cursor-pointer"
               @close="handleDeletePrompt(item.id)"
             >
-              {{ item.text }}
+              {{ promptTextView[item.text] }}
             </el-tag>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="handleAddBrackets(item.id)">
+                <el-dropdown-item @click="handleAddPrompt(item.text)">
+                  收藏提示词
+                </el-dropdown-item>
+                <el-dropdown-item divided @click="handleAddBrackets(item.id)">
                   添加圆括号
                 </el-dropdown-item>
                 <el-dropdown-item @click="handleAddSquareBrackets(item.id)">
@@ -161,6 +164,8 @@
 </template>
 
 <script setup lang="ts">
+// TODO 添加从示例添加提示词的功能，和撤回和重做的功能
+// TODO 点击tag有添加prompt功能
 import {
   Edit,
   CopyDocument,
@@ -169,15 +174,18 @@ import {
   Back,
   Right,
 } from '@element-plus/icons-vue'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { addWeight, clearWeight } from '@renderer/utils/editWeight'
-import { useManualRefHistory } from '@vueuse/core'
+import { useManualRefHistory, watchArray } from '@vueuse/core'
 import { cloneDeep } from 'lodash'
+import { useStorage } from '@renderer/stores/storage'
 
 const props = defineProps<{
   modelValue: string
 }>()
+
+const storage = useStorage()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
@@ -213,6 +221,34 @@ defineExpose({
 
 const { undo, redo, canUndo, canRedo } = useManualRefHistory(promptList, {
   clone: cloneDeep,
+})
+
+const promptTextTranslations = ref<Record<string, string>>({})
+watchArray(
+  () => promptList.value.map(({ text }) => text),
+  (_newArr, _oldArr, added) => {
+    added.forEach(async (text) => {
+      const translation = await handleGetTextTranslation(text)
+      if (translation) {
+        promptTextTranslations.value[text] = translation
+      }
+    })
+  },
+  {
+    immediate: true,
+    deep: true,
+  }
+)
+const promptTextView = computed(() => {
+  const textToView: Record<string, string> = {}
+  promptList.value.forEach(({ text }) => {
+    if (promptTextTranslations.value[text]) {
+      textToView[text] = `${text} | ${promptTextTranslations.value[text]}`
+    } else {
+      textToView[text] = text
+    }
+  })
+  return textToView
 })
 
 function handleSwitchEditMode(): void {
@@ -330,7 +366,6 @@ function handleClearWeightOfPrompt(id: string): void {
 
 function handleUndoEditor(): void {
   undo()
-  console.log(promptList.value)
   emit(
     'update:modelValue',
     promptList.value.map((item) => item.text).join(', ')
@@ -339,11 +374,40 @@ function handleUndoEditor(): void {
 
 function handleRedoEditor(): void {
   redo()
-  console.log(promptList.value)
   emit(
     'update:modelValue',
     promptList.value.map((item) => item.text).join(', ')
   )
+}
+
+async function handleAddPrompt(text: string): Promise<void> {
+  for (const p of storage.prompts.values()) {
+    if (p.text === text) {
+      ElMessage.warning('提示词已存在')
+      return
+    }
+  }
+  const translation = promptTextTranslations.value[text]
+  const result = await storage.addPrompt({
+    text,
+    translation,
+  })
+  if (result) {
+    ElMessage.success('成功添加提示词')
+  } else {
+    ElMessage.success('添加提示词失败')
+  }
+}
+
+async function handleGetTextTranslation(text: string): Promise<string> {
+  for (const item of storage.prompts.values()) {
+    if (item.text === text && item.translation) {
+      return item.translation
+    }
+  }
+  const result = await window.api.translateByDeepLX(text)
+  if (result) return result
+  return ''
 }
 
 function splitText(text: string): { id: string; text: string }[] {

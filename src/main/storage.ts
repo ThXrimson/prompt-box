@@ -316,7 +316,7 @@ export default class Storage {
     tagIDs?: string[]
     exampleIDs?: string[]
   }): void {
-    const p = this.db.data.prompts.find((prompt) => prompt.id === prompt.id)
+    const p = this.db.data.prompts.find((p) => p.id === prompt.id)
     if (!p) {
       throw new Error(`Prompt with ID ${prompt.id} not found`)
     }

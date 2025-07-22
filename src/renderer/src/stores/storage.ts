@@ -101,7 +101,7 @@ export const useStorage = defineStore('storage', () => {
 
   //#region 添加内容方法
   async function addPrompt(prompt: {
-    id: string
+    id?: string
     text: string
     translation?: string
     description?: string

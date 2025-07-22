@@ -162,7 +162,6 @@ async function handleAddPrompt(): Promise<void> {
     }
   }
   const newPrompt = await storage.addPrompt({
-    id: crypto.randomUUID(),
     text: promptInput.value,
   })
   if (newPrompt) {

@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
+import { BrowserWindow, clipboard, dialog, ipcMain, net } from 'electron'
 import fs from 'fs/promises'
 import fileType from 'file-type'
 import { getImageAsArrayBuffer, getImageDir } from './utils'
@@ -368,6 +368,18 @@ export function registerIpc(): void {
       }
     }
   )
+  ipcMain.handle(
+    ipcChannels.translateByDeepLX,
+    async (_event, text: string) => {
+      try {
+        const result = await translateByDeepLX(text)
+        return result
+      } catch (error) {
+        log.error('Failed to translate by deeplx:', error)
+        return null
+      }
+    }
+  )
 }
 
 async function addImage(path: string): Promise<Image | null> {
@@ -497,4 +509,49 @@ async function deleteExample(exampleID: string): Promise<boolean> {
     log.error('Failed to delete example:', error)
     return false
   }
+}
+
+function translateByDeepLX(text: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const request = net.request({
+      method: 'POST',
+      url: 'https://deepl.deno.dev/translate',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    request.write(
+      JSON.stringify({
+        text,
+        target_lang: 'zh',
+        source_lang: 'auto',
+      }),
+      'UTF-8'
+    )
+    request.on('response', (response) => {
+      if (response.statusCode !== 200) {
+        return reject(
+          new Error(
+            `Translation failed with status code: ${response.statusCode}`
+          )
+        )
+      }
+      let data = ''
+      response.on('data', (chunk) => {
+        data += chunk.toString()
+      })
+      response.on('end', () => {
+        try {
+          const result = JSON.parse(data)
+          resolve(result.data)
+        } catch (error) {
+          reject(new Error(`Failed to parse translation response: ${error}`))
+        }
+      })
+    })
+    request.on('error', (error) => {
+      reject(new Error(`Translation request failed: ${error.message}`))
+    })
+    request.end()
+  })
 }
