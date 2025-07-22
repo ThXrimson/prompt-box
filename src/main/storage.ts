@@ -146,7 +146,9 @@ export default class Storage {
   }
 
   addImageToExample(exampleID: string, imageID: string): Image {
-    const example = this.getExampleByID(exampleID)
+    const example = this.db.data.examples.find(
+      (example) => example.id === exampleID
+    )
     if (!example) {
       throw new Error(`Example with ID ${exampleID} not found`)
     }

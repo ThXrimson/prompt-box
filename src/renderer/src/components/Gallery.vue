@@ -129,14 +129,14 @@ function handleOpenAddImageDialog(): void {
 async function handleConfirmAddExampleImage(): Promise<void> {
   loadingPlaceholder.value += 1
   addImageDialogVisible.value = false
-  storage
-    .addImageToExample(props.exampleID, candidateImage.value)
-    .then((image) => {
-      if (!image) {
-        ElMessage.warning('添加图片失败，请检查路径或格式是否正确')
-      }
-      loadingPlaceholder.value -= 1
-    })
+  const image = await storage.addImageToExample(
+    props.exampleID,
+    candidateImage.value
+  )
+  if (!image) {
+    ElMessage.warning('添加图片失败，请检查路径或格式是否正确')
+  }
+  loadingPlaceholder.value -= 1
   candidateImage.value = ''
 }
 

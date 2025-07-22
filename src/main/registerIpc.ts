@@ -1,14 +1,12 @@
-import { BrowserWindow, clipboard, dialog, ipcMain, session } from 'electron'
+import { BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
 import fs from 'fs/promises'
 import fileType from 'file-type'
-import { getImageDir } from './utils'
+import { getImageAsArrayBuffer, getImageDir } from './utils'
 import { join } from 'path'
-import axios from 'axios'
 import * as ipcChannels from '@shared/ipc-channels'
 import log from 'electron-log/main'
 import Storage from './storage'
 import type { Image } from '@shared/types'
-import ElectronProxyAgent from 'electron-proxy-agent'
 
 export function registerIpc(): void {
   ipcMain.handle(ipcChannels.getAllPrompts, () =>
@@ -372,6 +370,8 @@ export function registerIpc(): void {
 async function addImage(path: string): Promise<Image | null> {
   let imageFileName = ''
   let fileCreated = false
+  // 确保目录存在
+  await fs.mkdir(getImageDir(), { recursive: true })
   try {
     const fileStat = await fs.stat(path)
     if (fileStat.isFile()) {
@@ -386,30 +386,26 @@ async function addImage(path: string): Promise<Image | null> {
   } catch (error) {
     if (!(error as Error).message.startsWith('ENOENT:')) {
       log.error('Failed to add image (%s) from file: %s', path, error)
-    }
-    if (fileCreated) {
-      // Clean up the file if it was created but not valid
-      await fs.unlink(join(getImageDir(), imageFileName))
+      if (fileCreated) {
+        // Clean up the file if it was created but not valid
+        await fs.unlink(join(getImageDir(), imageFileName))
+      }
+      return null
     }
   }
   try {
     const imageUrl = new URL(path)
-    const agent = new ElectronProxyAgent(session.defaultSession)
-    const axiosInstance = axios.create({
-      httpAgent: agent, // 用于 HTTP 请求
-      httpsAgent: agent, // 用于 HTTPS 请求
-    })
-    const resp = await axiosInstance.get(imageUrl.toString(), {
-      responseType: 'arraybuffer',
-    })
-    if (resp && resp.data) {
-      const t = await fileType.fileTypeFromBuffer(resp.data as ArrayBuffer)
-      if (t && t.mime.startsWith('image/')) {
-        imageFileName = `${crypto.randomUUID()}.${t.ext}`
-        await fs.writeFile(join(getImageDir(), imageFileName), resp.data)
-        fileCreated = true
-        return Storage.getInstance().addImage(imageFileName)
-      }
+    const data = await getImageAsArrayBuffer(imageUrl.toString())
+    if (!data) {
+      log.error('Failed to fetch image from URL:', path)
+      return null
+    }
+    const t = await fileType.fileTypeFromBuffer(data)
+    if (t && t.mime.startsWith('image/')) {
+      imageFileName = `${crypto.randomUUID()}.${t.ext}`
+      await fs.writeFile(join(getImageDir(), imageFileName), Buffer.from(data))
+      fileCreated = true
+      return Storage.getInstance().addImage(imageFileName)
     }
   } catch (error) {
     log.error('Failed to add image (%s) from URL:', path, error)

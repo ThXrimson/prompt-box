@@ -15,7 +15,6 @@ win:
   executableName: prompt-box
   target:
     - portable
-  compression: maximum
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
