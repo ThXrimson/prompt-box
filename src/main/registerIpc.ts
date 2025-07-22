@@ -82,6 +82,7 @@ export function registerIpc(): void {
         id?: string
         positivePrompt?: string
         negativePrompt?: string
+        extra?: string
         imageIDs?: string[]
       }
     ) => {
@@ -104,6 +105,7 @@ export function registerIpc(): void {
         id: string
         positivePrompt?: string
         negativePrompt?: string
+        extra?: string
         imageIDs?: string[]
       }
     ) => {
@@ -187,6 +189,7 @@ export function registerIpc(): void {
         id?: string
         positivePrompt?: string
         negativePrompt?: string
+        extra?: string
         imageIDs?: string[]
       }
     ) => {

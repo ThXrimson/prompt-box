@@ -18,6 +18,10 @@ export interface Example {
    */
   positivePrompt: string
   negativePrompt: string
+  /**
+   * @description 示例的额外信息
+   */
+  extra: string
   imageIDs: string[]
 }
 

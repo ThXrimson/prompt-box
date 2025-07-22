@@ -60,6 +60,7 @@ export const useStorage = defineStore('storage', () => {
     id: string
     positivePrompt: string
     negativePrompt: string
+    extra: string
     images: Image[]
   }[] {
     const tempExamples =
@@ -71,6 +72,7 @@ export const useStorage = defineStore('storage', () => {
       id: e.id,
       positivePrompt: e.positivePrompt,
       negativePrompt: e.negativePrompt,
+      extra: e.extra,
       images: getImagesByExampleID(e.id) || [],
     }))
   }
@@ -132,6 +134,7 @@ export const useStorage = defineStore('storage', () => {
     id?: string
     positivePrompt?: string
     negativePrompt?: string
+    extra?: string
     imageIDs?: string[]
   }): Promise<Example | null> {
     const newExample = await window.api.addExample(example)
@@ -169,6 +172,7 @@ export const useStorage = defineStore('storage', () => {
       id?: string
       positivePrompt?: string
       negativePrompt?: string
+      extra?: string
       imageIDs?: string[]
     }
   ): Promise<Example | null> {
@@ -262,6 +266,7 @@ export const useStorage = defineStore('storage', () => {
     id: string
     positivePrompt?: string
     negativePrompt?: string
+    extra?: string
     imageIDs?: string[]
   }): Promise<boolean> {
     const existingExample = toRaw(examples.value.get(example.id))
@@ -270,6 +275,7 @@ export const useStorage = defineStore('storage', () => {
         id: example.id,
         positivePrompt: example.positivePrompt,
         negativePrompt: example.negativePrompt,
+        extra: example.extra,
         imageIDs: cloneDeep(example.imageIDs),
       })
       if (res) {

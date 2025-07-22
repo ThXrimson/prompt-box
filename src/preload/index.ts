@@ -80,6 +80,7 @@ const api = {
     id: string
     positivePrompt?: string
     negativePrompt?: string
+    extra?: string
     imageIDs?: string[]
   }): Promise<Example | null> => {
     return await ipcRenderer.invoke(ipcChannels.updateExample, example)
@@ -88,6 +89,7 @@ const api = {
     id?: string
     positivePrompt?: string
     negativePrompt?: string
+    extra?: string
     imageIDs?: string[]
   }): Promise<Example | null> => {
     return await ipcRenderer.invoke(ipcChannels.addExample, example)
@@ -133,6 +135,7 @@ const api = {
       id?: string
       positivePrompt?: string
       negativePrompt?: string
+      extra?: string
       imageIDs?: string[]
     }
   ): Promise<Example | null> => {

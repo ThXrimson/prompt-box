@@ -39,34 +39,32 @@
               <div class="flex flex-col gap-1 flex-1 min-h-0">
                 <div class="flex justify-between gap-1">
                   <div>
-                    <el-switch
-                      v-model="isPositive[example.id]"
-                      inline-prompt
-                      active-text="POSITIVE"
-                      inactive-text="NEGATIVE"
-                      style="
-                        --el-switch-on-color: #13ce66;
-                        --el-switch-off-color: #ff4949;
+                    <el-segmented
+                      v-model="editorTab[example.id]"
+                      :options="
+                        tabs.map((tab) => {
+                          switch (tab) {
+                            case 'positive':
+                              return { label: '正向', value: tab }
+                            case 'negative':
+                              return { label: '负向', value: tab }
+                            case 'extra':
+                              return { label: '额外', value: tab }
+                          }
+                        })
                       "
                     />
                     <el-button
                       :icon="Edit"
                       :type="
-                        isPositive[example.id]
-                          ? canEditExamplesPositiveText[example.id]
-                            ? 'primary'
-                            : 'default'
-                          : canEditExamplesNegativeText[example.id]
-                            ? 'primary'
-                            : 'default'
+                        canEditExamplesText[editorTab[example.id]][example.id]
+                          ? 'primary'
+                          : 'default'
                       "
                       link
                       class="self-center flex-1 min-h-0"
                       @click="
-                        handleEditExampleText(
-                          example.id,
-                          isPositive[example.id] ? 'positive' : 'negative'
-                        )
+                        handleEditExampleText(example.id, editorTab[example.id])
                       "
                     />
                     <el-button
@@ -75,9 +73,7 @@
                       class="self-center flex-1 min-h-0 ml-0!"
                       @click="
                         handleCopyExampleText(
-                          isPositive[example.id]
-                            ? examplesPositiveText[example.id]
-                            : examplesNegativeText[example.id]
+                          examplesText[editorTab[example.id]][example.id]
                         )
                       "
                     />
@@ -112,40 +108,22 @@
                   </el-select>
                 </div>
                 <el-input
-                  v-if="isPositive[example.id]"
-                  v-model="examplesPositiveText[example.id]"
+                  v-for="tab in tabs"
+                  v-show="editorTab[example.id] === tab"
+                  :key="tab"
+                  v-model="examplesText[tab][example.id]"
                   placeholder="请输入示例文本"
                   type="textarea"
                   resize="none"
-                  :disabled="!canEditExamplesPositiveText[example.id]"
+                  :disabled="!canEditExamplesText[tab][example.id]"
                   class="example-input"
                   @keydown.prevent.enter="
-                    handleEditExampleText(example.id, 'positive')
-                  "
-                />
-                <el-input
-                  v-else
-                  v-model="examplesNegativeText[example.id]"
-                  placeholder="请输入示例文本"
-                  type="textarea"
-                  resize="none"
-                  :disabled="!canEditExamplesNegativeText[example.id]"
-                  class="example-input"
-                  @keydown.prevent.enter="
-                    handleEditExampleText(example.id, 'negative')
+                    handleEditExampleText(example.id, tab)
                   "
                 />
               </div>
             </div>
           </div>
-          <!-- <div class="flex flex-col gap-1 justify-evenly">
-            <el-button
-              :icon="DeleteFilled"
-              type="danger"
-              class="self-center flex-1 min-h-0 ml-0!"
-              @click="handleDeleteExample(example.id)"
-            />
-          </div> -->
         </div>
       </el-scrollbar>
     </div>
@@ -179,6 +157,14 @@ import { getImageUrl } from '@renderer/utils/utils'
 import { watchArray } from '@vueuse/core'
 // TODO 管理prompt模板
 
+const tabs = ['positive', 'negative', 'extra'] as const
+const tabToField: Record<string, string> = {
+  positive: 'positivePrompt',
+  negative: 'negativePrompt',
+  extra: 'extra',
+}
+type Tabs = (typeof tabs)[number]
+
 const storage = useStorage()
 
 const examples = computed(() => {
@@ -189,6 +175,7 @@ const examples = computed(() => {
         id: example.id,
         positivePrompt: example.positivePrompt,
         negativePrompt: example.negativePrompt,
+        extra: example.extra,
         images: storage.getImagesByExampleID(example.id),
       }
     })
@@ -199,38 +186,46 @@ const editGalleryExampleID = ref<string | null>(null)
 const editGalleryVisible = ref(false)
 
 // 是否可以编辑示例文本
-const canEditExamplesPositiveText = ref<Record<string, boolean>>({})
-const canEditExamplesNegativeText = ref<Record<string, boolean>>({})
-// 是否为正向示例
-const isPositive = ref<Record<string, boolean>>({})
+const canEditExamplesText = ref<Record<Tabs, Record<string, boolean>>>({
+  positive: {},
+  negative: {},
+  extra: {},
+})
+// 示例的编辑框当前的tab
+const editorTab = ref<Record<string, Tabs>>({})
 // 示例所属提示词
 const examplePrompts = ref<Record<string, { id: string; text: string }[]>>({})
 // 暂存示例文本, id -> 文本
-const examplesPositiveText = ref<Record<string, string>>({})
-const examplesNegativeText = ref<Record<string, string>>({})
+const examplesText = ref<Record<Tabs, Record<string, string>>>({
+  positive: {},
+  negative: {},
+  extra: {},
+})
 watchArray(
   () => examples.value.map((e) => e.id),
   (_newArr, _oldArr, added, removed) => {
     added.forEach((id) => {
-      canEditExamplesPositiveText.value[id] =
-        canEditExamplesPositiveText.value[id] ?? false
-      canEditExamplesNegativeText.value[id] =
-        canEditExamplesNegativeText.value[id] ?? false
-      isPositive.value[id] = true // 默认新添加的示例为正向示例
+      for (const tab of tabs) {
+        canEditExamplesText.value[tab][id] =
+          canEditExamplesText.value[tab][id] ?? false
+      }
+      for (const [tab, field] of Object.entries(tabToField)) {
+        examplesText.value[tab][id] =
+          examples.value.find((e) => e.id === id)?.[field] || ''
+      }
+      editorTab.value[id] = 'positive'
       examplePrompts.value[id] = storage.getPromptsByExampleID(id)
-      examplesPositiveText.value[id] =
-        examples.value.find((e) => e.id === id)?.positivePrompt || ''
-      examplesNegativeText.value[id] =
-        examples.value.find((e) => e.id === id)?.negativePrompt || ''
     })
     if (removed) {
       removed.forEach((id) => {
-        delete canEditExamplesPositiveText.value[id]
-        delete canEditExamplesNegativeText.value[id]
-        delete isPositive.value[id]
+        for (const tab of tabs) {
+          delete canEditExamplesText.value[tab][id]
+        }
+        delete editorTab.value[id]
         delete examplePrompts.value[id]
-        delete examplesPositiveText.value[id]
-        delete examplesNegativeText.value[id]
+        for (const tab of tabs) {
+          delete examplesText.value[tab][id]
+        }
       })
     }
   },
@@ -242,11 +237,13 @@ watchArray(
       id: e.id,
       positivePrompt: e.positivePrompt,
       negativePrompt: e.negativePrompt,
+      extra: e.extra,
     })),
   (newArr) => {
     newArr.forEach((example) => {
-      examplesPositiveText.value[example.id] = example.positivePrompt || ''
-      examplesNegativeText.value[example.id] = example.negativePrompt || ''
+      for (const tab of tabs) {
+        examplesText.value[tab][example.id] = example[tabToField[tab]] || ''
+      }
     })
   },
   { deep: true, immediate: true }
@@ -272,41 +269,24 @@ async function handleDeleteExample(id: string): Promise<void> {
 
 async function handleEditExampleText(
   exampleID: string,
-  type: 'positive' | 'negative'
+  type: 'positive' | 'negative' | 'extra'
 ): Promise<void> {
-  if (type === 'positive') {
-    if (canEditExamplesPositiveText.value[exampleID]) {
-      const success = await storage.updateExample({
-        id: exampleID,
-        positivePrompt: examplesPositiveText.value[exampleID],
-      })
-      if (success) {
-        ElMessage.success('示例文本更新成功')
-      } else {
-        ElMessage.error('示例文本更新失败')
-        examplesPositiveText.value[exampleID] =
-          storage.examples.get(exampleID)?.positivePrompt || ''
-      }
+  if (canEditExamplesText.value[type][exampleID]) {
+    const field = tabToField[type]
+    const success = await storage.updateExample({
+      id: exampleID,
+      [field]: examplesText.value[type][exampleID],
+    })
+    if (success) {
+      ElMessage.success('示例文本更新成功')
+    } else {
+      ElMessage.error('示例文本更新失败')
+      examplesText.value[type][exampleID] =
+        storage.examples.get(exampleID)?.[field] || ''
     }
-    canEditExamplesPositiveText.value[exampleID] =
-      !canEditExamplesPositiveText.value[exampleID]
-  } else {
-    if (canEditExamplesNegativeText.value[exampleID]) {
-      const success = await storage.updateExample({
-        id: exampleID,
-        negativePrompt: examplesNegativeText.value[exampleID],
-      })
-      if (success) {
-        ElMessage.success('示例文本更新成功')
-      } else {
-        ElMessage.error('示例文本更新失败')
-        examplesNegativeText.value[exampleID] =
-          storage.examples.get(exampleID)?.negativePrompt || ''
-      }
-    }
-    canEditExamplesNegativeText.value[exampleID] =
-      !canEditExamplesNegativeText.value[exampleID]
   }
+  canEditExamplesText.value[type][exampleID] =
+    !canEditExamplesText.value[type][exampleID]
 }
 
 function handleEditExampleGallery(exampleID: string): void {

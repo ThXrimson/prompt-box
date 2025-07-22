@@ -1,7 +1,7 @@
 @reference "tailwindcss";
 
-.example-input {
-  @apply flex-1 min-h-0 [&>.el-textarea\_\_inner]:flex-1 flex!;
+.example-input.el-textarea {
+  @apply flex-1 min-h-0 [&>.el-textarea\_\_inner]:flex-1 flex;
   & > .el-textarea__inner {
     overflow-y: auto;
   }
@@ -9,31 +9,31 @@
 
 /* #region 示例文本输入框 */
 /* #region 示例文本输入框滚动条 */
-.example-input .el-textarea__inner::-webkit-scrollbar {
+.example-input.el-textarea .el-textarea__inner::-webkit-scrollbar {
   width: 9px; /* 滚动条的宽度 */
 }
-.example-input .el-textarea__inner::-webkit-scrollbar-thumb {
+.example-input.el-textarea .el-textarea__inner::-webkit-scrollbar-thumb {
   background-color: transparent; /* 滚动条滑块的颜色 */
   border-radius: 4px; /* 滑块圆角 */
   border: 2px solid transparent; /* 与轨道之间留白 */
   background-clip: padding-box; /* 背景剪切到内边距框 */
   cursor: pointer; /* 鼠标悬停时的样式 */
 }
-.example-input:hover .el-textarea__inner::-webkit-scrollbar-thumb {
+.example-input.el-textarea:hover .el-textarea__inner::-webkit-scrollbar-thumb {
   background-color: #d7d7d7; /* 滑块悬停颜色 */
 }
 
-.example-input:hover .el-textarea__inner::-webkit-scrollbar-thumb:hover {
+.example-input.el-textarea:hover .el-textarea__inner::-webkit-scrollbar-thumb:hover {
   background-color: #c0c0c0; /* 滑块悬停颜色 */
 }
-.example-input .el-textarea__inner::-webkit-scrollbar-track {
+.example-input.el-textarea .el-textarea__inner::-webkit-scrollbar-track {
   opacity: 0;
   background: transparent; /* 滚动条轨道的颜色 */
   border-radius: 4px;
 }
 /* #endregion */
 /* #region 示例文本输入框被禁用时的样式 */
-.example-input.is-disabled .el-textarea__inner {
+.example-input.el-textarea.is-disabled .el-textarea__inner {
   background-color: white !important;
   border-color: #d1d1d1 !important;
   color: #606266 !important;
@@ -41,7 +41,7 @@
   transition: all 0.3s ease-in-out !important;
 }
 
-.example-input.is-disabled .el-textarea__inner:hover {
+.example-input.el-textarea.is-disabled .el-textarea__inner:hover {
   @apply shadow-gray-400! shadow-[inset_0_0_0_0.8px];
 }
 /* #endregion */

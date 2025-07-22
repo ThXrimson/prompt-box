@@ -186,6 +186,7 @@ export default class Storage {
     id: string
     positivePrompt?: string
     negativePrompt?: string
+    extra?: string
     imageIDs?: string[]
   }): Example | null {
     const existingExampleIndex = this.db.data.examples.findIndex(
@@ -197,6 +198,7 @@ export default class Storage {
         existingExample.positivePrompt = example.positivePrompt
       if (example.negativePrompt !== undefined)
         existingExample.negativePrompt = example.negativePrompt
+      if (example.extra !== undefined) existingExample.extra = example.extra
       if (example.imageIDs !== undefined) {
         existingExample.imageIDs = example.imageIDs
       }
@@ -211,6 +213,7 @@ export default class Storage {
     id?: string
     positivePrompt?: string
     negativePrompt?: string
+    extra?: string
     imageIDs?: string[]
   }): Example {
     const id =
@@ -221,6 +224,7 @@ export default class Storage {
       id,
       positivePrompt: example.positivePrompt ?? '',
       negativePrompt: example.negativePrompt ?? '',
+      extra: example.extra ?? '',
       imageIDs: example.imageIDs ?? [],
     }
     this.db.data.examples.unshift(newExample)
@@ -257,6 +261,7 @@ export default class Storage {
       id?: string
       positivePrompt?: string
       negativePrompt?: string
+      extra?: string
       imageIDs?: string[]
     }
   ): Example {
