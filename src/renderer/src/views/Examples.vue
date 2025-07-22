@@ -117,9 +117,6 @@
                   resize="none"
                   :disabled="!canEditExamplesText[tab][example.id]"
                   class="example-input"
-                  @keydown.prevent.enter="
-                    handleEditExampleText(example.id, tab)
-                  "
                 />
               </div>
             </div>
