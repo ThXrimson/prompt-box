@@ -44,6 +44,8 @@ export default class Storage {
   }
 
   write(): void {
+    this.db.data.prompts.sort((a, b) => a.text.localeCompare(b.text))
+    this.db.data.tags.sort((a, b) => a.text.localeCompare(b.text))
     this.db.write()
   }
 

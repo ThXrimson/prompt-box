@@ -42,6 +42,7 @@
           collapse-tags
           collapse-tags-tooltip
           clearable
+          :reserve-keyword="false"
         />
 
         <el-input v-model="searchTerm" placeholder="搜索提示词">
@@ -71,6 +72,7 @@
         <el-input
           v-else
           v-model="newPromptText"
+          autofocus
           @keyup.enter="handleConfirmAddPrompt"
           @keyup.esc="handleCancelAddPrompt"
         >
@@ -164,9 +166,6 @@ import { computed, ref } from 'vue'
 import { useStorage } from '@renderer/stores/storage'
 import TagEditor from '@renderer/components/TagEditor.vue'
 
-// TODO Prompt删除按键第一次点击变为删除icon，第二次点击删除图片，等待一段时间变回去
-// TODO 添加功能删除创建的tag
-
 interface PromptView {
   id: string
   text: string
@@ -193,9 +192,9 @@ const promptsView = computed(() => {
       if (searchTerm.value.trim() === '') {
         return true
       }
-      return prompt.text
-        .toLowerCase()
-        .startsWith(searchTerm.value.toLowerCase())
+      return (
+        prompt.text.toLowerCase().indexOf(searchTerm.value.toLowerCase()) !== -1
+      )
     })
     .filter((prompt) => {
       if (filteredTagIDs.value.length === 0) {
@@ -269,15 +268,21 @@ function handleAddPrompt(): void {
   creatingPrompt.value = true
 }
 
-function handleConfirmAddPrompt(): void {
+async function handleConfirmAddPrompt(): Promise<void> {
   if (!creatingPrompt.value) return
   if (newPromptText.value.trim() === '') {
     creatingPrompt.value = false
     return
   }
-  storage.addPrompt({
+  const result = await storage.addPrompt({
     text: newPromptText.value,
   })
+  if (result) {
+    ElMessage.success('提示词已添加')
+    selectedPromptID.value = result.id
+  } else {
+    ElMessage.error('添加提示词失败')
+  }
   newPromptText.value = ''
   creatingPrompt.value = false
 }
