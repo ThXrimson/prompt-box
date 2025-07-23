@@ -411,6 +411,7 @@ async function handleGetTextTranslation(text: string): Promise<string> {
 }
 
 function splitText(text: string): { id: string; text: string }[] {
+  if (text === '') return []
   return text.split(',').map((item) => {
     return {
       id: crypto.randomUUID(),

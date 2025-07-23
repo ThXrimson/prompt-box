@@ -186,8 +186,9 @@ const searchTerm = ref<string>('')
 const filteredTagIDs = ref<string[]>([])
 const selectedPromptID = ref<string | null>(null)
 
-const promptsView = computed(() =>
-  Array.from(storage.prompts.values())
+const promptsView = computed(() => {
+  const tagSet = new Set(filteredTagIDs.value)
+  return Array.from(storage.prompts.values())
     .filter((prompt) => {
       if (searchTerm.value.trim() === '') {
         return true
@@ -200,7 +201,10 @@ const promptsView = computed(() =>
       if (filteredTagIDs.value.length === 0) {
         return true
       }
-      const tagSet = new Set(filteredTagIDs.value)
+      if (tagSet.has('0') && prompt.tagIDs.length === 0) {
+        // 未分类的提示词
+        return true
+      }
       return prompt.tagIDs.some((id) => tagSet.has(id))
     })
     .map((prompt) => {
@@ -221,7 +225,7 @@ const promptsView = computed(() =>
         ? sortByText(sortByTextAsc.value)
         : sortByTime(sortByTimeAsc.value)
     )
-)
+})
 
 const tagDialogVisible = ref(false)
 

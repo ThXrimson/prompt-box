@@ -26,7 +26,9 @@ export const useStorage = defineStore('storage', () => {
         const allWorkspaces = await window.api.getAllWorkspaces()
 
         prompts.value = new Map(allPrompts.map((p) => [p.id, p]))
-        tags.value = new Map(allTags.map((t) => [t.id, t]))
+        tags.value = new Map(
+          [{ id: '0', text: '未分类' }, ...allTags].map((t) => [t.id, t])
+        )
         examples.value = new Map(allExamples.map((e) => [e.id, e]))
         images.value = new Map(allImages.map((i) => [i.id, i]))
         workspaces.value = new Map(allWorkspaces.map((w) => [w.id, w]))
@@ -86,6 +88,12 @@ export const useStorage = defineStore('storage', () => {
   }
 
   function getPromptsByTag(tagID: string): Prompt[] {
+    if (tagID === '0') {
+      // 如果是未分类的标签，返回没有任何标签的 prompts
+      return cloneDeep(Array.from(prompts.value.values())).filter(
+        (prompt) => prompt.tagIDs.length === 0
+      )
+    }
     return Array.from(cloneDeep(prompts.value).values()).filter((prompt) =>
       prompt.tagIDs.some((id) => id === tagID)
     )
