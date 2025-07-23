@@ -1,7 +1,102 @@
 <template>
-  <div class="flex gap-2 bg-white p-3 rounded-lg shadow-md min-h-50 h-1/3">
-    <div class="flex flex-col gap-2 justify-center-safe">
-      <div class="flex gap-2 justify-center-safe flex-1">
+  <!-- 可拖动的handle -->
+  <div
+    ref="dragHandleRef"
+    class="h-1 cursor-ns-resize rounded-t-lg flex items-center justify-center hover:[&>div]:bg-gray-600"
+    @mousedown="startDragging"
+  >
+    <div class="w-8 h-0.5 bg-gray-400 rounded"></div>
+  </div>
+  <div
+    ref="containerRef"
+    class="flex flex-col bg-white rounded-lg shadow-md min-h-50"
+    :style="{ height: containerHeight + 'px' }"
+  >
+    <div class="flex flex-col gap-2 p-2 flex-1">
+      <!-- 编辑框 -->
+      <div class="flex-1 min-h-0">
+        <el-input
+          v-if="editMode"
+          v-model="inputText"
+          type="textarea"
+          resize="none"
+          :rows="5"
+          class="example-input"
+        />
+        <el-scrollbar
+          v-else
+          class="border-none shadow-[0_0_0_1px_#e4e7ed] rounded-lg flex-1"
+        >
+          <div class="h-full">
+            <vue-draggable
+              v-model="promptList"
+              :animation="100"
+              class="flex flex-wrap gap-2 p-2"
+            >
+              <el-dropdown
+                v-for="item in promptList"
+                :key="item.id"
+                trigger="click"
+              >
+                <el-tag
+                  type="primary"
+                  size="small"
+                  disable-transitions
+                  closable
+                  class="cursor-pointer"
+                  @close="handleDeletePrompt(item.id)"
+                >
+                  {{ promptTextView[item.text] }}
+                </el-tag>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="handleAddPrompt(item.text)">
+                      收藏提示词
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      divided
+                      @click="handleAddBrackets(item.id)"
+                    >
+                      添加圆括号
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="handleAddSquareBrackets(item.id)">
+                      添加方括号
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="handleAddAngleBrackets(item.id)">
+                      添加尖括号
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      @click="handleDeleteOnePairBrackets(item.id)"
+                    >
+                      删除一对括号
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="handleDeleteAllBrackets(item.id)">
+                      清除所有括号
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      divided
+                      @click="handleAddWeightToPrompt(item.id, 0.1)"
+                    >
+                      加 0.1 权重
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      @click="handleAddWeightToPrompt(item.id, -0.1)"
+                    >
+                      减 0.1 权重
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      @click="handleClearWeightOfPrompt(item.id)"
+                    >
+                      清除权重
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </vue-draggable>
+          </div>
+        </el-scrollbar>
+      </div>
+      <div class="flex gap-2 justify-center-safe">
         <el-tooltip
           content="添加为示例"
           :enterable="false"
@@ -25,10 +120,33 @@
           placement="top-end"
           :hide-after="0"
         >
-          <el-button :icon="Star" class="flex-1 m-0! h-full!" />
+          <el-button :icon="Star" class="flex-1 m-0! h-full!" disabled />
         </el-tooltip>
-      </div>
-      <div class="flex gap-2 justify-center-safe flex-1">
+        <el-tooltip
+          :content="!editMode ? '编辑模式' : '显示模式'"
+          :enterable="false"
+          placement="top-start"
+          :hide-after="0"
+        >
+          <el-button
+            :icon="Edit"
+            :type="!editMode ? 'default' : 'success'"
+            class="flex-1 m-0!"
+            @click="handleSwitchEditMode"
+          />
+        </el-tooltip>
+        <el-tooltip
+          content="复制"
+          :enterable="false"
+          placement="top-start"
+          :hide-after="0"
+        >
+          <el-button
+            :icon="CopyDocument"
+            class="flex-1 m-0!"
+            @click="handleCopyToClipboard"
+          />
+        </el-tooltip>
         <el-tooltip
           content="撤销"
           :enterable="false"
@@ -57,109 +175,6 @@
         </el-tooltip>
       </div>
     </div>
-
-    <!-- 编辑框 -->
-    <el-input
-      v-if="editMode"
-      v-model="inputText"
-      type="textarea"
-      resize="none"
-      :rows="5"
-      class="example-input"
-    />
-    <el-scrollbar
-      v-else
-      class="border-none shadow-[0_0_0_1px_#e4e7ed] rounded-lg flex-1"
-    >
-      <div class="h-full">
-        <vue-draggable
-          v-model="promptList"
-          :animation="100"
-          class="flex flex-wrap gap-2 p-2"
-        >
-          <el-dropdown
-            v-for="item in promptList"
-            :key="item.id"
-            trigger="click"
-          >
-            <el-tag
-              type="primary"
-              size="small"
-              disable-transitions
-              closable
-              class="cursor-pointer"
-              @close="handleDeletePrompt(item.id)"
-            >
-              {{ promptTextView[item.text] }}
-            </el-tag>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="handleAddPrompt(item.text)">
-                  收藏提示词
-                </el-dropdown-item>
-                <el-dropdown-item divided @click="handleAddBrackets(item.id)">
-                  添加圆括号
-                </el-dropdown-item>
-                <el-dropdown-item @click="handleAddSquareBrackets(item.id)">
-                  添加方括号
-                </el-dropdown-item>
-                <el-dropdown-item @click="handleAddAngleBrackets(item.id)">
-                  添加尖括号
-                </el-dropdown-item>
-                <el-dropdown-item @click="handleDeleteOnePairBrackets(item.id)">
-                  删除一对括号
-                </el-dropdown-item>
-                <el-dropdown-item @click="handleDeleteAllBrackets(item.id)">
-                  清除所有括号
-                </el-dropdown-item>
-                <el-dropdown-item
-                  divided
-                  @click="handleAddWeightToPrompt(item.id, 0.1)"
-                >
-                  加 0.1 权重
-                </el-dropdown-item>
-                <el-dropdown-item
-                  @click="handleAddWeightToPrompt(item.id, -0.1)"
-                >
-                  减 0.1 权重
-                </el-dropdown-item>
-                <el-dropdown-item @click="handleClearWeightOfPrompt(item.id)">
-                  清除权重
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </vue-draggable>
-      </div>
-    </el-scrollbar>
-
-    <div class="flex flex-col gap-2 justify-center-safe">
-      <el-tooltip
-        :content="!editMode ? '编辑模式' : '显示模式'"
-        :enterable="false"
-        placement="top-start"
-        :hide-after="0"
-      >
-        <el-button
-          :icon="Edit"
-          :type="!editMode ? 'default' : 'success'"
-          class="flex-1 m-0!"
-          @click="handleSwitchEditMode"
-        />
-      </el-tooltip>
-      <el-tooltip
-        content="复制"
-        :enterable="false"
-        placement="top-start"
-        :hide-after="0"
-      >
-        <el-button
-          :icon="CopyDocument"
-          class="flex-1 m-0!"
-          @click="handleCopyToClipboard"
-        />
-      </el-tooltip>
-    </div>
   </div>
 </template>
 
@@ -174,7 +189,7 @@ import {
   Back,
   Right,
 } from '@element-plus/icons-vue'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { addWeight, clearWeight } from '@renderer/utils/editWeight'
 import { useManualRefHistory, watchArray } from '@vueuse/core'
@@ -193,8 +208,48 @@ const emit = defineEmits<{
 }>()
 
 const inputText = ref('')
-
 const editMode = ref(false)
+
+// 拖动相关的状态
+const containerRef = ref<HTMLElement>()
+const dragHandleRef = ref<HTMLElement>()
+const containerHeight = ref(200)
+onMounted(() => {
+  if (containerRef.value) {
+    containerHeight.value = containerRef.value.clientHeight
+  }
+})
+const isDragging = ref(false)
+const startY = ref(0)
+const startHeight = ref(0)
+
+// 拖动功能
+const startDragging = (event: MouseEvent): void => {
+  isDragging.value = true
+  startY.value = event.clientY
+  startHeight.value = containerHeight.value
+
+  document.addEventListener('mousemove', onDragging)
+  document.addEventListener('mouseup', stopDragging)
+  document.body.style.userSelect = 'none'
+  event.preventDefault()
+}
+
+const onDragging = (event: MouseEvent): void => {
+  if (!isDragging.value) return
+
+  const deltaY = startY.value - event.clientY
+  // 最高 800px，最低 150px
+  const newHeight = Math.max(150, Math.min(800, startHeight.value + deltaY))
+  containerHeight.value = newHeight
+}
+
+const stopDragging = (): void => {
+  isDragging.value = false
+  document.removeEventListener('mousemove', onDragging)
+  document.removeEventListener('mouseup', stopDragging)
+  document.body.style.userSelect = ''
+}
 
 const promptList = ref<{ id: string; text: string }[]>([])
 watch(
