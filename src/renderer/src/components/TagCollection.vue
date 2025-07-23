@@ -1,7 +1,7 @@
 <template>
   <div
     ref="tagCard"
-    class="tag-collection h-full min-w-40 w-40 flex flex-col gap-1.5 border-2 border-gray-200 rounded-lg p-2 bg-white"
+    class="tag-collection h-full flex flex-col gap-1.5 border-2 border-gray-200 rounded-lg p-2 bg-white"
   >
     <div class="drag-handle grid justify-center-safe hover:cursor-pointer">
       <drag-handle
@@ -42,10 +42,7 @@
           class="flex justify-between w-full border-1 border-gray-200 bg-teal-400 rounded-sm p-1.5 hover:bg-teal-500 transition-all duration-300"
         >
           <el-tooltip
-            :content="
-              prompt.text +
-              (prompt.translation ? ` (${prompt.translation})` : '')
-            "
+            :content="prompt.translation || prompt.text"
             placement="top-start"
             trigger="hover"
             :hide-after="0"

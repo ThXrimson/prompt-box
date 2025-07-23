@@ -29,11 +29,11 @@
             {{ workspace.name || '未命名' }}
           </el-text>
           <el-text class="text-sm! italic! self-start!"> POSITIVE </el-text>
-          <el-text class="text-gray-500! text-xs!">
+          <el-text class="text-gray-500! text-xs! self-start!">
             {{ workspace.positiveEditor }}
           </el-text>
           <el-text class="text-sm! italic! self-start!"> NEGATIVE </el-text>
-          <el-text class="text-gray-500! text-xs!">
+          <el-text class="text-gray-500! text-xs! self-start!">
             {{ workspace.negativeEditor }}
           </el-text>
         </div>

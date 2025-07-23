@@ -12,7 +12,7 @@
     class="flex flex-col bg-white rounded-lg shadow-md min-h-50"
     :style="{ height: containerHeight + 'px' }"
   >
-    <div class="flex flex-col gap-2 p-2 flex-1">
+    <div class="flex flex-col gap-2 p-2 flex-1 min-h-0">
       <!-- 编辑框 -->
       <div class="flex-1 min-h-0">
         <el-input
@@ -21,11 +21,11 @@
           type="textarea"
           resize="none"
           :rows="5"
-          class="example-input"
+          class="example-input h-full"
         />
         <el-scrollbar
           v-else
-          class="border-none shadow-[0_0_0_1px_#e4e7ed] rounded-lg flex-1"
+          class="border-none shadow-[0_0_0_1px_#e4e7ed] rounded-lg h-full"
         >
           <div class="h-full">
             <vue-draggable
@@ -96,7 +96,7 @@
           </div>
         </el-scrollbar>
       </div>
-      <div class="flex gap-2 justify-center-safe">
+      <div class="flex gap-2 justify-start">
         <el-tooltip
           content="添加为示例"
           :enterable="false"
@@ -105,7 +105,6 @@
         >
           <el-button
             :icon="Plus"
-            class="flex-1 m-0! h-full!"
             @click="
               emit(
                 'add-example',
@@ -120,7 +119,7 @@
           placement="top-end"
           :hide-after="0"
         >
-          <el-button :icon="Star" class="flex-1 m-0! h-full!" disabled />
+          <el-button :icon="Star" class="m-0!" disabled />
         </el-tooltip>
         <el-tooltip
           :content="!editMode ? '编辑模式' : '显示模式'"
@@ -131,7 +130,7 @@
           <el-button
             :icon="Edit"
             :type="!editMode ? 'default' : 'success'"
-            class="flex-1 m-0!"
+            class="m-0!"
             @click="handleSwitchEditMode"
           />
         </el-tooltip>
@@ -143,7 +142,7 @@
         >
           <el-button
             :icon="CopyDocument"
-            class="flex-1 m-0!"
+            class="m-0!"
             @click="handleCopyToClipboard"
           />
         </el-tooltip>
@@ -156,7 +155,7 @@
           <el-button
             :icon="Back"
             :disabled="!canUndo"
-            class="flex-1 m-0! h-full!"
+            class="m-0!"
             @click="handleUndoEditor"
           />
         </el-tooltip>
@@ -169,7 +168,7 @@
           <el-button
             :icon="Right"
             :disabled="!canRedo"
-            class="flex-1 m-0! h-full!"
+            class="m-0!"
             @click="handleRedoEditor"
           />
         </el-tooltip>
