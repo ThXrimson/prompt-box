@@ -1,5 +1,5 @@
 <template>
-  <div class="flex gap-2 bg-white p-3 rounded-lg shadow-md h-30">
+  <div class="flex gap-2 bg-white p-3 rounded-lg shadow-md min-h-50 h-1/3">
     <div class="flex flex-col gap-2 justify-center-safe">
       <div class="flex gap-2 justify-center-safe flex-1">
         <el-tooltip
@@ -412,11 +412,14 @@ async function handleGetTextTranslation(text: string): Promise<string> {
 
 function splitText(text: string): { id: string; text: string }[] {
   if (text === '') return []
-  return text.split(',').map((item) => {
-    return {
-      id: crypto.randomUUID(),
-      text: item.trim(),
-    }
-  })
+  return text
+    .split(',')
+    .filter((item) => item !== '')
+    .map((item) => {
+      return {
+        id: crypto.randomUUID(),
+        text: item.trim(),
+      }
+    })
 }
 </script>

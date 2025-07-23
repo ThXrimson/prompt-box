@@ -41,7 +41,7 @@
 
         <el-select-v2
           v-model="workspace.tagIDs"
-          :options="[{ text: '未分类', id: '0' }, ...storage.tags.values()]"
+          :options="Array.from(storage.tags.values())"
           :props="{
             label: 'text',
             value: 'id',

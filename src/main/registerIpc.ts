@@ -543,6 +543,9 @@ function translateByDeepLX(text: string): Promise<string> {
       response.on('end', () => {
         try {
           const result = JSON.parse(data)
+          if (typeof result.data !== 'string') {
+            reject(new Error('Invalid translation response format'))
+          }
           resolve(result.data)
         } catch (error) {
           reject(new Error(`Failed to parse translation response: ${error}`))
