@@ -24,7 +24,11 @@
         <el-tooltip content="管理标签" placement="bottom-start" :hide-after="0">
           <el-button :icon="Discount" @click="tagDialogVisible = true" />
         </el-tooltip>
-        <el-dialog v-if="tagDialogVisible" v-model="tagDialogVisible">
+        <el-dialog
+          v-if="tagDialogVisible"
+          v-model="tagDialogVisible"
+          title="标签管理"
+        >
           <tag-editor />
         </el-dialog>
 
@@ -71,8 +75,8 @@
         </el-button>
         <el-input
           v-else
+          ref="promptInput"
           v-model="newPromptText"
-          autofocus
           @keyup.enter="handleConfirmAddPrompt"
           @keyup.esc="handleCancelAddPrompt"
         >
@@ -162,7 +166,7 @@ import {
   Sort,
   Discount,
 } from '@element-plus/icons-vue'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, useTemplateRef } from 'vue'
 import { useStorage } from '@renderer/stores/storage'
 import TagEditor from '@renderer/components/TagEditor.vue'
 
@@ -263,9 +267,13 @@ function handleSortByTime(): void {
 //#region 添加 Prompt
 const creatingPrompt = ref(false)
 const newPromptText = ref('')
+const promptInput = useTemplateRef('promptInput')
 
 function handleAddPrompt(): void {
   creatingPrompt.value = true
+  nextTick(() => {
+    promptInput.value?.focus()
+  })
 }
 
 async function handleConfirmAddPrompt(): Promise<void> {

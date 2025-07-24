@@ -1,39 +1,58 @@
 <template>
-  <el-table :data="tagCounter">
-    <el-table-column label="标签" sortable>
-      <template #default="scope">
-        <el-input
-          v-if="editingTag[scope.row.id]"
-          v-model="editingTagText[scope.row.id]"
-        />
-        <el-text v-else>{{ scope.row.text }}</el-text>
+  <div class="flex flex-col gap-2">
+    <el-button :icon="Plus" @click="handleOpenAddTagInput">添加标签</el-button>
+
+    <el-scrollbar view-class="h-[50vh]">
+      <el-table :data="tagCounter">
+        <el-table-column label="标签" sortable>
+          <template #default="scope">
+            <el-input
+              v-if="editingTag[scope.row.id]"
+              v-model="editingTagText[scope.row.id]"
+            />
+            <el-text v-else>{{ scope.row.text }}</el-text>
+          </template>
+        </el-table-column>
+        <el-table-column prop="count" label="提示词数" sortable />
+        <el-table-column label="操作">
+          <template #default="scope">
+            <el-button
+              size="small"
+              :icon="EditPen"
+              :class="{
+                'text-gray-400!': editingTag[scope.row.id],
+              }"
+              @click="handleEditTag(scope.row.id)"
+            />
+            <el-button
+              size="small"
+              type="danger"
+              :icon="Delete"
+              @click="handelDeleteTag(scope.row.id)"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-scrollbar>
+  </div>
+
+  <el-dialog v-model="showAddTagDialog" title="添加标签">
+    <el-input
+      v-model="addTag"
+      placeholder="输入标签名称"
+      clearable
+      @keyup.enter="handleAddTag"
+    >
+      <template #prefix>
+        <el-button :icon="Plus" link @click="handleAddTag" />
       </template>
-    </el-table-column>
-    <el-table-column prop="count" label="提示词数" sortable />
-    <el-table-column label="操作">
-      <template #default="scope">
-        <el-button
-          size="small"
-          :icon="EditPen"
-          :class="{
-            'text-gray-400!': editingTag[scope.row.id],
-          }"
-          @click="handleEditTag(scope.row.id)"
-        />
-        <el-button
-          size="small"
-          type="danger"
-          :icon="Delete"
-          @click="handelDeleteTag(scope.row.id)"
-        />
-      </template>
-    </el-table-column>
-  </el-table>
+    </el-input>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { useStorage } from '@renderer/stores/storage'
-import { EditPen, Delete } from '@element-plus/icons-vue'
+import { EditPen, Delete, Plus } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 
 const storage = useStorage()
@@ -60,6 +79,29 @@ const tagCounter = computed(() => {
 })
 const editingTag = ref<Record<string, boolean>>({})
 const editingTagText = ref<Record<string, string>>({})
+
+const showAddTagDialog = ref(false)
+const addTag = ref('')
+
+function handleOpenAddTagInput(): void {
+  showAddTagDialog.value = true
+  addTag.value = ''
+}
+
+async function handleAddTag(): Promise<void> {
+  if (addTag.value.trim() === '') {
+    ElMessage.warning('标签名称不能为空')
+    return
+  }
+  const newTag = await storage.addTag({ text: addTag.value.trim() })
+  if (newTag) {
+    ElMessage.success('标签已添加')
+    showAddTagDialog.value = false
+    addTag.value = ''
+  } else {
+    ElMessage.error('添加标签失败')
+  }
+}
 
 onMounted(() => {
   // 初始化编辑状态

@@ -195,6 +195,8 @@ import type { Tag } from '@shared/types'
 import { watchArray } from '@vueuse/core'
 import TranslateIcon from '@renderer/icons/Prompt.vue'
 
+// TODO prompt 描述框可放大
+
 const tabs = ['positive', 'negative', 'extra'] as const
 const tabToField: Record<string, string> = {
   positive: 'positivePrompt',

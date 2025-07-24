@@ -152,7 +152,6 @@ import {
 } from '@element-plus/icons-vue'
 import { getImageUrl } from '@renderer/utils/utils'
 import { watchArray } from '@vueuse/core'
-// TODO 管理prompt模板
 
 const tabs = ['positive', 'negative', 'extra'] as const
 const tabToField: Record<string, string> = {

@@ -41,6 +41,7 @@ export default class Storage {
       images: [],
       workspaces: [],
     })
+    this.write()
   }
 
   write(): void {

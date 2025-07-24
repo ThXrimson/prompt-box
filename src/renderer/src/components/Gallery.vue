@@ -79,8 +79,6 @@ import { computed, ref } from 'vue'
 import { Plus, Close } from '@element-plus/icons-vue'
 import SaveIcon from '@renderer/icons/Save.vue'
 
-// TODO 图片删除按键第一次点击变为删除icon，第二次点击删除图片，等待一段时间变回去
-
 const props = defineProps<{
   exampleID: string
 }>()
