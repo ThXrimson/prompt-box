@@ -112,7 +112,7 @@
               'hover:bg-gray-300': selectedPromptID === prompt.id,
             }"
           >
-            <div class="flex flex-col">
+            <div class="flex flex-col flex-1 min-w-0">
               <el-text truncated class="self-start!">
                 {{ prompt.text }}
               </el-text>
@@ -279,6 +279,11 @@ function handleAddPrompt(): void {
 async function handleConfirmAddPrompt(): Promise<void> {
   if (!creatingPrompt.value) return
   if (newPromptText.value.trim() === '') {
+    creatingPrompt.value = false
+    return
+  }
+  if (storage.checkPromptExists(newPromptText.value.trim())) {
+    ElMessage.warning('提示词已存在')
     creatingPrompt.value = false
     return
   }

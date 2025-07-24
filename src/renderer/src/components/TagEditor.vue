@@ -93,6 +93,12 @@ async function handleAddTag(): Promise<void> {
     ElMessage.warning('标签名称不能为空')
     return
   }
+  if (storage.checkTagExists(addTag.value.trim())) {
+    ElMessage.warning('标签已存在')
+    showAddTagDialog.value = false
+    addTag.value = ''
+    return
+  }
   const newTag = await storage.addTag({ text: addTag.value.trim() })
   if (newTag) {
     ElMessage.success('标签已添加')

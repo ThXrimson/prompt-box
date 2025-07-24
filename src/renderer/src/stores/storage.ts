@@ -581,6 +581,24 @@ export const useStorage = defineStore('storage', () => {
   }
   //#endregion
 
+  function checkPromptExists(text: string): boolean {
+    for (const prompt of prompts.value.values()) {
+      if (prompt.text === text) {
+        return true
+      }
+    }
+    return false
+  }
+
+  function checkTagExists(text: string): boolean {
+    for (const tag of tags.value.values()) {
+      if (tag.text === text) {
+        return true
+      }
+    }
+    return false
+  }
+
   async function write(): Promise<void> {
     await window.api.writeStorage()
   }
@@ -593,6 +611,8 @@ export const useStorage = defineStore('storage', () => {
     images,
     workspaces,
     write,
+    checkPromptExists,
+    checkTagExists,
     // 查找
     getPromptsByExampleID,
     getExamplesByPromptID,

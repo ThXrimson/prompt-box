@@ -1,16 +1,20 @@
 <template>
-  <div class="inline-flex items-center relative w-full">
+  <div class="flex items-center relative w-full border border-gray-300 rounded">
     <el-input
       v-if="isEditing"
       ref="inputRef"
       v-model="editValue"
+      type="textarea"
       :placeholder="placeholder"
       :size="size"
       :clearable="clearable"
-      @keyup.enter="handleSave"
+      resize="none"
+      class="example-input"
+      @blur="handleSave"
       @keyup.esc="handleCancel"
     >
-      <template #suffix>
+      <!-- @blur="handleSave" -->
+      <!-- <template #suffix>
         <div class="flex items-center gap-2 pr-2.5">
           <el-icon
             class="text-base cursor-pointer text-gray-600 hover:text-green-500 transition-colors duration-200"
@@ -25,49 +29,42 @@
             <Close />
           </el-icon>
         </div>
-      </template>
+      </template> -->
     </el-input>
 
-    <div
+    <el-scrollbar
       v-else
-      class="flex items-center justify-between w-full px-[11px] py-[0.2px] min-h-8 leading-8 border border-gray-300 rounded box-border transition-all duration-200 hover:border-gray-400 focus-within:border-blue-500 focus-within:shadow-[0_0_0_1px_theme(colors.blue.500)]"
+      class="flex-1 flex"
+      wrap-class="flex-1 flex"
+      view-class="flex items-center justify-between w-full py-1 px-2 transition-all duration-200 hover:border-gray-400"
+      @click="handleEdit"
     >
       <el-text
-        class="flex-grow overflow-hidden whitespace-nowrap leading-[30px]"
+        class="w-full leading-5 max-h-32"
         :class="{
-          'text-gray-400!':
-            displayValue === '' ||
-            displayValue === null ||
-            displayValue === undefined,
-          'text-gray-700!': !(
-            displayValue === '' ||
-            displayValue === null ||
-            displayValue === undefined
-          ),
+          'text-gray-400!': checkTextEmpty(displayValue),
+          'text-gray-700!': !checkTextEmpty(displayValue),
         }"
       >
         {{
-          displayValue === '' ||
-          displayValue === null ||
-          displayValue === undefined
+          checkTextEmpty(displayValue)
             ? placeholder || '点击编辑'
             : displayValue
         }}
       </el-text>
-      <el-icon
+      <!-- <el-icon
         class="text-base cursor-pointer text-gray-600 hover:text-blue-500 transition-colors duration-200 ml-2 flex-shrink-0"
         @click="handleEdit"
       >
         <Edit />
-      </el-icon>
-    </div>
+      </el-icon> -->
+    </el-scrollbar>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
-import { ElInput, ElIcon } from 'element-plus'
-import { Edit, Check, Close } from '@element-plus/icons-vue'
+import { ElInput } from 'element-plus'
 
 interface Props {
   modelValue?: string
@@ -94,7 +91,7 @@ const emit = defineEmits<{
 const isEditing = ref(false) // 是否处于编辑状态
 const displayValue = ref(props.modelValue) // 显示的值
 const editValue = ref(props.modelValue) // 编辑时绑定的值
-const originalValue = ref(props.modelValue) // 进入编辑前的原始值
+let originalValue = props.modelValue // 进入编辑前的原始值
 const inputRef = ref<InstanceType<typeof ElInput> | null>(null) // el-input 实例引用
 
 // 监听 modelValue 的变化，同步更新 displayValue
@@ -104,22 +101,17 @@ watch(
     // 只有在非编辑状态下才更新 displayValue，避免编辑时外部传入值覆盖
     if (!isEditing.value) {
       displayValue.value = newValue
-      originalValue.value = newValue // 外部更新时，也更新原始值
+      originalValue = newValue // 外部更新时，也更新原始值
     }
   },
   { immediate: true }
 )
 
-// 监听 displayValue 的变化，当 displayValue 改变时，确保它是最新的原始值
-// watch(displayValue, (newValue) => {
-//   originalValue.value = newValue;
-// });
-
 // 处理点击编辑图标
 function handleEdit(): void {
   isEditing.value = true
   editValue.value = displayValue.value
-  originalValue.value = displayValue.value
+  originalValue = displayValue.value
   emit('edit')
   nextTick(() => {
     inputRef.value?.focus()
@@ -129,17 +121,24 @@ function handleEdit(): void {
 
 function handleSave(): void {
   isEditing.value = false
-  displayValue.value = editValue.value
+  if (editValue.value === originalValue) return
   emit('update:modelValue', editValue.value)
   emit('save', editValue.value)
 }
 
 function handleCancel(): void {
   isEditing.value = false
-  editValue.value = originalValue.value
-  displayValue.value = originalValue.value
-  emit('cancel', originalValue.value)
+  emit('cancel', originalValue)
+}
+
+function checkTextEmpty(text: string): boolean {
+  return text === '' || text === null || text === undefined
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+.example-input :deep(.el-textarea__inner) {
+  field-sizing: content;
+  max-height: 8.5rem;
+}
+</style>

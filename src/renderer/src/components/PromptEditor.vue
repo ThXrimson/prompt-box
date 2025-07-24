@@ -1,11 +1,16 @@
 <template>
   <el-scrollbar class="flex flex-col gap-2 flex-1 min-h-0 relative">
     <div>
-      <el-text class="edit-header">Prompt</el-text>
+      <el-text class="edit-header">提示词</el-text>
+      <el-button
+        :icon="CopyDocument"
+        link
+        @click="handleCopyText(promptText)"
+      />
       <confirm-input
         :model-value="promptText"
-        placeholder="请输入 Prompt"
-        @save="handleChangeText"
+        placeholder="请输入提示词"
+        @save="handleChangePromptText"
       />
     </div>
     <div>
@@ -22,6 +27,12 @@
             @click="handleTranslateByDeepLX"
           />
         </el-tooltip>
+        <el-button
+          :icon="CopyDocument"
+          link
+          class="ml-0!"
+          @click="handleCopyText(promptTranslation)"
+        />
       </div>
       <confirm-input
         :model-value="promptTranslation"
@@ -52,6 +63,11 @@
     </div>
     <div>
       <el-text class="edit-header">描述</el-text>
+      <el-button
+        :icon="CopyDocument"
+        link
+        @click="handleCopyText(promptDescription)"
+      />
       <confirm-input
         :model-value="promptDescription"
         placeholder="请输入描述"
@@ -130,7 +146,7 @@
                       link
                       class="self-center flex-1 min-h-0 ml-0!"
                       @click="
-                        handleCopyExampleText(
+                        handleCopyText(
                           examplesText[editorTab[example.id]][example.id]
                         )
                       "
@@ -144,6 +160,13 @@
                       </template>
                     </el-popconfirm>
                   </div>
+                  <!-- <confirm-input
+                    v-for="tab in tabs"
+                    v-show="editorTab[example.id] === tab"
+                    :key="tab"
+                    :model-value="examplesText[tab][example.id]"
+                    placeholder="请输入示例文本"
+                  /> -->
                   <el-input
                     v-for="tab in tabs"
                     v-show="editorTab[example.id] === tab"
@@ -194,8 +217,6 @@ import ConfirmInput from '@renderer/components/ConfirmInput.vue'
 import type { Tag } from '@shared/types'
 import { watchArray } from '@vueuse/core'
 import TranslateIcon from '@renderer/icons/Prompt.vue'
-
-// TODO prompt 描述框可放大
 
 const tabs = ['positive', 'negative', 'extra'] as const
 const tabToField: Record<string, string> = {
@@ -303,7 +324,15 @@ watch(
 )
 
 //#region 更改示例内容
-async function handleChangeText(value: string): Promise<void> {
+async function handleChangePromptText(value: string): Promise<void> {
+  if (value.trim() === '') {
+    ElMessage.warning('提示词不能为空')
+    return
+  }
+  if (storage.checkPromptExists(value.trim())) {
+    ElMessage.warning('提示词已存在')
+    return
+  }
   const success = await storage.updatePromptText(props.promptId, value)
   if (!success) {
     ElMessage.error('更新提示词文本失败')
@@ -389,6 +418,7 @@ async function handleEditExampleText(
   exampleID: string,
   type: 'positive' | 'negative' | 'extra'
 ): Promise<void> {
+  console.log(`Editing example text for ${exampleID} in ${type} tab`)
   if (canEditExamplesText.value[type][exampleID]) {
     const field = tabToField[type]
     const success = await storage.updateExample({
@@ -420,7 +450,11 @@ watch(editGalleryVisible, (visible) => {
 })
 //#endregion
 
-async function handleCopyExampleText(text: string): Promise<void> {
+async function handleCopyText(text?: string): Promise<void> {
+  if (!text) {
+    ElMessage.warning('没有可复制的文本')
+    return
+  }
   const success = await window.api.copyToClipboard(text)
   if (success) {
     ElMessage.success('已复制到剪贴板')
