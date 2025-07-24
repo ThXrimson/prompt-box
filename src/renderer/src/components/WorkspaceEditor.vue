@@ -1,4 +1,17 @@
 <template>
+  <el-dialog v-model="editingPrompt" title="编辑提示词">
+    <el-input
+      v-model="editingPromptText"
+      placeholder="编辑提示词"
+      @keyup.enter="handleConfirmEditPrompt"
+    />
+    <template #footer>
+      <el-button type="primary" @click="handleConfirmEditPrompt">
+        确定
+      </el-button>
+      <el-button @click="editingPrompt = false"> 取消 </el-button>
+    </template>
+  </el-dialog>
   <!-- 可拖动的handle -->
   <div
     ref="dragHandleRef"
@@ -36,18 +49,21 @@
               <el-dropdown
                 v-for="item in promptList"
                 :key="item.id"
-                trigger="click"
+                trigger="contextmenu"
               >
                 <el-tag
-                  type="primary"
+                  :type="item.disabled ? 'info' : 'primary'"
                   size="small"
                   disable-transitions
                   closable
                   class="cursor-pointer"
+                  :class="item.disabled ? 'line-through' : ''"
+                  @click="handleEditPrompt(item.id)"
                   @close="handleDeletePrompt(item.id)"
                 >
                   {{ promptTextView[item.text] }}
                 </el-tag>
+
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item @click="handleAddPrompt(item.text)">
@@ -89,6 +105,12 @@
                     >
                       清除权重
                     </el-dropdown-item>
+                    <el-dropdown-item
+                      divided
+                      @click="item.disabled = !item.disabled"
+                    >
+                      {{ item.disabled ? '启用' : '禁用' }}提示词
+                    </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -103,15 +125,7 @@
           placement="top-end"
           :hide-after="0"
         >
-          <el-button
-            :icon="Plus"
-            @click="
-              emit(
-                'add-example',
-                promptList.map((item) => item.text).join(', ')
-              )
-            "
-          />
+          <el-button :icon="Plus" @click="emit('add-example', joinPrompts())" />
         </el-tooltip>
         <el-tooltip
           content="选择示例为模板"
@@ -209,6 +223,32 @@ const emit = defineEmits<{
 const inputText = ref('')
 const editMode = ref(false)
 
+// 是否正在编辑提示词
+const editingPrompt = ref(false)
+const editingPromptID = ref<string | null>(null)
+const editingPromptText = ref('')
+
+function handleEditPrompt(id: string): void {
+  const text = promptList.value.find((item) => item.id === id)?.text
+  if (text) {
+    editingPromptID.value = id
+    editingPromptText.value = text
+    editingPrompt.value = true
+  }
+}
+
+function handleConfirmEditPrompt(): void {
+  if (!editingPromptText.value.trim()) return
+  const item = promptList.value.find(
+    (item) => item.id === editingPromptID.value
+  )
+  if (item) {
+    item.text = editingPromptText.value.trim()
+    emit('update:modelValue', joinPrompts())
+    editingPrompt.value = false
+  }
+}
+
 // 拖动相关的状态
 const containerRef = ref<HTMLElement>()
 const dragHandleRef = ref<HTMLElement>()
@@ -250,7 +290,12 @@ const stopDragging = (): void => {
   document.body.style.userSelect = ''
 }
 
-const promptList = ref<{ id: string; text: string }[]>([])
+interface PromptView {
+  id: string
+  text: string
+  disabled: boolean
+}
+const promptList = ref<PromptView[]>([])
 watch(
   () => props.modelValue,
   (newValue) => {
@@ -264,12 +309,13 @@ watch(
 )
 defineExpose({
   addText: (text: string) => {
-    promptList.value.push({ id: crypto.randomUUID(), text: text.trim() })
+    promptList.value.push({
+      id: crypto.randomUUID(),
+      text: text.trim(),
+      disabled: false,
+    })
     inputText.value = ''
-    emit(
-      'update:modelValue',
-      promptList.value.map((item) => item.text).join(', ')
-    )
+    emit('update:modelValue', joinPrompts())
   },
 })
 
@@ -309,27 +355,21 @@ function handleSwitchEditMode(): void {
   if (editMode.value) {
     // 切换到显示模式
     promptList.value = splitText(inputText.value)
-    emit(
-      'update:modelValue',
-      promptList.value.map((item) => item.text).join(', ')
-    )
+    emit('update:modelValue', joinPrompts())
   } else {
     // 切换到编辑模式
-    inputText.value = promptList.value.map((item) => item.text).join(', ')
+    inputText.value = joinPrompts()
   }
   editMode.value = !editMode.value
 }
 
 function handleDeletePrompt(id: string): void {
   promptList.value = promptList.value.filter((item) => item.id !== id)
-  emit(
-    'update:modelValue',
-    promptList.value.map((item) => item.text).join(', ')
-  )
+  emit('update:modelValue', joinPrompts())
 }
 
 async function handleCopyToClipboard(): Promise<void> {
-  const textToCopy = promptList.value.map((item) => item.text).join(', ')
+  const textToCopy = joinPrompts()
   const res = await window.api.copyToClipboard(textToCopy)
   if (res) {
     ElMessage.success('已复制到剪贴板')
@@ -342,10 +382,7 @@ function handleAddBrackets(id: string): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
     item.text = `(${item.text})`
-    emit(
-      'update:modelValue',
-      promptList.value.map((item) => item.text).join(', ')
-    )
+    emit('update:modelValue', joinPrompts())
   }
 }
 
@@ -353,10 +390,7 @@ function handleAddSquareBrackets(id: string): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
     item.text = `[${item.text}]`
-    emit(
-      'update:modelValue',
-      promptList.value.map((item) => item.text).join(', ')
-    )
+    emit('update:modelValue', joinPrompts())
   }
 }
 
@@ -364,10 +398,7 @@ function handleAddAngleBrackets(id: string): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
     item.text = `<${item.text}>`
-    emit(
-      'update:modelValue',
-      promptList.value.map((item) => item.text).join(', ')
-    )
+    emit('update:modelValue', joinPrompts())
   }
 }
 
@@ -377,10 +408,7 @@ function handleDeleteOnePairBrackets(id: string): void {
     item.text = item.text
       .replace(/^\((.*)\)$/, '$1')
       .replace(/^\[(.*)\]$/, '$1')
-    emit(
-      'update:modelValue',
-      promptList.value.map((item) => item.text).join(', ')
-    )
+    emit('update:modelValue', joinPrompts())
   }
 }
 
@@ -389,10 +417,7 @@ function handleDeleteAllBrackets(id: string): void {
   if (item) {
     // eslint-disable-next-line no-useless-escape
     item.text = item.text.replace(/([\(\[]+)(.*?)([\)\]]+)/g, '$2')
-    emit(
-      'update:modelValue',
-      promptList.value.map((item) => item.text).join(', ')
-    )
+    emit('update:modelValue', joinPrompts())
   }
 }
 
@@ -400,10 +425,7 @@ function handleAddWeightToPrompt(id: string, delta: number): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
     item.text = addWeight(item.text, delta)
-    emit(
-      'update:modelValue',
-      promptList.value.map((item) => item.text).join(', ')
-    )
+    emit('update:modelValue', joinPrompts())
   }
 }
 
@@ -411,27 +433,18 @@ function handleClearWeightOfPrompt(id: string): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
     item.text = clearWeight(item.text)
-    emit(
-      'update:modelValue',
-      promptList.value.map((item) => item.text).join(', ')
-    )
+    emit('update:modelValue', joinPrompts())
   }
 }
 
 function handleUndoEditor(): void {
   undo()
-  emit(
-    'update:modelValue',
-    promptList.value.map((item) => item.text).join(', ')
-  )
+  emit('update:modelValue', joinPrompts())
 }
 
 function handleRedoEditor(): void {
   redo()
-  emit(
-    'update:modelValue',
-    promptList.value.map((item) => item.text).join(', ')
-  )
+  emit('update:modelValue', joinPrompts())
 }
 
 async function handleAddPrompt(text: string): Promise<void> {
@@ -464,7 +477,7 @@ async function handleGetTextTranslation(text: string): Promise<string> {
   return ''
 }
 
-function splitText(text: string): { id: string; text: string }[] {
+function splitText(text: string): PromptView[] {
   if (text === '') return []
   return text
     .split(',')
@@ -473,7 +486,15 @@ function splitText(text: string): { id: string; text: string }[] {
       return {
         id: crypto.randomUUID(),
         text: item.trim(),
+        disabled: false,
       }
     })
+}
+
+function joinPrompts(): string {
+  return promptList.value
+    .filter((item) => !item.disabled)
+    .map((item) => item.text)
+    .join(', ')
 }
 </script>

@@ -418,7 +418,6 @@ async function handleEditExampleText(
   exampleID: string,
   type: 'positive' | 'negative' | 'extra'
 ): Promise<void> {
-  console.log(`Editing example text for ${exampleID} in ${type} tab`)
   if (canEditExamplesText.value[type][exampleID]) {
     const field = tabToField[type]
     const success = await storage.updateExample({
