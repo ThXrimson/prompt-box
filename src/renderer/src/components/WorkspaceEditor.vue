@@ -163,7 +163,11 @@
             placement="top-end"
             :hide-after="0"
           >
-            <el-button :icon="Star" class="m-0!" disabled />
+            <el-button
+              :icon="Star"
+              class="m-0!"
+              @click="handleOpenExamplesDialog"
+            />
           </el-tooltip>
           <el-tooltip
             :content="!editMode ? '编辑模式' : '显示模式'"
@@ -235,6 +239,16 @@
   >
     <prompt-editor :prompt-i-d="editingPromptID" />
   </el-dialog>
+
+  <el-dialog
+    v-model="examplesDialogVisible"
+    title="示例列表"
+    fullscreen
+    class="h-[100vh] flex flex-col"
+    body-class="flex-1 min-h-0 flex flex-col"
+  >
+    <examples />
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -266,6 +280,7 @@ import {
   weightAdd,
 } from '@renderer/utils/utils'
 import EnterIcon from '@renderer/icons/Enter.vue'
+import Examples from '@renderer/views/Examples.vue'
 
 const props = defineProps<{
   modelValue: string
@@ -580,6 +595,11 @@ function handleOpenPromptEditor(promptID: string): void {
   } else {
     ElMessage.warning('提示词不存在')
   }
+}
+
+const examplesDialogVisible = ref(false)
+function handleOpenExamplesDialog(): void {
+  examplesDialogVisible.value = true
 }
 
 async function handleGetTextTranslation(text: string): Promise<string> {
