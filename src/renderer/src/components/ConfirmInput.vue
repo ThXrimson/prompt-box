@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center relative w-full border border-gray-300 rounded">
+  <div class="flex relative w-full border border-gray-300 rounded">
     <el-input
       v-if="isEditing"
       ref="inputRef"
@@ -12,35 +12,17 @@
       class="example-input"
       @blur="handleSave"
       @keyup.esc="handleCancel"
-    >
-      <!-- @blur="handleSave" -->
-      <!-- <template #suffix>
-        <div class="flex items-center gap-2 pr-2.5">
-          <el-icon
-            class="text-base cursor-pointer text-gray-600 hover:text-green-500 transition-colors duration-200"
-            @click="handleSave"
-          >
-            <Check />
-          </el-icon>
-          <el-icon
-            class="text-base cursor-pointer text-gray-600 hover:text-red-500 transition-colors duration-200"
-            @click="handleCancel"
-          >
-            <Close />
-          </el-icon>
-        </div>
-      </template> -->
-    </el-input>
+    />
 
     <el-scrollbar
       v-else
       class="flex-1 flex"
       wrap-class="flex-1 flex"
-      view-class="flex items-center justify-between w-full py-1 px-2 transition-all duration-200 hover:border-gray-400"
+      view-class="flex justify-between w-full py-1 px-2 transition-all duration-200 hover:border-gray-400"
       @click="handleEdit"
     >
       <el-text
-        class="w-full leading-5 max-h-32"
+        class="confirm-text w-full leading-5 max-h-32"
         :class="{
           'text-gray-400!': checkTextEmpty(displayValue),
           'text-gray-700!': !checkTextEmpty(displayValue),

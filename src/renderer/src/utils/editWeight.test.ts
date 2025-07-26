@@ -4,7 +4,7 @@ import { addWeight, clearWeight } from './editWeight'
 describe('addWeight', () => {
   it('should add 0.1 to existing number after colon', () => {
     const result = addWeight('([(asdfsadf:1.1)])')
-    expect(result).toBe('([(asdfsadf:1.20)])')
+    expect(result).toBe('([(asdfsadf:1.2)])')
   })
 
   it('should add :1.1 when no number exists', () => {
@@ -14,12 +14,12 @@ describe('addWeight', () => {
 
   it('should work with square brackets and add to existing number', () => {
     const result = addWeight('[(test:2.5)]')
-    expect(result).toBe('[(test:2.60)]')
+    expect(result).toBe('[(test:2.6)]')
   })
 
   it('should only process the last number after colon', () => {
     const result = addWeight('(multiple:1.0:2.0)')
-    expect(result).toBe('(multiple:1.0:2.10)')
+    expect(result).toBe('(multiple:1.0:2.1)')
   })
 
   it('should return original string if not matching bracket pair format', () => {
@@ -54,17 +54,17 @@ describe('addWeight', () => {
 
   it('should add custom delta to existing number', () => {
     const result = addWeight('(value:2.0)', 0.3)
-    expect(result).toBe('(value:2.30)')
+    expect(result).toBe('(value:2.3)')
   })
 
   it('should handle negative delta', () => {
     const result = addWeight('(value:2.0)', -0.1)
-    expect(result).toBe('(value:1.90)')
+    expect(result).toBe('(value:1.9)')
   })
 
   it('should handle integer numbers', () => {
     const result = addWeight('(test:1)')
-    expect(result).toBe('(test:1.10)')
+    expect(result).toBe('(test:1.1)')
   })
 
   it('should handle mixed brackets correctly', () => {

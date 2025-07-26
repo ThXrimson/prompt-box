@@ -1,5 +1,9 @@
 <template>
-  <el-dialog v-model="editingPrompt" title="编辑提示词">
+  <el-dialog
+    v-model="editingPrompt"
+    title="编辑提示词"
+    @keyup.esc.stop.prevent="editingPrompt = false"
+  >
     <el-input
       v-model="editingPromptText"
       placeholder="编辑提示词"
@@ -20,6 +24,7 @@
   >
     <div class="w-8 h-0.5 bg-gray-400 rounded"></div>
   </div>
+  <!-- 编辑框容器 -->
   <div
     ref="containerRef"
     class="flex flex-col bg-white rounded-lg shadow-md min-h-50"
@@ -49,10 +54,16 @@
               <el-dropdown
                 v-for="item in promptList"
                 :key="item.id"
-                trigger="contextmenu"
+                trigger="hover"
               >
                 <el-tag
-                  :type="item.disabled ? 'info' : 'primary'"
+                  :type="
+                    item.disabled
+                      ? 'info'
+                      : storage.checkPromptExists(item.text)
+                        ? 'success'
+                        : 'primary'
+                  "
                   size="small"
                   disable-transitions
                   closable
@@ -61,7 +72,17 @@
                   @click="handleEditPrompt(item.id)"
                   @close="handleDeletePrompt(item.id)"
                 >
-                  {{ promptTextView[item.text] }}
+                  <!-- {{ promptTextView[item.text] }} -->
+                  <span
+                    v-for="part in promptTextView[item.text]"
+                    :key="part.id"
+                    :class="{
+                      'bg-yellow-300': part.searched,
+                      'bg-red-400': part.focused,
+                    }"
+                  >
+                    {{ part.text }}
+                  </span>
                 </el-tag>
 
                 <template #dropdown>
@@ -118,74 +139,88 @@
           </div>
         </el-scrollbar>
       </div>
-      <div class="flex gap-2 justify-start">
-        <el-tooltip
-          content="添加为示例"
-          :enterable="false"
-          placement="top-end"
-          :hide-after="0"
-        >
-          <el-button :icon="Plus" @click="emit('add-example', joinPrompts())" />
-        </el-tooltip>
-        <el-tooltip
-          content="选择示例为模板"
-          :enterable="false"
-          placement="top-end"
-          :hide-after="0"
-        >
-          <el-button :icon="Star" class="m-0!" disabled />
-        </el-tooltip>
-        <el-tooltip
-          :content="!editMode ? '编辑模式' : '显示模式'"
-          :enterable="false"
-          placement="top-start"
-          :hide-after="0"
-        >
-          <el-button
-            :icon="Edit"
-            :type="!editMode ? 'default' : 'success'"
-            class="m-0!"
-            @click="handleSwitchEditMode"
-          />
-        </el-tooltip>
-        <el-tooltip
-          content="复制"
-          :enterable="false"
-          placement="top-start"
-          :hide-after="0"
-        >
-          <el-button
-            :icon="CopyDocument"
-            class="m-0!"
-            @click="handleCopyToClipboard"
-          />
-        </el-tooltip>
-        <el-tooltip
-          content="撤销"
-          :enterable="false"
-          placement="top-end"
-          :hide-after="0"
-        >
-          <el-button
-            :icon="Back"
-            :disabled="!canUndo"
-            class="m-0!"
-            @click="handleUndoEditor"
-          />
-        </el-tooltip>
-        <el-tooltip
-          content="重做"
-          :enterable="false"
-          placement="top-end"
-          :hide-after="0"
-        >
-          <el-button
-            :icon="Right"
-            :disabled="!canRedo"
-            class="m-0!"
-            @click="handleRedoEditor"
-          />
-        </el-tooltip>
+
+      <!-- 工具栏 -->
+      <div class="flex justify-between gap-2">
+        <div class="flex gap-2 justify-start">
+          <el-tooltip
+            content="添加为示例"
+            :enterable="false"
+            placement="top-end"
+            :hide-after="0"
+          >
+            <el-button
+              :icon="Plus"
+              @click="emit('add-example', joinPrompts())"
+            />
+          </el-tooltip>
+          <el-tooltip
+            content="选择示例为模板"
+            :enterable="false"
+            placement="top-end"
+            :hide-after="0"
+          >
+            <el-button :icon="Star" class="m-0!" disabled />
+          </el-tooltip>
+          <el-tooltip
+            :content="!editMode ? '编辑模式' : '显示模式'"
+            :enterable="false"
+            placement="top-start"
+            :hide-after="0"
+          >
+            <el-button
+              :icon="Edit"
+              :type="!editMode ? 'default' : 'success'"
+              class="m-0!"
+              @click="handleSwitchEditMode"
+            />
+          </el-tooltip>
+          <el-tooltip
+            content="复制"
+            :enterable="false"
+            placement="top-start"
+            :hide-after="0"
+          >
+            <el-button
+              :icon="CopyDocument"
+              class="m-0!"
+              @click="handleCopyToClipboard"
+            />
+          </el-tooltip>
+          <el-tooltip
+            content="撤销"
+            :enterable="false"
+            placement="top-end"
+            :hide-after="0"
+          >
+            <el-button
+              :icon="Back"
+              :disabled="!canUndo"
+              class="m-0!"
+              @click="handleUndoEditor"
+            />
+          </el-tooltip>
+          <el-tooltip
+            content="重做"
+            :enterable="false"
+            placement="top-end"
+            :hide-after="0"
+          >
+            <el-button
+              :icon="Right"
+              :disabled="!canRedo"
+              class="m-0!"
+              @click="handleRedoEditor"
+            />
+          </el-tooltip>
+        </div>
+
+        <el-input
+          v-model="searchText"
+          :prefix-icon="Search"
+          :suffix-icon="EnterIcon"
+          clearable
+        />
       </div>
     </div>
   </div>
@@ -194,6 +229,9 @@
 <script setup lang="ts">
 // TODO 添加从示例添加提示词的功能，和撤回和重做的功能
 // TODO 点击tag有添加prompt功能
+
+// TODO 搜索框
+// 3、enter键跳转到下一个搜索，当前focus的搜索为红色高亮
 import {
   Edit,
   CopyDocument,
@@ -201,13 +239,22 @@ import {
   Plus,
   Back,
   Right,
+  Search,
 } from '@element-plus/icons-vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
-import { addWeight, clearWeight } from '@renderer/utils/editWeight'
 import { useManualRefHistory, watchArray } from '@vueuse/core'
 import { cloneDeep } from 'lodash'
 import { useStorage } from '@renderer/stores/storage'
+import {
+  stripWeight,
+  joinWeight,
+  LeftBracket,
+  stripBrackets,
+  joinBrackets,
+  weightAdd,
+} from '@renderer/utils/utils'
+import EnterIcon from '@renderer/icons/Enter.vue'
 
 const props = defineProps<{
   modelValue: string
@@ -293,6 +340,8 @@ const stopDragging = (): void => {
 interface PromptView {
   id: string
   text: string
+  leftBrackets: LeftBracket[]
+  weight: string
   disabled: boolean
 }
 const promptList = ref<PromptView[]>([])
@@ -312,6 +361,8 @@ defineExpose({
     promptList.value.push({
       id: crypto.randomUUID(),
       text: text.trim(),
+      leftBrackets: [],
+      weight: '',
       disabled: false,
     })
     inputText.value = ''
@@ -339,13 +390,55 @@ watchArray(
     deep: true,
   }
 )
+
+type TextPart = {
+  id: string
+  text: string
+  searched: boolean
+  focused: boolean
+}
+
+const searchText = ref('')
+
 const promptTextView = computed(() => {
-  const textToView: Record<string, string> = {}
-  promptList.value.forEach(({ text }) => {
-    if (promptTextTranslations.value[text]) {
-      textToView[text] = `${text} | ${promptTextTranslations.value[text]}`
-    } else {
-      textToView[text] = text
+  const regex = new RegExp(searchText.value, 'ig')
+
+  const textToView: Record<string, TextPart[]> = {}
+  promptList.value.forEach((item) => {
+    let text = item.text
+    if (promptTextTranslations.value[item.text]) {
+      text = `${joinBrackets(joinWeight(item.text, item.weight), item.leftBrackets)} | ${promptTextTranslations.value[item.text]}`
+    }
+    const matchesIndices = Array.from(text.matchAll(regex)).map(
+      (match) => match.index
+    )
+
+    textToView[item.text] = []
+    let prevIndex = 0
+    for (const index of matchesIndices) {
+      if (prevIndex !== index) {
+        textToView[item.text].push({
+          id: item.id,
+          text: text.slice(prevIndex, index),
+          searched: false,
+          focused: false,
+        })
+      }
+      textToView[item.text].push({
+        id: item.id,
+        text: text.slice(index, index + searchText.value.length),
+        searched: true,
+        focused: false,
+      })
+      prevIndex = index + searchText.value.length
+    }
+    if (prevIndex < text.length) {
+      textToView[item.text].push({
+        id: item.id,
+        text: text.slice(prevIndex),
+        searched: false,
+        focused: false,
+      })
     }
   })
   return textToView
@@ -381,7 +474,7 @@ async function handleCopyToClipboard(): Promise<void> {
 function handleAddBrackets(id: string): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
-    item.text = `(${item.text})`
+    item.leftBrackets.push('(')
     emit('update:modelValue', joinPrompts())
   }
 }
@@ -389,7 +482,7 @@ function handleAddBrackets(id: string): void {
 function handleAddSquareBrackets(id: string): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
-    item.text = `[${item.text}]`
+    item.leftBrackets.push('[')
     emit('update:modelValue', joinPrompts())
   }
 }
@@ -397,7 +490,7 @@ function handleAddSquareBrackets(id: string): void {
 function handleAddAngleBrackets(id: string): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
-    item.text = `<${item.text}>`
+    item.leftBrackets.push('<')
     emit('update:modelValue', joinPrompts())
   }
 }
@@ -405,9 +498,7 @@ function handleAddAngleBrackets(id: string): void {
 function handleDeleteOnePairBrackets(id: string): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
-    item.text = item.text
-      .replace(/^\((.*)\)$/, '$1')
-      .replace(/^\[(.*)\]$/, '$1')
+    item.leftBrackets.shift()
     emit('update:modelValue', joinPrompts())
   }
 }
@@ -415,8 +506,7 @@ function handleDeleteOnePairBrackets(id: string): void {
 function handleDeleteAllBrackets(id: string): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
-    // eslint-disable-next-line no-useless-escape
-    item.text = item.text.replace(/([\(\[]+)(.*?)([\)\]]+)/g, '$2')
+    item.leftBrackets.length = 0
     emit('update:modelValue', joinPrompts())
   }
 }
@@ -424,7 +514,7 @@ function handleDeleteAllBrackets(id: string): void {
 function handleAddWeightToPrompt(id: string, delta: number): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
-    item.text = addWeight(item.text, delta)
+    item.weight = weightAdd(item.weight, delta)
     emit('update:modelValue', joinPrompts())
   }
 }
@@ -432,7 +522,7 @@ function handleAddWeightToPrompt(id: string, delta: number): void {
 function handleClearWeightOfPrompt(id: string): void {
   const item = promptList.value.find((item) => item.id === id)
   if (item) {
-    item.text = clearWeight(item.text)
+    item.weight = ''
     emit('update:modelValue', joinPrompts())
   }
 }
@@ -483,9 +573,13 @@ function splitText(text: string): PromptView[] {
     .split(',')
     .filter((item) => item !== '')
     .map((item) => {
+      const { content, leftBrackets } = stripBrackets(item.trim())
+      const { content: text, weight } = stripWeight(content)
       return {
         id: crypto.randomUUID(),
-        text: item.trim(),
+        text,
+        leftBrackets,
+        weight,
         disabled: false,
       }
     })
@@ -494,7 +588,9 @@ function splitText(text: string): PromptView[] {
 function joinPrompts(): string {
   return promptList.value
     .filter((item) => !item.disabled)
-    .map((item) => item.text)
+    .map((item) =>
+      joinBrackets(joinWeight(item.text, item.weight), item.leftBrackets)
+    )
     .join(', ')
 }
 </script>

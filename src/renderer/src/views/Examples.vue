@@ -54,7 +54,7 @@
                         })
                       "
                     />
-                    <el-button
+                    <!-- <el-button
                       :icon="Edit"
                       :type="
                         canEditExamplesText[editorTab[example.id]][example.id]
@@ -66,7 +66,7 @@
                       @click="
                         handleEditExampleText(example.id, editorTab[example.id])
                       "
-                    />
+                    /> -->
                     <el-button
                       :icon="CopyDocument"
                       link
@@ -107,7 +107,7 @@
                     />
                   </el-select>
                 </div>
-                <el-input
+                <!-- <el-input
                   v-for="tab in tabs"
                   v-show="editorTab[example.id] === tab"
                   :key="tab"
@@ -117,6 +117,17 @@
                   resize="none"
                   :disabled="!canEditExamplesText[tab][example.id]"
                   class="example-input"
+                /> -->
+                <confirm-input
+                  v-for="tab in tabs"
+                  v-show="editorTab[example.id] === tab"
+                  :key="tab"
+                  :model-value="examplesText[tab][example.id]"
+                  placeholder="请输入示例文本"
+                  class="flex-1 min-h-0"
+                  @save="
+                    handleConfirmEditExampleTextFunc(example.id, tab)($event)
+                  "
                 />
               </div>
             </div>
@@ -133,6 +144,7 @@
       align-center
       class="w-auto! h-[80vh] flex flex-col"
       body-class="flex-1 min-h-0 flex gap-2 justify-between"
+      @keyup.esc.stop.prevent="editGalleryVisible = false"
     >
       <template #default>
         <Gallery :example-i-d="editGalleryExampleID" />
@@ -148,7 +160,7 @@ import {
   CirclePlusFilled,
   CopyDocument,
   Delete,
-  Edit,
+  // Edit,
 } from '@element-plus/icons-vue'
 import { getImageUrl } from '@renderer/utils/utils'
 import { watchArray } from '@vueuse/core'
@@ -182,11 +194,11 @@ const editGalleryExampleID = ref<string | null>(null)
 const editGalleryVisible = ref(false)
 
 // 是否可以编辑示例文本
-const canEditExamplesText = ref<Record<Tabs, Record<string, boolean>>>({
-  positive: {},
-  negative: {},
-  extra: {},
-})
+// const canEditExamplesText = ref<Record<Tabs, Record<string, boolean>>>({
+//   positive: {},
+//   negative: {},
+//   extra: {},
+// })
 // 示例的编辑框当前的tab
 const editorTab = ref<Record<string, Tabs>>({})
 // 示例所属提示词
@@ -201,10 +213,10 @@ watchArray(
   () => examples.value.map((e) => e.id),
   (_newArr, _oldArr, added, removed) => {
     added.forEach((id) => {
-      for (const tab of tabs) {
-        canEditExamplesText.value[tab][id] =
-          canEditExamplesText.value[tab][id] ?? false
-      }
+      // for (const tab of tabs) {
+      //   canEditExamplesText.value[tab][id] =
+      //     canEditExamplesText.value[tab][id] ?? false
+      // }
       for (const [tab, field] of Object.entries(tabToField)) {
         examplesText.value[tab][id] =
           examples.value.find((e) => e.id === id)?.[field] || ''
@@ -214,9 +226,9 @@ watchArray(
     })
     if (removed) {
       removed.forEach((id) => {
-        for (const tab of tabs) {
-          delete canEditExamplesText.value[tab][id]
-        }
+        // for (const tab of tabs) {
+        //   delete canEditExamplesText.value[tab][id]
+        // }
         delete editorTab.value[id]
         delete examplePrompts.value[id]
         for (const tab of tabs) {
@@ -263,27 +275,27 @@ async function handleDeleteExample(id: string): Promise<void> {
   }
 }
 
-async function handleEditExampleText(
-  exampleID: string,
-  type: 'positive' | 'negative' | 'extra'
-): Promise<void> {
-  if (canEditExamplesText.value[type][exampleID]) {
-    const field = tabToField[type]
-    const success = await storage.updateExample({
-      id: exampleID,
-      [field]: examplesText.value[type][exampleID],
-    })
-    if (success) {
-      ElMessage.success('示例文本更新成功')
-    } else {
-      ElMessage.error('示例文本更新失败')
-      examplesText.value[type][exampleID] =
-        storage.examples.get(exampleID)?.[field] || ''
-    }
-  }
-  canEditExamplesText.value[type][exampleID] =
-    !canEditExamplesText.value[type][exampleID]
-}
+// async function handleEditExampleText(
+//   exampleID: string,
+//   type: 'positive' | 'negative' | 'extra'
+// ): Promise<void> {
+//   if (canEditExamplesText.value[type][exampleID]) {
+//     const field = tabToField[type]
+//     const success = await storage.updateExample({
+//       id: exampleID,
+//       [field]: examplesText.value[type][exampleID],
+//     })
+//     if (success) {
+//       ElMessage.success('示例文本更新成功')
+//     } else {
+//       ElMessage.error('示例文本更新失败')
+//       examplesText.value[type][exampleID] =
+//         storage.examples.get(exampleID)?.[field] || ''
+//     }
+//   }
+//   canEditExamplesText.value[type][exampleID] =
+//     !canEditExamplesText.value[type][exampleID]
+// }
 
 function handleEditExampleGallery(exampleID: string): void {
   editGalleryExampleID.value = exampleID
@@ -328,6 +340,23 @@ async function handleChangeExamplePrompt(exampleID: string): Promise<void> {
   if (removedPromptIDs.length > 0) {
     for (const promptID of removedPromptIDs) {
       await storage.deleteExampleIDFromPrompt(promptID, exampleID)
+    }
+  }
+}
+
+function handleConfirmEditExampleTextFunc(exampleID: string, type: Tabs) {
+  const field = tabToField[type]
+  return async (text: string) => {
+    const success = await storage.updateExample({
+      id: exampleID,
+      [field]: text,
+    })
+    if (success) {
+      ElMessage.success('示例文本更新成功')
+    } else {
+      ElMessage.error('示例文本更新失败')
+      examplesText.value[type][exampleID] =
+        storage.examples.get(exampleID)?.[field] || ''
     }
   }
 }

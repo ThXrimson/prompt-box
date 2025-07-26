@@ -4,7 +4,7 @@
 
     <el-scrollbar view-class="h-[50vh]">
       <el-table :data="tagCounter">
-        <el-table-column label="标签" sortable>
+        <el-table-column label="标签">
           <template #default="scope">
             <el-input
               v-if="editingTag[scope.row.id]"
@@ -22,12 +22,14 @@
               :class="{
                 'text-gray-400!': editingTag[scope.row.id],
               }"
+              :disabled="scope.row.id === uncategorizedTagID"
               @click="handleEditTag(scope.row.id)"
             />
             <el-button
               size="small"
               type="danger"
               :icon="Delete"
+              :disabled="scope.row.id === uncategorizedTagID"
               @click="handelDeleteTag(scope.row.id)"
             />
           </template>
@@ -36,7 +38,11 @@
     </el-scrollbar>
   </div>
 
-  <el-dialog v-model="showAddTagDialog" title="添加标签">
+  <el-dialog
+    v-model="showAddTagDialog"
+    title="添加标签"
+    @keyup.esc.stop.prevent="showAddTagDialog = false"
+  >
     <el-input
       v-model="addTag"
       placeholder="输入标签名称"
@@ -51,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { useStorage } from '@renderer/stores/storage'
+import { uncategorizedTagID, useStorage } from '@renderer/stores/storage'
 import { EditPen, Delete, Plus } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 
@@ -63,6 +69,10 @@ const tagCounter = computed(() => {
     tagCounter[tag.id] = 0
   })
   storage.prompts.forEach((prompt) => {
+    if (prompt.tagIDs.length === 0) {
+      tagCounter[uncategorizedTagID] = (tagCounter[uncategorizedTagID] || 0) + 1 // 统计无标签的提示词
+      return
+    }
     prompt.tagIDs.forEach((id) => {
       if (tagCounter[id]) {
         tagCounter[id]++

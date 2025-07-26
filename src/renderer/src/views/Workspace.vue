@@ -4,7 +4,8 @@
     <navigator>
       <div class="flex gap-2 justify-start">
         <el-text
-          class="font-bold! cursor-pointer"
+          truncated
+          class="font-bold! cursor-pointer max-w-24!"
           @click="handleOpenWorkspaceNameDialog"
         >
           {{ workspace.name || '未命名' }}
@@ -15,6 +16,7 @@
             placeholder="请输入工作区名称"
             clearable
             @keyup.enter="handleConfirmEditWorkspaceName(tempWorkspaceText)"
+            @keyup.esc.stop.prevent="handleCancelEditWorkspaceName"
           />
           <template #footer>
             <el-button @click="handleCancelEditWorkspaceName">取消</el-button>
@@ -27,17 +29,44 @@
           </template>
         </el-dialog>
 
-        <el-input
+        <!-- <el-input
           v-model="addTag"
           placeholder="添加标签"
           clearable
-          class="w-60!"
+          class="flex-[0.5_2] min-w-0"
           @keyup.enter="handleAddTag"
         >
           <template #prefix>
+            <el-icon><Discount /></el-icon>
             <el-button :icon="Plus" link @click="handleAddTag" />
           </template>
-        </el-input>
+        </el-input> -->
+
+        <el-tooltip content="管理标签" placement="bottom-start" :hide-after="0">
+          <el-button :icon="Discount" @click="tagDialogVisible = true" />
+        </el-tooltip>
+        <el-dialog
+          v-if="tagDialogVisible"
+          v-model="tagDialogVisible"
+          title="标签管理"
+          @keyup.esc.stop.prevent="tagDialogVisible = false"
+        >
+          <tag-editor />
+        </el-dialog>
+
+        <el-select-v2
+          model-value=""
+          :options="Array.from(storage.prompts.values())"
+          :props="{
+            label: 'text',
+            value: 'text',
+          }"
+          filterable
+          placeholder="查找提示词"
+          clearable
+          class="flex-1 min-w-0"
+          @update:model-value="editor?.addText($event)"
+        />
 
         <el-select-v2
           v-model="workspace.tagIDs"
@@ -101,11 +130,12 @@
 <script setup lang="ts">
 import { useStorage } from '@renderer/stores/storage'
 import { onMounted, ref, useTemplateRef, watch } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
+import { Discount } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { Workspace } from '@shared/types'
 import { watchArray } from '@vueuse/core'
 import { VueDraggable } from 'vue-draggable-plus'
+import TagEditor from '@renderer/components/TagEditor.vue'
 
 const storage = useStorage()
 
@@ -156,6 +186,7 @@ watch(editorText, async (newText) => {
 })
 
 const addTag = ref('')
+const tagDialogVisible = ref(false)
 
 async function handleAddTag(): Promise<void> {
   if (!workspace.value.id) {

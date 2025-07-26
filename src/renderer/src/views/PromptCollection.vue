@@ -28,6 +28,7 @@
           v-if="tagDialogVisible"
           v-model="tagDialogVisible"
           title="标签管理"
+          @keyup.esc.stop.prevent="tagDialogVisible = false"
         >
           <tag-editor />
         </el-dialog>
@@ -167,7 +168,7 @@ import {
   Discount,
 } from '@element-plus/icons-vue'
 import { computed, nextTick, ref, useTemplateRef } from 'vue'
-import { useStorage } from '@renderer/stores/storage'
+import { uncategorizedTagID, useStorage } from '@renderer/stores/storage'
 import TagEditor from '@renderer/components/TagEditor.vue'
 
 interface PromptView {
@@ -204,7 +205,7 @@ const promptsView = computed(() => {
       if (filteredTagIDs.value.length === 0) {
         return true
       }
-      if (tagSet.has('0') && prompt.tagIDs.length === 0) {
+      if (tagSet.has(uncategorizedTagID) && prompt.tagIDs.length === 0) {
         // 未分类的提示词
         return true
       }

@@ -47,7 +47,11 @@
   </el-scrollbar>
 
   <!-- 添加图片对话框 -->
-  <el-dialog v-model="addImageDialogVisible" title="添加图片">
+  <el-dialog
+    v-model="addImageDialogVisible"
+    title="添加图片"
+    @keyup.esc.stop.prevent="handleCancelAddExampleImage"
+  >
     <el-text>图片地址（URL或本地文件）</el-text>
     <div class="flex gap-2">
       <el-input

@@ -1,7 +1,7 @@
 <template>
   <div
     ref="tagCard"
-    class="tag-collection h-full flex flex-col gap-1.5 border-2 border-gray-200 rounded-lg p-2 bg-white"
+    class="tag-collection h-full flex flex-col gap-1.5 border-2 border-gray-200 rounded-lg p-2 bg-white min-w-48"
   >
     <div class="drag-handle grid justify-center-safe hover:cursor-pointer">
       <drag-handle
@@ -34,12 +34,10 @@
         </template>
       </el-input>
     </div>
-    <el-scrollbar
-      view-class="prompt-container flex flex-col flex-1 min-h-0 gap-1.5"
-    >
+    <el-scrollbar view-class="prompt-container flex flex-col gap-1.5">
       <div v-for="prompt in promptView" :key="prompt.id" class="prompt-wrapper">
         <div
-          class="flex justify-between w-full border-1 border-gray-200 bg-teal-400 rounded-sm p-1.5 hover:bg-teal-500 transition-all duration-300"
+          class="flex justify-between border-1 border-gray-200 bg-teal-400 rounded-sm p-1.5 hover:bg-teal-500 transition-all duration-300"
         >
           <el-tooltip
             :content="prompt.translation || prompt.text"
@@ -48,7 +46,6 @@
             :hide-after="0"
           >
             <el-text
-              truncated
               class="cursor-pointer text-white! font-bold"
               @click="handleCopyPrompt(prompt.text)"
             >
@@ -93,9 +90,10 @@
   <el-dialog
     v-if="editPromptDialogVisible && editingPromptID !== null"
     v-model="editPromptDialogVisible"
-    title="编辑 Prompt"
+    title="编辑提示词"
     append-to-body
     class="w-auto! h-auto! mx-10! mt-10! mb-0!"
+    @keyup.esc.stop.prevent="editPromptDialogVisible = false"
   >
     <prompt-editor :prompt-id="editingPromptID" />
   </el-dialog>
@@ -107,7 +105,7 @@ import { Plus, Close } from '@element-plus/icons-vue'
 import DragHandle from '../icons/DragHandle.vue'
 import { Pointer, Edit, Delete } from '@element-plus/icons-vue'
 import type { Prompt, Tag } from '@shared/types'
-import { useStorage } from '@renderer/stores/storage'
+import { useStorage, uncategorizedTagID } from '@renderer/stores/storage'
 import { clone, cloneDeep } from 'lodash'
 
 const props = defineProps<{
@@ -161,10 +159,10 @@ async function handleAddPrompt(): Promise<void> {
   const newPrompt = await storage.addPrompt({
     text: promptInput.value,
   })
-  if (newPrompt) {
+  if (newPrompt && props.tag.id !== uncategorizedTagID) {
     const success = await storage.updatePromptTags(newPrompt.id, [props.tag.id])
     if (success) {
-      ElMessage.success(`新增提示词并添加成功: ${newPrompt}`)
+      ElMessage.success(`新增提示词并添加成功: ${newPrompt.text}`)
       promptInput.value = ''
     } else {
       ElMessage.error('新增提示词并添加失败')
