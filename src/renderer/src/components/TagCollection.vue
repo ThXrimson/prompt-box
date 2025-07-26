@@ -102,7 +102,7 @@
     class="w-auto! h-auto! mx-10! mt-10! mb-0!"
     @keyup.esc.stop.prevent="editPromptDialogVisible = false"
   >
-    <prompt-editor :prompt-id="editingPromptID" />
+    <prompt-editor :prompt-i-d="editingPromptID" />
   </el-dialog>
 </template>
 

@@ -1,8 +1,8 @@
 <template>
   <el-dialog
-    v-model="editingPrompt"
+    v-model="isEditingPromptText"
     title="编辑提示词"
-    @keyup.esc.stop.prevent="editingPrompt = false"
+    @keyup.esc.stop.prevent="isEditingPromptText = false"
   >
     <el-input
       v-model="editingPromptText"
@@ -13,7 +13,7 @@
       <el-button type="primary" @click="handleConfirmEditPrompt">
         确定
       </el-button>
-      <el-button @click="editingPrompt = false"> 取消 </el-button>
+      <el-button @click="isEditingPromptText = false"> 取消 </el-button>
     </template>
   </el-dialog>
   <!-- 可拖动的handle -->
@@ -60,7 +60,7 @@
                   :type="
                     item.disabled
                       ? 'info'
-                      : storage.checkPromptExists(item.text)
+                      : item.existsID !== null
                         ? 'success'
                         : 'primary'
                   "
@@ -87,13 +87,7 @@
 
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item @click="handleAddPrompt(item.text)">
-                      收藏提示词
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      divided
-                      @click="handleAddBrackets(item.id)"
-                    >
+                    <el-dropdown-item @click="handleAddBrackets(item.id)">
                       添加圆括号
                     </el-dropdown-item>
                     <el-dropdown-item @click="handleAddSquareBrackets(item.id)">
@@ -128,8 +122,17 @@
                     </el-dropdown-item>
                     <el-dropdown-item
                       divided
-                      @click="item.disabled = !item.disabled"
+                      @click="handleAddPrompt(item.text)"
                     >
+                      收藏提示词
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      :disabled="item.existsID === null"
+                      @click="handleOpenPromptEditor(item.existsID!)"
+                    >
+                      编辑提示词
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="item.disabled = !item.disabled">
                       {{ item.disabled ? '启用' : '禁用' }}提示词
                     </el-dropdown-item>
                   </el-dropdown-menu>
@@ -224,6 +227,14 @@
       </div>
     </div>
   </div>
+
+  <el-dialog
+    v-if="editingPromptID !== null"
+    v-model="editingPromptVisible"
+    title="编辑提示词"
+  >
+    <prompt-editor :prompt-i-d="editingPromptID" />
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -271,28 +282,28 @@ const inputText = ref('')
 const editMode = ref(false)
 
 // 是否正在编辑提示词
-const editingPrompt = ref(false)
-const editingPromptID = ref<string | null>(null)
+const isEditingPromptText = ref(false)
+const editingPromptTextID = ref<string | null>(null)
 const editingPromptText = ref('')
 
 function handleEditPrompt(id: string): void {
   const text = promptList.value.find((item) => item.id === id)?.text
   if (text) {
-    editingPromptID.value = id
+    editingPromptTextID.value = id
     editingPromptText.value = text
-    editingPrompt.value = true
+    isEditingPromptText.value = true
   }
 }
 
 function handleConfirmEditPrompt(): void {
   if (!editingPromptText.value.trim()) return
   const item = promptList.value.find(
-    (item) => item.id === editingPromptID.value
+    (item) => item.id === editingPromptTextID.value
   )
   if (item) {
     item.text = editingPromptText.value.trim()
     emit('update:modelValue', joinPrompts())
-    editingPrompt.value = false
+    isEditingPromptText.value = false
   }
 }
 
@@ -342,6 +353,8 @@ interface PromptView {
   text: string
   leftBrackets: LeftBracket[]
   weight: string
+  // 是否存在于存储中
+  existsID: string | null
   disabled: boolean
 }
 const promptList = ref<PromptView[]>([])
@@ -349,7 +362,7 @@ watch(
   () => props.modelValue,
   (newValue) => {
     if (newValue) {
-      promptList.value = splitText(newValue)
+      promptList.value = splitTextToPromptView(newValue)
     } else {
       promptList.value = []
     }
@@ -363,6 +376,7 @@ defineExpose({
       text: text.trim(),
       leftBrackets: [],
       weight: '',
+      existsID: storage.getPromptIDIfExists(text.trim()),
       disabled: false,
     })
     inputText.value = ''
@@ -447,7 +461,7 @@ const promptTextView = computed(() => {
 function handleSwitchEditMode(): void {
   if (editMode.value) {
     // 切换到显示模式
-    promptList.value = splitText(inputText.value)
+    promptList.value = splitTextToPromptView(inputText.value)
     emit('update:modelValue', joinPrompts())
   } else {
     // 切换到编辑模式
@@ -556,6 +570,18 @@ async function handleAddPrompt(text: string): Promise<void> {
   }
 }
 
+const editingPromptVisible = ref(false)
+const editingPromptID = ref<string | null>(null)
+
+function handleOpenPromptEditor(promptID: string): void {
+  if (promptID) {
+    editingPromptVisible.value = true
+    editingPromptID.value = promptID
+  } else {
+    ElMessage.warning('提示词不存在')
+  }
+}
+
 async function handleGetTextTranslation(text: string): Promise<string> {
   for (const item of storage.prompts.values()) {
     if (item.text === text && item.translation) {
@@ -567,7 +593,7 @@ async function handleGetTextTranslation(text: string): Promise<string> {
   return ''
 }
 
-function splitText(text: string): PromptView[] {
+function splitTextToPromptView(text: string): PromptView[] {
   if (text === '') return []
   return text
     .split(',')
@@ -580,6 +606,7 @@ function splitText(text: string): PromptView[] {
         text,
         leftBrackets,
         weight,
+        existsID: storage.getPromptIDIfExists(text),
         disabled: false,
       }
     })

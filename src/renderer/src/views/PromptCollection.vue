@@ -151,7 +151,7 @@
       >
         <prompt-editor
           v-if="selectedPromptID !== null"
-          :prompt-id="selectedPromptID"
+          :prompt-i-d="selectedPromptID"
         />
       </el-scrollbar>
     </div>
@@ -284,7 +284,7 @@ async function handleConfirmAddPrompt(): Promise<void> {
     creatingPrompt.value = false
     return
   }
-  if (storage.checkPromptExists(newPromptText.value.trim())) {
+  if (storage.getPromptIDIfExists(newPromptText.value.trim()) !== null) {
     ElMessage.warning('提示词已存在')
     creatingPrompt.value = false
     return

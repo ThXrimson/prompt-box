@@ -216,7 +216,7 @@
     @keyup.esc.stop.prevent="editGalleryVisible = false"
   >
     <existing-examples
-      :prompt-i-d="promptId"
+      :prompt-i-d="promptID"
       @add-example="handleAddExampleFromExisting"
     />
   </el-dialog>
@@ -242,22 +242,22 @@ const tabToField: Record<string, string> = {
 type Tabs = (typeof tabs)[number]
 
 const props = defineProps<{
-  promptId: string
+  promptID: string
 }>()
 
 const storage = useStorage()
 const allTags = computed(() => Array.from(storage.tags.values()))
 
 // 编辑 Prompt 相关数据
-const promptText = computed(() => storage.prompts.get(props.promptId)?.text)
+const promptText = computed(() => storage.prompts.get(props.promptID)?.text)
 const promptTranslation = computed(
-  () => storage.prompts.get(props.promptId)?.translation
+  () => storage.prompts.get(props.promptID)?.translation
 )
 const promptDescription = computed(
-  () => storage.prompts.get(props.promptId)?.description
+  () => storage.prompts.get(props.promptID)?.description
 )
 const selectedTags = ref<(Tag | string)[]>([])
-const examples = computed(() => storage.getExamplesByPromptID(props.promptId))
+const examples = computed(() => storage.getExamplesByPromptID(props.promptID))
 
 // 编辑或添加示例相关数据
 const editGalleryExampleID = ref<string | null>(null)
@@ -324,9 +324,9 @@ watchArray(
 )
 
 watch(
-  () => props.promptId,
+  () => props.promptID,
   () => {
-    const prompt = lodash.cloneDeep(storage.prompts.get(props.promptId))
+    const prompt = lodash.cloneDeep(storage.prompts.get(props.promptID))
     if (prompt !== undefined) {
       selectedTags.value = prompt.tagIDs
         .map((id) => storage.getTagByID(id))
@@ -344,18 +344,18 @@ async function handleChangePromptText(value: string): Promise<void> {
     ElMessage.warning('提示词不能为空')
     return
   }
-  if (storage.checkPromptExists(value.trim())) {
+  if (storage.getPromptIDIfExists(value.trim()) !== null) {
     ElMessage.warning('提示词已存在')
     return
   }
-  const success = await storage.updatePromptText(props.promptId, value)
+  const success = await storage.updatePromptText(props.promptID, value)
   if (!success) {
     ElMessage.error('更新提示词文本失败')
   }
 }
 
 async function handleChangeTranslation(value: string): Promise<void> {
-  const success = await storage.updatePromptTranslation(props.promptId, value)
+  const success = await storage.updatePromptTranslation(props.promptID, value)
   if (!success) {
     ElMessage.error('更新提示词翻译失败')
   }
@@ -366,7 +366,7 @@ async function handleTranslateByDeepLX(): Promise<void> {
     const result = await window.api.translateByDeepLX(promptText.value)
     if (result) {
       const success = await storage.updatePromptTranslation(
-        props.promptId,
+        props.promptID,
         result
       )
       if (!success) {
@@ -379,7 +379,7 @@ async function handleTranslateByDeepLX(): Promise<void> {
 }
 
 async function handleChangeDescription(value: string): Promise<void> {
-  const success = await storage.updatePromptDescription(props.promptId, value)
+  const success = await storage.updatePromptDescription(props.promptID, value)
   if (!success) {
     ElMessage.error('更新 Prompt 描述失败')
   }
@@ -402,7 +402,7 @@ async function handleChangeTags(): Promise<void> {
     return tag
   })
   storage.updatePromptTags(
-    props.promptId,
+    props.promptID,
     selectedTags.value
       .filter((tag): tag is Tag => typeof tag !== 'string')
       .map((tag) => tag.id)
@@ -412,7 +412,7 @@ async function handleChangeTags(): Promise<void> {
 
 //#region 编辑示例
 async function handleAddExample(): Promise<void> {
-  const example = await storage.addExampleToPrompt(props.promptId, {})
+  const example = await storage.addExampleToPrompt(props.promptID, {})
   if (!example) {
     ElMessage.error('添加示例失败')
     return
@@ -421,7 +421,7 @@ async function handleAddExample(): Promise<void> {
 }
 
 async function handleDeleteExample(id: string): Promise<void> {
-  const success = await storage.deleteExampleIDFromPrompt(props.promptId, id)
+  const success = await storage.deleteExampleIDFromPrompt(props.promptID, id)
   if (!success) {
     ElMessage.error('删除示例失败')
   } else {
@@ -477,7 +477,7 @@ function handleOpenAddExampleFromExistingDialog(): void {
   addExampleFromExistingVisible.value = true
 }
 async function handleAddExampleFromExisting(exampleID: string): Promise<void> {
-  const example = await storage.addExampleIDToPrompt(props.promptId, exampleID)
+  const example = await storage.addExampleIDToPrompt(props.promptID, exampleID)
   if (!example) {
     ElMessage.error('添加示例失败')
     return

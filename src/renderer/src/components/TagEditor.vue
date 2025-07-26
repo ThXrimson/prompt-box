@@ -110,7 +110,7 @@ async function handleAddTag(): Promise<void> {
     ElMessage.warning('标签名称不能为空')
     return
   }
-  if (storage.checkTagExists(addTag.value.trim())) {
+  if (storage.getTagIDIfExists(addTag.value.trim()) !== null) {
     ElMessage.warning('标签已存在')
     showAddTagDialog.value = false
     addTag.value = ''
