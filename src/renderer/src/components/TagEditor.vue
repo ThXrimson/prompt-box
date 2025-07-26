@@ -25,13 +25,20 @@
               :disabled="scope.row.id === uncategorizedTagID"
               @click="handleEditTag(scope.row.id)"
             />
-            <el-button
-              size="small"
-              type="danger"
-              :icon="Delete"
-              :disabled="scope.row.id === uncategorizedTagID"
-              @click="handelDeleteTag(scope.row.id)"
-            />
+
+            <el-popconfirm
+              title="确定从该提示词中删除此示例？"
+              @confirm="handelDeleteTag(scope.row.id)"
+            >
+              <template #reference>
+                <el-button
+                  size="small"
+                  type="danger"
+                  :icon="Delete"
+                  :disabled="scope.row.id === uncategorizedTagID"
+                />
+              </template>
+            </el-popconfirm>
           </template>
         </el-table-column>
       </el-table>

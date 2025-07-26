@@ -79,6 +79,7 @@
                     />
                     <el-popconfirm
                       title="确定删除此示例？"
+                      :hide-after="0"
                       @confirm="handleDeleteExample(example.id)"
                     >
                       <template #reference>

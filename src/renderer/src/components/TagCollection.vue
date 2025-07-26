@@ -14,9 +14,15 @@
     <div class="header flex justify-between gap-0.5">
       <el-text class="font-bold">{{ tag.text }}</el-text>
       <div class="flex items-center gap-1 [&_button]:m-0!">
-        <el-tooltip content="删除标签" placement="top" :hide-after="0">
-          <el-button link :icon="Delete" @click="emit('delete', clone(tag))" />
-        </el-tooltip>
+        <el-popconfirm
+          title="确定删除此标签？"
+          :hide-after="0"
+          @confirm="emit('delete', clone(tag))"
+        >
+          <template #reference>
+            <el-button link :icon="Delete" />
+          </template>
+        </el-popconfirm>
         <el-tooltip content="关闭标签" placement="top" :hide-after="0">
           <el-button link :icon="Close" @click="emit('close', clone(tag))" />
         </el-tooltip>
@@ -69,18 +75,19 @@
                 <Edit />
               </el-icon>
             </el-tooltip>
-            <el-tooltip
-              content="从标签中删除提示词"
-              placement="top"
+            <el-popconfirm
+              title="确定从标签中删除提示词？"
               :hide-after="0"
+              @confirm="handleDeletePrompt(prompt.id)"
             >
-              <el-icon
-                class="text-white! hover:text-gray-700! cursor-pointer"
-                @click="handleDeletePrompt(prompt.id)"
-              >
-                <Delete />
-              </el-icon>
-            </el-tooltip>
+              <template #reference>
+                <el-icon
+                  class="text-white! hover:text-gray-700! cursor-pointer"
+                >
+                  <Delete />
+                </el-icon>
+              </template>
+            </el-popconfirm>
           </div>
         </div>
       </div>

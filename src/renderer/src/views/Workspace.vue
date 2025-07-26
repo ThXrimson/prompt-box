@@ -185,27 +185,27 @@ watch(editorText, async (newText) => {
   }
 })
 
-const addTag = ref('')
+// const addTag = ref('')
 const tagDialogVisible = ref(false)
 
-async function handleAddTag(): Promise<void> {
-  if (!workspace.value.id) {
-    return
-  }
-  if (addTag.value.trim() === '') {
-    ElMessage.warning('标签不能为空')
-    return
-  }
-  const newTag = await storage.addTag({ text: addTag.value.trim() })
-  if (!newTag) {
-    ElMessage.error('添加标签失败')
-    return
-  }
-  updateWorkspace({
-    tagIDs: [newTag.id, ...(workspace.value?.tagIDs || [])],
-  })
-  addTag.value = ''
-}
+// async function handleAddTag(): Promise<void> {
+//   if (!workspace.value.id) {
+//     return
+//   }
+//   if (addTag.value.trim() === '') {
+//     ElMessage.warning('标签不能为空')
+//     return
+//   }
+//   const newTag = await storage.addTag({ text: addTag.value.trim() })
+//   if (!newTag) {
+//     ElMessage.error('添加标签失败')
+//     return
+//   }
+//   updateWorkspace({
+//     tagIDs: [newTag.id, ...(workspace.value?.tagIDs || [])],
+//   })
+//   addTag.value = ''
+// }
 
 async function handleDeleteTag(tag: {
   id: string

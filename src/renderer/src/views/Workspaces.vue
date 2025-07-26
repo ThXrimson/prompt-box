@@ -39,6 +39,7 @@
         </div>
         <el-popconfirm
           title="确定删除此工作区吗？"
+          :hide-after="0"
           @confirm="handleDeleteWorkspace(workspace.id)"
         >
           <template #reference>

@@ -153,6 +153,7 @@
                     />
                     <el-popconfirm
                       title="确定从该提示词中删除此示例？"
+                      :hide-after="0"
                       @confirm="handleDeleteExample(example.id)"
                     >
                       <template #reference>
