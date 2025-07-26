@@ -211,7 +211,7 @@
     v-model="addExampleFromExistingVisible"
     title="从已有示例添加"
     align-center
-    class="w-auto! h-[80vh] flex flex-col"
+    class="w-auto! max-w-240 h-[80vh] flex flex-col"
     body-class="flex-1 min-h-0 flex gap-2 justify-between"
     @keyup.esc.stop.prevent="editGalleryVisible = false"
   >

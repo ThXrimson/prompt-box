@@ -35,8 +35,8 @@ function createWindow(): BrowserWindow {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     title: 'Prompt Box',
-    width: 900,
-    height: 670,
+    width: 1280,
+    height: 720,
     minWidth: 800,
     minHeight: 600,
     autoHideMenuBar: true,

@@ -55,6 +55,7 @@
                 v-for="item in promptList"
                 :key="item.id"
                 trigger="hover"
+                size="small"
               >
                 <el-tag
                   :type="
@@ -88,13 +89,13 @@
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item @click="handleAddBrackets(item.id)">
-                      添加圆括号
+                      添加 ()
                     </el-dropdown-item>
                     <el-dropdown-item @click="handleAddSquareBrackets(item.id)">
-                      添加方括号
+                      添加 []
                     </el-dropdown-item>
                     <el-dropdown-item @click="handleAddAngleBrackets(item.id)">
-                      添加尖括号
+                      添加 &lt;&gt;
                     </el-dropdown-item>
                     <el-dropdown-item
                       @click="handleDeleteOnePairBrackets(item.id)"
