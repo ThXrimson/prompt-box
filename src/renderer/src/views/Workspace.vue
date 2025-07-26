@@ -113,6 +113,7 @@
             .filter((tag) => tag !== undefined)"
           :key="tag.id"
           :tag="tag"
+          :existing-prompt-i-ds="existingPromptIDs"
           @add-to-workspace="editor?.addText($event.text)"
           @delete="handleDeleteTag"
           @close="handleCloseTag"
@@ -124,6 +125,7 @@
       ref="editor"
       v-model="editorText"
       @add-example="handleAddExample"
+      @existing-prompt-change="handleExistingPromptChange($event)"
     />
   </div>
 </template>
@@ -185,27 +187,7 @@ watch(editorText, async (newText) => {
   }
 })
 
-// const addTag = ref('')
 const tagDialogVisible = ref(false)
-
-// async function handleAddTag(): Promise<void> {
-//   if (!workspace.value.id) {
-//     return
-//   }
-//   if (addTag.value.trim() === '') {
-//     ElMessage.warning('标签不能为空')
-//     return
-//   }
-//   const newTag = await storage.addTag({ text: addTag.value.trim() })
-//   if (!newTag) {
-//     ElMessage.error('添加标签失败')
-//     return
-//   }
-//   updateWorkspace({
-//     tagIDs: [newTag.id, ...(workspace.value?.tagIDs || [])],
-//   })
-//   addTag.value = ''
-// }
 
 async function handleDeleteTag(tag: {
   id: string
@@ -297,6 +279,11 @@ function handleConfirmEditWorkspaceName(name: string): void {
 
 function handleCancelEditWorkspaceName(): void {
   showWorkspaceNameDialog.value = false
+}
+
+const existingPromptIDs = ref<string[]>([])
+function handleExistingPromptChange(promptIDs: string[]): void {
+  existingPromptIDs.value = promptIDs
 }
 
 function defaultWorkspace(): Workspace {

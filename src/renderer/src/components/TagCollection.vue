@@ -43,7 +43,14 @@
     <el-scrollbar view-class="prompt-container flex flex-col gap-1.5">
       <div v-for="prompt in promptView" :key="prompt.id" class="prompt-wrapper">
         <div
-          class="flex justify-between border-1 border-gray-200 bg-teal-400 rounded-sm p-1.5 hover:bg-teal-500 transition-all duration-300"
+          class="flex justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300"
+          :class="{
+            'bg-orange-400 hover:bg-orange-500': existingPromptIDs?.includes(
+              prompt.id
+            ),
+            'bg-teal-400 hover:bg-teal-500':
+              existingPromptIDs?.includes(prompt.id) === false,
+          }"
         >
           <el-tooltip
             :content="prompt.translation || prompt.text"
@@ -117,6 +124,7 @@ import { clone, cloneDeep } from 'lodash'
 
 const props = defineProps<{
   tag: Tag
+  existingPromptIDs?: string[]
 }>()
 
 const emit = defineEmits<{

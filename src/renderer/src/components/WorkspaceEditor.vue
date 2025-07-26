@@ -292,6 +292,7 @@ const storage = useStorage()
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'add-example', text: string): void
+  (e: 'existing-prompt-change', existingIDs: string[]): void
 }>()
 
 const inputText = ref('')
@@ -606,6 +607,17 @@ const examplesDialogVisible = ref(false)
 function handleOpenExamplesDialog(): void {
   examplesDialogVisible.value = true
 }
+
+watchArray(
+  () =>
+    promptList.value
+      .map((item) => item.existsID)
+      .filter((id) => id !== null) as string[],
+  (newIDs) => {
+    emit('existing-prompt-change', newIDs)
+  },
+  { immediate: true }
+)
 
 async function handleGetTextTranslation(text: string): Promise<string> {
   for (const item of storage.prompts.values()) {
