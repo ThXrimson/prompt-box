@@ -77,14 +77,24 @@
     <div class="image flex flex-col flex-1 min-h-0">
       <el-text class="edit-header self-start!">示例</el-text>
       <div class="flex-1 min-h-0 flex flex-col">
-        <el-button
-          type="success"
-          :icon="CirclePlusFilled"
-          class="mb-2 self-start!"
-          @click="handleAddExample"
-        >
-          添加示例
-        </el-button>
+        <div>
+          <el-button
+            type="success"
+            :icon="CirclePlusFilled"
+            class="mb-2 self-start!"
+            @click="handleAddExample"
+          >
+            添加示例
+          </el-button>
+          <el-button
+            type="success"
+            :icon="CirclePlusFilled"
+            class="mb-2 self-start!"
+            @click="handleOpenAddExampleFromExistingDialog"
+          >
+            从已有示例添加
+          </el-button>
+        </div>
         <div
           v-if="examples.length > 0"
           class="flex flex-col gap-2 flex-1 min-h-0 border-2 border-gray-200 rounded-md px-1"
@@ -195,17 +205,27 @@
       <Gallery :example-i-d="editGalleryExampleID" />
     </template>
   </el-dialog>
+
+  <!-- 从已有添加示例 -->
+  <el-dialog
+    v-model="addExampleFromExistingVisible"
+    title="从已有示例添加"
+    align-center
+    class="w-auto! h-[80vh] flex flex-col"
+    body-class="flex-1 min-h-0 flex gap-2 justify-between"
+    @keyup.esc.stop.prevent="editGalleryVisible = false"
+  >
+    <existing-examples
+      :prompt-i-d="promptId"
+      @add-example="handleAddExampleFromExisting"
+    />
+  </el-dialog>
 </template>
 
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
 import { useStorage } from '@renderer/stores/storage'
-import {
-  CirclePlusFilled,
-  // Edit,
-  CopyDocument,
-  Delete,
-} from '@element-plus/icons-vue'
+import { CirclePlusFilled, CopyDocument, Delete } from '@element-plus/icons-vue'
 import { getImageUrl } from '@renderer/utils/utils'
 import lodash from 'lodash'
 import ConfirmInput from '@renderer/components/ConfirmInput.vue'
@@ -409,28 +429,6 @@ async function handleDeleteExample(id: string): Promise<void> {
   }
 }
 
-// async function handleEditExampleText(
-//   exampleID: string,
-//   type: Tabs
-// ): Promise<void> {
-//   if (canEditExamplesText.value[type][exampleID]) {
-//     const field = tabToField[type]
-//     const success = await storage.updateExample({
-//       id: exampleID,
-//       [field]: examplesText.value[type][exampleID],
-//     })
-//     if (success) {
-//       ElMessage.success('示例文本更新成功')
-//     } else {
-//       ElMessage.error('示例文本更新失败')
-//       examplesText.value[type][exampleID] =
-//         storage.examples.get(exampleID)?.[field] || ''
-//     }
-//   }
-//   canEditExamplesText.value[type][exampleID] =
-//     !canEditExamplesText.value[type][exampleID]
-// }
-
 function handleConfirmEditExampleTextFunc(exampleID: string, type: Tabs) {
   const field = tabToField[type]
   return async (text: string) => {
@@ -472,6 +470,19 @@ async function handleCopyText(text?: string): Promise<void> {
   } else {
     ElMessage.warning('复制失败，请重试')
   }
+}
+
+const addExampleFromExistingVisible = ref(false)
+function handleOpenAddExampleFromExistingDialog(): void {
+  addExampleFromExistingVisible.value = true
+}
+async function handleAddExampleFromExisting(exampleID: string): Promise<void> {
+  const example = await storage.addExampleIDToPrompt(props.promptId, exampleID)
+  if (!example) {
+    ElMessage.error('添加示例失败')
+    return
+  }
+  ElMessage.success('添加示例成功')
 }
 </script>
 

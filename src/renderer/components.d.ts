@@ -32,6 +32,8 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     ElText: typeof import('element-plus/es')['ElText']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    Examples: typeof import('./src/components/ExistingExamples.vue')['default']
+    ExistingExamples: typeof import('./src/components/ExistingExamples.vue')['default']
     Gallery: typeof import('./src/components/Gallery.vue')['default']
     Navigator: typeof import('./src/components/Navigator.vue')['default']
     PromptEditor: typeof import('./src/components/PromptEditor.vue')['default']
