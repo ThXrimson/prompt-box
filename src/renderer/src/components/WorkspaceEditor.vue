@@ -415,6 +415,7 @@ watchArray(
         promptTextTranslations.value[text] = translation
       }
     })
+    emit('update:modelValue', joinPrompts())
   },
   {
     immediate: true,

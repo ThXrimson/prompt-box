@@ -159,6 +159,19 @@ onMounted(() => {
   }
 })
 
+// 保存标签顺序
+watchArray(
+  () => workspace.value.tagIDs,
+  (newArr, oldArr) => {
+    if (newArr.join(',') !== oldArr.join(',')) {
+      storage.updateWorkspace({
+        id: workspace.value.id,
+        tagIDs: newArr,
+      })
+    }
+  }
+)
+
 // 切换正向、负向编辑器
 const isPositiveEditor = ref(true)
 
