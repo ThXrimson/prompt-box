@@ -580,6 +580,10 @@ async function handleAddPrompt(text: string): Promise<void> {
     translation,
   })
   if (result) {
+    const index = promptList.value.findIndex((item) => item.text === text)
+    if (index !== -1) {
+      promptList.value[index].existsID = result.id
+    }
     ElMessage.success('成功添加提示词')
   } else {
     ElMessage.success('添加提示词失败')
