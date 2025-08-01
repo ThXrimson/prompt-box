@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, protocol } from 'electron'
+import { app, shell, BrowserWindow, protocol, Menu } from 'electron'
 import { join, normalize } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import fs from 'fs'
@@ -8,6 +8,8 @@ import dayjs from 'dayjs'
 import Storage from './storage'
 import { getImageDir, getAppDir } from './utils'
 import { registerIpc } from './registerIpc'
+
+Menu.setApplicationMenu(null)
 
 function init(): void {
   {

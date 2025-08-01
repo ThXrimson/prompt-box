@@ -1,14 +1,42 @@
 <template>
   <el-dialog
     v-model="isEditingPromptText"
-    title="编辑提示词"
+    title="编辑提示词文本"
     @keyup.esc.stop.prevent="isEditingPromptText = false"
   >
-    <el-input
-      v-model="editingPromptText"
-      placeholder="编辑提示词"
-      @keyup.enter="handleConfirmEditPrompt"
-    />
+    <div class="flex flex-col gap-2">
+      <div class="flex gap-0.5 w-full flex-wrap">
+        <el-button size="small" class="ml-0!" @click="handleEditPromptAddCurly"
+          >+()</el-button
+        >
+        <el-button size="small" class="ml-0!" @click="handleEditPromptAddSquare"
+          >+[]</el-button
+        >
+        <el-button size="small" class="ml-0!" @click="handleEditPromptAddAngle"
+          >+&lt;&gt;</el-button
+        >
+        <el-button size="small" class="ml-0!" @click="handleEditPromptDelete"
+          >-()|[]|&lt;&gt;</el-button
+        >
+        <el-button size="small" class="ml-0!" @click="handleEditPromptClear"
+          >括号清空</el-button
+        >
+        <el-button size="small" class="ml-0!" @click="handleEditPromptAdd"
+          >+0.1</el-button
+        >
+        <el-button size="small" class="ml-0!" @click="handleEditPromptMinus"
+          >-0.1</el-button
+        >
+        <el-button size="small" class="ml-0!" @click="handleEditPromptZero"
+          >权重清零</el-button
+        >
+      </div>
+      <el-input
+        v-model="editingPromptText"
+        placeholder="编辑提示词"
+        @keyup.enter="handleConfirmEditPrompt"
+      />
+    </div>
     <template #footer>
       <el-button type="primary" @click="handleConfirmEditPrompt">
         确定
@@ -51,94 +79,70 @@
               :animation="100"
               class="flex flex-wrap gap-2 p-2"
             >
-              <el-dropdown
+              <el-tooltip
                 v-for="item in promptList"
                 :key="item.id"
-                trigger="hover"
-                size="small"
+                placement="bottom"
+                :hide-after="0"
               >
-                <el-tag
-                  :type="
-                    item.disabled
-                      ? 'info'
-                      : item.existsID !== null
-                        ? 'success'
-                        : 'primary'
-                  "
-                  size="small"
-                  disable-transitions
-                  closable
-                  class="cursor-pointer"
-                  :class="item.disabled ? 'line-through' : ''"
-                  @click="handleEditPrompt(item.id)"
-                  @close="handleDeletePrompt(item.id)"
-                >
-                  <!-- {{ promptTextView[item.text] }} -->
-                  <span
-                    v-for="part in promptTextView[item.text]"
-                    :key="part.id"
-                    :class="{
-                      'bg-yellow-300': part.searched,
-                      'bg-red-400': part.focused,
-                    }"
-                  >
-                    {{ part.text }}
-                  </span>
-                </el-tag>
-
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item @click="handleAddBrackets(item.id)">
-                      添加 ()
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="handleAddSquareBrackets(item.id)">
-                      添加 []
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="handleAddAngleBrackets(item.id)">
-                      添加 &lt;&gt;
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      @click="handleDeleteOnePairBrackets(item.id)"
-                    >
-                      删除一对括号
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="handleDeleteAllBrackets(item.id)">
-                      清除所有括号
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      divided
-                      @click="handleAddWeightToPrompt(item.id, 0.1)"
-                    >
-                      加 0.1 权重
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      @click="handleAddWeightToPrompt(item.id, -0.1)"
-                    >
-                      减 0.1 权重
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      @click="handleClearWeightOfPrompt(item.id)"
-                    >
-                      清除权重
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      divided
-                      @click="handleAddPrompt(item.text)"
-                    >
-                      收藏提示词
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      :disabled="item.existsID === null"
-                      @click="handleOpenPromptEditor(item.existsID!)"
-                    >
-                      编辑提示词
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="item.disabled = !item.disabled">
-                      {{ item.disabled ? '启用' : '禁用' }}提示词
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
+                <template #content>
+                  点击编辑该词
+                  <br />
+                  按住拖动顺序
                 </template>
-              </el-dropdown>
+                <el-dropdown
+                  trigger="hover"
+                  size="small"
+                  placement="top"
+                  :hide-on-click="false"
+                >
+                  <el-tag
+                    :type="
+                      item.disabled
+                        ? 'info'
+                        : item.existsID !== null
+                          ? 'success'
+                          : 'primary'
+                    "
+                    size="small"
+                    disable-transitions
+                    closable
+                    class="cursor-pointer"
+                    :class="item.disabled ? 'line-through' : ''"
+                    @click="handleEditPrompt(item.id)"
+                    @close="handleDeletePrompt(item.id)"
+                  >
+                    <!-- {{ promptTextView[item.text] }} -->
+                    <span
+                      v-for="part in promptTextView[item.text]"
+                      :key="part.id"
+                      :class="{
+                        'bg-yellow-300': part.searched,
+                        'bg-red-400': part.focused,
+                      }"
+                    >
+                      {{ part.text }}
+                    </span>
+                  </el-tag>
+
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="handleAddPrompt(item.text)">
+                        收藏提示词
+                      </el-dropdown-item>
+                      <el-dropdown-item
+                        :disabled="item.existsID === null"
+                        @click="handleOpenPromptEditor(item.existsID!)"
+                      >
+                        编辑提示词
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="item.disabled = !item.disabled">
+                        {{ item.disabled ? '启用' : '禁用' }}提示词
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </el-tooltip>
             </vue-draggable>
           </div>
         </el-scrollbar>
@@ -225,10 +229,20 @@
 
         <el-input
           v-model="searchText"
+          placeholder="搜索或添加"
           :prefix-icon="Search"
-          :suffix-icon="EnterIcon"
           clearable
-        />
+          @keyup.enter="handleAddPromptToEditor"
+        >
+          <template #suffix>
+            <el-icon
+              class="cursor-pointer"
+              @click.stop="handleAddPromptToEditor"
+            >
+              <enter-icon />
+            </el-icon>
+          </template>
+        </el-input>
       </div>
     </div>
   </div>
@@ -258,6 +272,8 @@
 
 // TODO 搜索框
 // 3、enter键跳转到下一个搜索，当前focus的搜索为红色高亮
+
+// FIXME 编辑提示词后，tag里没有更新
 import {
   Edit,
   CopyDocument,
@@ -304,10 +320,11 @@ const editingPromptTextID = ref<string | null>(null)
 const editingPromptText = ref('')
 
 function handleEditPrompt(id: string): void {
-  const text = promptList.value.find((item) => item.id === id)?.text
-  if (text) {
+  const p = promptList.value.find((item) => item.id === id)
+  if (p) {
     editingPromptTextID.value = id
-    editingPromptText.value = text
+    const showText = joinBrackets(joinWeight(p.text, p.weight), p.leftBrackets)
+    editingPromptText.value = showText
     isEditingPromptText.value = true
   }
 }
@@ -318,10 +335,72 @@ function handleConfirmEditPrompt(): void {
     (item) => item.id === editingPromptTextID.value
   )
   if (item) {
-    item.text = editingPromptText.value.trim()
+    const showText = editingPromptText.value.trim()
+    const stripBracketsRes = stripBrackets(showText)
+    const stripWeightRes = stripWeight(stripBracketsRes.content)
+    item.text = stripWeightRes.content
+    item.weight = stripWeightRes.weight
+    item.leftBrackets = stripBracketsRes.leftBrackets
     emit('update:modelValue', joinPrompts())
     isEditingPromptText.value = false
   }
+}
+
+function handleEditPromptAddCurly(): void {
+  editingPromptText.value = `(${editingPromptText.value})`
+}
+
+function handleEditPromptAddSquare(): void {
+  editingPromptText.value = `[${editingPromptText.value}]`
+}
+
+function handleEditPromptAddAngle(): void {
+  editingPromptText.value = `<${editingPromptText.value}>`
+}
+
+function handleEditPromptDelete(): void {
+  const stripBracketsRes = stripBrackets(editingPromptText.value)
+  if (stripBracketsRes.leftBrackets.length > 0) {
+    stripBracketsRes.leftBrackets.shift()
+    editingPromptText.value = joinBrackets(
+      stripBracketsRes.content,
+      stripBracketsRes.leftBrackets
+    )
+  }
+}
+
+function handleEditPromptClear(): void {
+  const stripBracketsRes = stripBrackets(editingPromptText.value)
+  editingPromptText.value = stripBracketsRes.content
+}
+
+function handleEditPromptAdd(): void {
+  const stripBracketsRes = stripBrackets(editingPromptText.value)
+  const stripWeightRes = stripWeight(stripBracketsRes.content)
+  const newWeight = weightAdd(stripWeightRes.weight, 0.1)
+  editingPromptText.value = joinBrackets(
+    joinWeight(stripWeightRes.content, newWeight),
+    stripBracketsRes.leftBrackets
+  )
+}
+
+function handleEditPromptMinus(): void {
+  const stripBracketsRes = stripBrackets(editingPromptText.value)
+  const stripWeightRes = stripWeight(stripBracketsRes.content)
+  const newWeight = weightAdd(stripWeightRes.weight, -0.1)
+  editingPromptText.value = joinBrackets(
+    joinWeight(stripWeightRes.content, newWeight),
+    stripBracketsRes.leftBrackets
+  )
+}
+
+function handleEditPromptZero(): void {
+  const stripBracketsRes = stripBrackets(editingPromptText.value)
+  const stripWeightRes = stripWeight(stripBracketsRes.content)
+  editingPromptText.value = joinBrackets(
+    stripWeightRes.content,
+    stripBracketsRes.leftBrackets
+  )
 }
 
 // 拖动相关的状态
@@ -432,14 +511,30 @@ type TextPart = {
 
 const searchText = ref('')
 
+const handleAddPromptToEditor = (): void => {
+  const text = searchText.value.trim()
+  if (text === '') return
+  promptList.value.push({
+    id: crypto.randomUUID(),
+    text,
+    leftBrackets: [],
+    weight: '',
+    existsID: storage.getPromptIDIfExists(text),
+    disabled: false,
+  })
+  searchText.value = ''
+  emit('update:modelValue', joinPrompts())
+}
+
 const promptTextView = computed(() => {
   const regex = new RegExp(searchText.value, 'ig')
 
   const textToView: Record<string, TextPart[]> = {}
   promptList.value.forEach((item) => {
     let text = item.text
+    text = joinBrackets(joinWeight(item.text, item.weight), item.leftBrackets)
     if (promptTextTranslations.value[item.text]) {
-      text = `${joinBrackets(joinWeight(item.text, item.weight), item.leftBrackets)} | ${promptTextTranslations.value[item.text]}`
+      text += `| ${promptTextTranslations.value[item.text]}`
     }
     const matchesIndices = Array.from(text.matchAll(regex)).map(
       (match) => match.index
@@ -500,62 +595,6 @@ async function handleCopyToClipboard(): Promise<void> {
     ElMessage.success('已复制到剪贴板')
   } else {
     ElMessage.warning('复制失败，请重试')
-  }
-}
-
-function handleAddBrackets(id: string): void {
-  const item = promptList.value.find((item) => item.id === id)
-  if (item) {
-    item.leftBrackets.push('(')
-    emit('update:modelValue', joinPrompts())
-  }
-}
-
-function handleAddSquareBrackets(id: string): void {
-  const item = promptList.value.find((item) => item.id === id)
-  if (item) {
-    item.leftBrackets.push('[')
-    emit('update:modelValue', joinPrompts())
-  }
-}
-
-function handleAddAngleBrackets(id: string): void {
-  const item = promptList.value.find((item) => item.id === id)
-  if (item) {
-    item.leftBrackets.push('<')
-    emit('update:modelValue', joinPrompts())
-  }
-}
-
-function handleDeleteOnePairBrackets(id: string): void {
-  const item = promptList.value.find((item) => item.id === id)
-  if (item) {
-    item.leftBrackets.shift()
-    emit('update:modelValue', joinPrompts())
-  }
-}
-
-function handleDeleteAllBrackets(id: string): void {
-  const item = promptList.value.find((item) => item.id === id)
-  if (item) {
-    item.leftBrackets.length = 0
-    emit('update:modelValue', joinPrompts())
-  }
-}
-
-function handleAddWeightToPrompt(id: string, delta: number): void {
-  const item = promptList.value.find((item) => item.id === id)
-  if (item) {
-    item.weight = weightAdd(item.weight, delta)
-    emit('update:modelValue', joinPrompts())
-  }
-}
-
-function handleClearWeightOfPrompt(id: string): void {
-  const item = promptList.value.find((item) => item.id === id)
-  if (item) {
-    item.weight = ''
-    emit('update:modelValue', joinPrompts())
   }
 }
 

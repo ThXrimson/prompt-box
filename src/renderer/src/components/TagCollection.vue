@@ -59,6 +59,7 @@
             :hide-after="0"
           >
             <el-text
+              truncated
               class="cursor-pointer text-white! font-bold"
               @click="handleCopyPrompt(prompt.text)"
             >
@@ -71,7 +72,7 @@
                 class="text-white! hover:text-gray-700! cursor-pointer"
                 @click="emit('add-to-workspace', cloneDeep(prompt))"
               >
-                <Pointer />
+                <CirclePlus />
               </el-icon>
             </el-tooltip>
             <el-tooltip content="编辑" placement="top" :hide-after="0">
@@ -115,9 +116,9 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Plus, Close } from '@element-plus/icons-vue'
+import { Plus, Close, CirclePlus } from '@element-plus/icons-vue'
 import DragHandle from '../icons/DragHandle.vue'
-import { Pointer, Edit, Delete } from '@element-plus/icons-vue'
+import { Edit, Delete } from '@element-plus/icons-vue'
 import type { Prompt, Tag } from '@shared/types'
 import { useStorage, uncategorizedTagID } from '@renderer/stores/storage'
 import { clone, cloneDeep } from 'lodash'
