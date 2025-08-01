@@ -77,7 +77,7 @@
             <vue-draggable
               v-model="promptList"
               :animation="100"
-              class="flex flex-wrap gap-2 p-2"
+              class="flex flex-wrap gap-1 gap-y-0 p-2"
             >
               <div v-for="item in promptList" :key="item.id">
                 <el-tooltip placement="bottom" :hide-after="0">
