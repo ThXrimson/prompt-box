@@ -3,6 +3,8 @@
     v-model="isEditingPromptText"
     title="编辑提示词文本"
     @keyup.esc.stop.prevent="isEditingPromptText = false"
+    @opened="promptEditorInput?.focus()"
+    @open.once="handleOpenEditDialog"
   >
     <div class="flex flex-col gap-2">
       <div class="flex gap-0.5 w-full flex-wrap">
@@ -32,6 +34,7 @@
         >
       </div>
       <el-input
+        ref="promptEditorInput"
         v-model="editingPromptText"
         placeholder="编辑提示词"
         @keyup.enter="handleConfirmEditPrompt"
@@ -282,7 +285,7 @@ import {
   Right,
   Search,
 } from '@element-plus/icons-vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useManualRefHistory, watchArray } from '@vueuse/core'
 import { cloneDeep } from 'lodash'
@@ -297,6 +300,8 @@ import {
 } from '@renderer/utils/utils'
 import EnterIcon from '@renderer/icons/Enter.vue'
 import Examples from '@renderer/views/Examples.vue'
+import { ElInput } from 'element-plus'
+import { useBracketsWrapElInput } from '@renderer/hooks/useBracketsWrapElInput'
 
 const props = defineProps<{
   modelValue: string
@@ -309,6 +314,14 @@ const emit = defineEmits<{
   (e: 'add-example', text: string): void
   (e: 'existing-prompt-change', existingIDs: string[]): void
 }>()
+
+// 使输入框可以成对输入括号的功能
+const promptEditorInput =
+  useTemplateRef<InstanceType<typeof ElInput>>('promptEditorInput')
+const handleOpenEditDialog = (): void => {
+  useBracketsWrapElInput(promptEditorInput)
+  promptEditorInput.value?.focus()
+}
 
 const inputText = ref('')
 const editMode = ref(false)

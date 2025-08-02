@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals'
-import { addWeight, clearWeight } from './editWeight'
+import { addWeight, clearWeight } from './edit-weight'
 
 describe('addWeight', () => {
   it('should add 0.1 to existing number after colon', () => {
