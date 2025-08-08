@@ -226,21 +226,15 @@ async function handleAddPrompt(): Promise<void> {
       return
     }
   }
+  const tags: string[] = []
+  if (props.tag.id !== uncategorizedTagID) {
+    tags.push(props.tag.id)
+  }
   const newPrompt = await storage.addPrompt({
     text: promptInput.value.trim(),
+    tagIDs: tags,
   })
   if (newPrompt) {
-    if (props.tag.id !== uncategorizedTagID) {
-      const success = await storage.updatePromptTags(newPrompt.id, [
-        props.tag.id,
-      ])
-      if (success) {
-        ElMessage.success(`新增提示词并添加成功: ${newPrompt.text}`)
-        promptInput.value = ''
-      } else {
-        ElMessage.error('新增提示词并添加失败')
-      }
-    }
     ElMessage.success(`新增提示词并添加成功: ${newPrompt.text}`)
   } else {
     ElMessage.error('新增提示词并添加失败')
