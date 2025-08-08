@@ -115,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useTemplateRef, watch } from 'vue'
 import { Plus, Close, CirclePlus } from '@element-plus/icons-vue'
 import DragHandle from '../icons/DragHandle.vue'
 import { Edit, Delete } from '@element-plus/icons-vue'
@@ -133,6 +133,22 @@ const emit = defineEmits<{
   (e: 'close', tag: Tag): void
   (e: 'add-to-workspace', prompt: Prompt): void
 }>()
+
+const tagCard = useTemplateRef('tagCard')
+
+defineExpose({
+  scrollIntoView: () => {
+    tagCard.value?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'center',
+    })
+    tagCard.value?.classList.add('glowing-edge')
+    setTimeout(() => {
+      tagCard.value?.classList.remove('glowing-edge')
+    }, 1000)
+  },
+})
 
 const storage = useStorage()
 
@@ -230,5 +246,13 @@ async function handleDeletePrompt(promptID: string): Promise<void> {
   .el-button {
     @apply bg-blue-50 text-blue-500 border-blue-400 border-1;
   }
+}
+
+.tag-collection {
+  transition: border-color 0.3s ease-in-out;
+}
+
+.glowing-edge {
+  @apply border-blue-400 shadow-lg shadow-blue-200;
 }
 </style>

@@ -69,6 +69,24 @@
         />
 
         <el-select-v2
+          model-value=""
+          :options="
+            workspace.tagIDs
+              .map((id) => storage.getTagByID(id))
+              .filter((tag) => tag !== undefined)
+          "
+          :props="{
+            label: 'text',
+            value: 'id',
+          }"
+          filterable
+          placeholder="查找标签"
+          clearable
+          class="flex-1 min-w-0"
+          @update:model-value="handleScrollToTag($event)"
+        />
+
+        <el-select-v2
           v-model="workspace.tagIDs"
           :options="Array.from(storage.tags.values())"
           :props="{
@@ -111,6 +129,7 @@
           v-for="tag in workspace.tagIDs
             .map((id) => storage.getTagByID(id))
             .filter((tag) => tag !== undefined)"
+          ref="tagCollections"
           :key="tag.id"
           :tag="tag"
           :existing-prompt-i-ds="existingPromptIDs"
@@ -138,6 +157,7 @@ import type { Workspace } from '@shared/types'
 import { watchArray } from '@vueuse/core'
 import { VueDraggable } from 'vue-draggable-plus'
 import TagEditor from '@renderer/components/TagEditor.vue'
+import TagCollection from '@renderer/components/TagCollection.vue'
 
 const storage = useStorage()
 
@@ -297,6 +317,18 @@ function handleCancelEditWorkspaceName(): void {
 const existingPromptIDs = ref<string[]>([])
 function handleExistingPromptChange(promptIDs: string[]): void {
   existingPromptIDs.value = promptIDs
+}
+
+const tagCollections = useTemplateRef('tagCollections')
+function handleScrollToTag(tagID: string): void {
+  if (!tagCollections.value) return
+  for (const tagCollection of tagCollections.value) {
+    if (tagCollection === null) continue
+    if (tagCollection.$props.tag.id === tagID) {
+      tagCollection.scrollIntoView()
+      return
+    }
+  }
 }
 
 function defaultWorkspace(): Workspace {
