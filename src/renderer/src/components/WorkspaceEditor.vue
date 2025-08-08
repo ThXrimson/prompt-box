@@ -109,7 +109,7 @@
                       class="cursor-pointer"
                       :class="item.disabled ? 'line-through' : ''"
                       @click="handleEditPrompt(item.id)"
-                      @close="handleDeletePrompt(item.id)"
+                      @close="handleRemovePrompt(item.id)"
                     >
                       <!-- {{ promptTextView[item.text] }} -->
                       <span
@@ -255,6 +255,22 @@
     title="编辑提示词"
   >
     <prompt-editor :prompt-i-d="editingPromptID" />
+    <template #footer>
+      <el-popconfirm
+        title="确定删除此提示词？"
+        :hide-after="0"
+        @confirm="
+          () => {
+            handleDeletePrompt(editingPromptID!)
+            editingPromptVisible = false
+          }
+        "
+      >
+        <template #reference>
+          <el-button type="danger" class="w-full"> 删除 </el-button>
+        </template>
+      </el-popconfirm>
+    </template>
   </el-dialog>
 
   <el-dialog
@@ -595,9 +611,23 @@ function handleSwitchEditMode(): void {
   editMode.value = !editMode.value
 }
 
-function handleDeletePrompt(id: string): void {
+function handleRemovePrompt(id: string): void {
   promptList.value = promptList.value.filter((item) => item.id !== id)
   emit('update:modelValue', joinPrompts())
+}
+
+async function handleDeletePrompt(id: string): Promise<void> {
+  const res = await storage.deletePrompt(id)
+  if (res) {
+    ElMessage.success('成功删除提示词')
+    promptList.value.forEach((item) => {
+      if (item.existsID === id) {
+        item.existsID = null
+      }
+    })
+  } else {
+    ElMessage.error('删除提示词失败')
+  }
 }
 
 async function handleCopyToClipboard(): Promise<void> {

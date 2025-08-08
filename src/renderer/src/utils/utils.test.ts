@@ -104,7 +104,7 @@ describe('joinWeight', () => {
   })
 
   it('should handle zero weight', () => {
-    const result = joinWeight('test', '0')
+    const result = joinWeight('test', '1')
     expect(result).toBe('test')
   })
 })

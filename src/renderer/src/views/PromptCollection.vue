@@ -35,12 +35,23 @@
 
         <el-select-v2
           v-model="filteredTagIDs"
-          :options="Array.from(storage.tags.values())"
+          :options="tagOptions"
           :props="{
             label: 'text',
             value: 'id',
           }"
           filterable
+          :filter-method="
+            (text) => {
+              tagOptions = allTags.filter((tag) => {
+                return (
+                  tag.text.includes(text) ||
+                  pinyinIncludes(tag.text, text) ||
+                  pinyinIncludesWithFirstLetter(tag.text, text)
+                )
+              })
+            }
+          "
           placeholder="过滤标签"
           style="width: 240px"
           multiple
@@ -126,7 +137,7 @@
               </el-text>
             </div>
             <el-popconfirm
-              title="确定从该提示词中删除此示例？"
+              title="确定删除此提示词？"
               :hide-after="0"
               @confirm="handleDeletePrompt(prompt.id)"
             >
@@ -171,6 +182,7 @@ import {
 import { computed, nextTick, ref, useTemplateRef } from 'vue'
 import { uncategorizedTagID, useStorage } from '@renderer/stores/storage'
 import TagEditor from '@renderer/components/TagEditor.vue'
+import { pinyinIncludes, pinyinIncludesWithFirstLetter } from '@renderer/utils/pinyin-includes'
 
 interface PromptView {
   id: string
@@ -190,6 +202,11 @@ const storage = useStorage()
 const searchTerm = ref<string>('')
 const filteredTagIDs = ref<string[]>([])
 const selectedPromptID = ref<string | null>(null)
+
+const allTags = computed(() => {
+  return Array.from(storage.tags.values())
+})
+const tagOptions = ref(allTags.value)
 
 const promptsView = computed(() => {
   const tagSet = new Set(filteredTagIDs.value)

@@ -41,7 +41,12 @@
       </el-input>
     </div>
     <el-scrollbar view-class="prompt-container flex flex-col gap-1.5">
-      <div v-for="prompt in promptView" :key="prompt.id" class="prompt-wrapper">
+      <div
+        v-for="prompt in promptView"
+        :key="prompt.id"
+        ref="promptCards"
+        class="prompt-wrapper"
+      >
         <div
           class="flex justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300"
           :class="{
@@ -84,9 +89,9 @@
               </el-icon>
             </el-tooltip>
             <el-popconfirm
-              title="确定从标签中删除提示词？"
+              title="确定从标签中移除提示词？"
               :hide-after="0"
-              @confirm="handleDeletePrompt(prompt.id)"
+              @confirm="handleRemovePromptFromTag(prompt.id)"
             >
               <template #reference>
                 <el-icon
@@ -111,11 +116,27 @@
     @keyup.esc.stop.prevent="editPromptDialogVisible = false"
   >
     <prompt-editor :prompt-i-d="editingPromptID" />
+    <template #footer>
+      <el-popconfirm
+        title="确定删除此提示词？"
+        :hide-after="0"
+        @confirm="
+          () => {
+            handleDeletePrompt(editingPromptID!)
+            editPromptDialogVisible = false
+          }
+        "
+      >
+        <template #reference>
+          <el-button type="danger" class="w-full"> 删除 </el-button>
+        </template>
+      </el-popconfirm>
+    </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { Plus, Close, CirclePlus } from '@element-plus/icons-vue'
 import DragHandle from '../icons/DragHandle.vue'
 import { Edit, Delete } from '@element-plus/icons-vue'
@@ -135,20 +156,7 @@ const emit = defineEmits<{
 }>()
 
 const tagCard = useTemplateRef('tagCard')
-
-defineExpose({
-  scrollIntoView: () => {
-    tagCard.value?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-      inline: 'center',
-    })
-    tagCard.value?.classList.add('glowing-edge')
-    setTimeout(() => {
-      tagCard.value?.classList.remove('glowing-edge')
-    }, 1000)
-  },
-})
+const promptCards = useTemplateRef('promptCards')
 
 const storage = useStorage()
 
@@ -166,6 +174,37 @@ const promptView = computed(() => {
     .toSorted((a, b) => a.text.localeCompare(b.text))
 })
 
+defineExpose({
+  scrollIntoView: () => {
+    tagCard.value?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'center',
+    })
+    tagCard.value?.classList.add('glowing-edge')
+    setTimeout(() => {
+      tagCard.value?.classList.remove('glowing-edge')
+    }, 1000)
+  },
+  scrollPromptIntoView: async (prompt: string) => {
+    promptInput.value = ''
+    await nextTick()
+    const index = promptView.value.findIndex((p) => p.text === prompt)
+    if (index !== -1) {
+      const promptElement = promptCards.value?.[index]
+      promptElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'center',
+      })
+      promptElement?.firstElementChild?.classList.add('glowing-bg')
+      setTimeout(() => {
+        promptElement?.firstElementChild?.classList.remove('glowing-bg')
+      }, 1000)
+    }
+  },
+})
+
 async function handleAddPrompt(): Promise<void> {
   if (promptInput.value.trim() === '') {
     return
@@ -181,7 +220,6 @@ async function handleAddPrompt(): Promise<void> {
       ])
       if (success) {
         ElMessage.success(`提示词已存在，并添加到标签: ${props.tag.text}`)
-        promptInput.value = ''
       } else {
         ElMessage.error('添加提示词时更新标签失败')
       }
@@ -189,16 +227,21 @@ async function handleAddPrompt(): Promise<void> {
     }
   }
   const newPrompt = await storage.addPrompt({
-    text: promptInput.value,
+    text: promptInput.value.trim(),
   })
-  if (newPrompt && props.tag.id !== uncategorizedTagID) {
-    const success = await storage.updatePromptTags(newPrompt.id, [props.tag.id])
-    if (success) {
-      ElMessage.success(`新增提示词并添加成功: ${newPrompt.text}`)
-      promptInput.value = ''
-    } else {
-      ElMessage.error('新增提示词并添加失败')
+  if (newPrompt) {
+    if (props.tag.id !== uncategorizedTagID) {
+      const success = await storage.updatePromptTags(newPrompt.id, [
+        props.tag.id,
+      ])
+      if (success) {
+        ElMessage.success(`新增提示词并添加成功: ${newPrompt.text}`)
+        promptInput.value = ''
+      } else {
+        ElMessage.error('新增提示词并添加失败')
+      }
     }
+    ElMessage.success(`新增提示词并添加成功: ${newPrompt.text}`)
   } else {
     ElMessage.error('新增提示词并添加失败')
   }
@@ -228,12 +271,21 @@ function handleCopyPrompt(promptText: string): void {
   })
 }
 
-async function handleDeletePrompt(promptID: string): Promise<void> {
+async function handleRemovePromptFromTag(promptID: string): Promise<void> {
   const res = await storage.deleteTagIDFromPrompt(props.tag.id, promptID)
   if (res) {
-    ElMessage.success('提示词删除成功')
+    ElMessage.success('提示词移除成功')
   } else {
-    ElMessage.error('提示词删除失败')
+    ElMessage.error('提示词移除失败')
+  }
+}
+
+async function handleDeletePrompt(id: string): Promise<void> {
+  const res = await storage.deletePrompt(id)
+  if (res) {
+    ElMessage.success('成功删除提示词')
+  } else {
+    ElMessage.error('删除提示词失败')
   }
 }
 </script>
@@ -254,5 +306,9 @@ async function handleDeletePrompt(promptID: string): Promise<void> {
 
 .glowing-edge {
   @apply border-blue-400 shadow-lg shadow-blue-200;
+}
+
+.glowing-bg {
+  @apply bg-blue-400;
 }
 </style>

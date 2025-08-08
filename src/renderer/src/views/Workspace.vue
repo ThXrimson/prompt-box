@@ -65,21 +65,28 @@
           placeholder="查找提示词"
           clearable
           class="flex-1 min-w-0"
-          @update:model-value="editor?.addText($event)"
+          @update:model-value="handleFindPromptAndScroll($event)"
         />
 
         <el-select-v2
           model-value=""
-          :options="
-            workspace.tagIDs
-              .map((id) => storage.getTagByID(id))
-              .filter((tag) => tag !== undefined)
-          "
+          :options="tagFocusOptions"
           :props="{
             label: 'text',
             value: 'id',
           }"
           filterable
+          :filter-method="
+            (text) => {
+              tagFocusOptions = workspaceTags.filter((tag) => {
+                return (
+                  tag.text.includes(text) ||
+                  pinyinIncludes(tag.text, text) ||
+                  pinyinIncludesWithFirstLetter(tag.text, text)
+                )
+              })
+            }
+          "
           placeholder="查找标签"
           clearable
           class="flex-1 min-w-0"
@@ -88,12 +95,23 @@
 
         <el-select-v2
           v-model="workspace.tagIDs"
-          :options="Array.from(storage.tags.values())"
+          :options="tagAddOptions"
           :props="{
             label: 'text',
             value: 'id',
           }"
           filterable
+          :filter-method="
+            (text) => {
+              tagAddOptions = allTags.filter((tag) => {
+                return (
+                  tag.text.includes(text) ||
+                  pinyinIncludes(tag.text, text) ||
+                  pinyinIncludesWithFirstLetter(tag.text, text)
+                )
+              })
+            }
+          "
           placeholder="选择标签"
           multiple
           collapse-tags-tooltip
@@ -126,9 +144,7 @@
         wrap-class="overflow-y-hidden!"
       >
         <tag-collection
-          v-for="tag in workspace.tagIDs
-            .map((id) => storage.getTagByID(id))
-            .filter((tag) => tag !== undefined)"
+          v-for="tag in selectedTags"
           ref="tagCollections"
           :key="tag.id"
           :tag="tag"
@@ -150,7 +166,7 @@
 </template>
 <script setup lang="ts">
 import { useStorage } from '@renderer/stores/storage'
-import { onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { Discount } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { Workspace } from '@shared/types'
@@ -158,8 +174,15 @@ import { watchArray } from '@vueuse/core'
 import { VueDraggable } from 'vue-draggable-plus'
 import TagEditor from '@renderer/components/TagEditor.vue'
 import TagCollection from '@renderer/components/TagCollection.vue'
+import {
+  pinyinIncludes,
+  pinyinIncludesWithFirstLetter,
+} from '@renderer/utils/pinyin-includes'
 
 const storage = useStorage()
+
+const allTags = computed(() => Array.from(storage.tags.values()))
+const tagAddOptions = ref(allTags.value)
 
 const editor = useTemplateRef('editor')
 
@@ -178,6 +201,19 @@ onMounted(() => {
     ElMessage.error('工作区未找到')
   }
 })
+
+const selectedTags = computed(() =>
+  workspace.value.tagIDs
+    .map((id) => storage.getTagByID(id))
+    .filter((tag) => tag !== undefined)
+)
+
+const workspaceTags = computed(() => {
+  return workspace.value.tagIDs
+    .map((id) => storage.getTagByID(id))
+    .filter((tag) => tag !== undefined)
+})
+const tagFocusOptions = ref(workspaceTags.value)
 
 // 保存标签顺序
 watchArray(
@@ -329,6 +365,22 @@ function handleScrollToTag(tagID: string): void {
       return
     }
   }
+}
+
+function handleFindPromptAndScroll(prompt: string): void {
+  selectedTags.value.forEach(async (tag) => {
+    const prompts = storage.getPromptsByTag(tag.id)
+    const index = prompts.findIndex((p) => p.text === prompt)
+    if (index !== -1) {
+      const tc = tagCollections.value?.find(
+        (tc) => tc?.$props.tag.id === tag.id
+      )
+      tc?.scrollIntoView()
+      await nextTick()
+      tc?.scrollPromptIntoView(prompt)
+      return
+    }
+  })
 }
 
 function defaultWorkspace(): Workspace {

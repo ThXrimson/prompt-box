@@ -47,6 +47,17 @@
         value-key="id"
         multiple
         filterable
+        :filter-method="
+          (text) => {
+            tagOptions = allTags.filter((tag) => {
+              return (
+                tag.text.includes(text) ||
+                pinyinIncludes(tag.text, text) ||
+                pinyinIncludesWithFirstLetter(tag.text, text)
+              )
+            })
+          }
+        "
         allow-create
         default-first-option
         :reserve-keyword="false"
@@ -54,7 +65,7 @@
         @blur="handleChangeTags"
       >
         <el-option
-          v-for="tag in allTags"
+          v-for="tag in tagOptions"
           :key="tag.id"
           :label="tag.text"
           :value="tag"
@@ -232,6 +243,10 @@ import ConfirmInput from '@renderer/components/ConfirmInput.vue'
 import type { Tag } from '@shared/types'
 import { watchArray } from '@vueuse/core'
 import TranslateIcon from '@renderer/icons/Prompt.vue'
+import {
+  pinyinIncludes,
+  pinyinIncludesWithFirstLetter,
+} from '@renderer/utils/pinyin-includes'
 
 const tabs = ['positive', 'negative', 'extra'] as const
 const tabToField: Record<string, string> = {
@@ -247,6 +262,7 @@ const props = defineProps<{
 
 const storage = useStorage()
 const allTags = computed(() => Array.from(storage.tags.values()))
+const tagOptions = ref(allTags.value)
 
 // 编辑 Prompt 相关数据
 const promptText = computed(() => storage.prompts.get(props.promptID)?.text)

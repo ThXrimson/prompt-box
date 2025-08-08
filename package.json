@@ -36,6 +36,7 @@
     "lodash": "^4.17.21",
     "lowdb": "^7.0.1",
     "pinia": "^3.0.3",
+    "pinyin-pro": "^3.27.0",
     "tailwindcss": "^4.1.10",
     "vue-draggable-plus": "^0.6.0",
     "vue-router": "^4.5.1"
