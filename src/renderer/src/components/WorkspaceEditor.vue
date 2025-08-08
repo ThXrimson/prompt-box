@@ -290,8 +290,6 @@
 
 // TODO 搜索框
 // 3、enter键跳转到下一个搜索，当前focus的搜索为红色高亮
-
-// FIXME 编辑提示词后，tag里没有更新
 import {
   Edit,
   CopyDocument,
@@ -369,6 +367,7 @@ function handleConfirmEditPrompt(): void {
     item.text = stripWeightRes.content
     item.weight = stripWeightRes.weight
     item.leftBrackets = stripBracketsRes.leftBrackets
+    item.existsID = storage.getPromptIDIfExists(item.text)
     emit('update:modelValue', joinPrompts())
     isEditingPromptText.value = false
   }
