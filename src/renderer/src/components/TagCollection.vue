@@ -206,14 +206,15 @@ defineExpose({
 })
 
 async function handleAddPrompt(): Promise<void> {
-  if (promptInput.value.trim() === '') {
+  promptInput.value = promptInput.value.trim()
+  if (promptInput.value === '') {
     return
   }
-  if (prompts.value.some((p) => p.text === promptInput.value.trim())) {
+  if (prompts.value.some((p) => p.text === promptInput.value)) {
     return
   }
   for (const prompt of storage.prompts.values()) {
-    if (prompt.text === promptInput.value.trim()) {
+    if (prompt.text === promptInput.value) {
       const success = await storage.updatePromptTags(prompt.id, [
         props.tag.id,
         ...prompt.tagIDs,
