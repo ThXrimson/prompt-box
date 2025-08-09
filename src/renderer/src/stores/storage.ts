@@ -27,7 +27,10 @@ export const useStorage = defineStore('storage', () => {
 
         prompts.value = new Map(allPrompts.map((p) => [p.id, p]))
         tags.value = new Map(
-          [{ id: uncategorizedTagID, text: '未分类' }, ...allTags].map((t) => [t.id, t])
+          [{ id: uncategorizedTagID, text: '未分类' }, ...allTags].map((t) => [
+            t.id,
+            t,
+          ])
         )
         examples.value = new Map(allExamples.map((e) => [e.id, e]))
         images.value = new Map(allImages.map((i) => [i.id, i]))

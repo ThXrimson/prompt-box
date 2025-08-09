@@ -1,14 +1,25 @@
 <template>
   <div class="my-2 mx-2 flex-1 min-h-0 min-w-0 flex flex-col">
     <div class="image flex flex-col flex-1 min-h-0">
-      <el-button
-        type="success"
-        :icon="CirclePlusFilled"
-        class="mb-2 self-start!"
-        @click="handleAddExample"
-      >
-        添加示例
-      </el-button>
+      <div>
+        <el-button
+          type="success"
+          :icon="CirclePlusFilled"
+          class="mb-2 self-start!"
+          @click="handleAddExample"
+        >
+          添加示例
+        </el-button>
+
+        <el-button
+          type="success"
+          :icon="DeleteFilled"
+          class="mb-2 self-start!"
+          @click="handleDeleteEmptyExamples"
+        >
+          删除空示例
+        </el-button>
+      </div>
 
       <el-scrollbar
         v-if="examples.length > 0"
@@ -161,10 +172,12 @@ import {
   CirclePlusFilled,
   CopyDocument,
   Delete,
+  DeleteFilled,
   // Edit,
 } from '@element-plus/icons-vue'
 import { getImageUrl } from '@renderer/utils/utils'
 import { watchArray } from '@vueuse/core'
+import { ElMessageBox } from 'element-plus'
 
 const tabs = ['positive', 'negative', 'extra'] as const
 const tabToField: Record<string, string> = {
@@ -273,6 +286,46 @@ async function handleDeleteExample(id: string): Promise<void> {
     ElMessage.error('删除示例失败')
   } else {
     ElMessage.success('删除示例成功')
+  }
+}
+
+async function handleDeleteEmptyExamples(): Promise<void> {
+  const emptyExamples = Array.from(storage.examples.values()).filter(
+    (example) =>
+      example.positivePrompt === '' &&
+      example.negativePrompt === '' &&
+      example.extra === '' &&
+      example.imageIDs.length === 0
+  )
+  if (emptyExamples.length === 0) {
+    ElMessage.info('没有空示例可删除')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确定删除 ${emptyExamples.length} 个空示例？`,
+      '删除空示例',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    for (const prompt of storage.prompts.values()) {
+      const exampleIDs = prompt.exampleIDs.filter(
+        (id) => !emptyExamples.some((e) => e.id === id)
+      )
+      if (exampleIDs.length === prompt.exampleIDs.length) continue
+      await storage.updatePromptExampleIDs(prompt.id, exampleIDs)
+    }
+    for (const example of emptyExamples) {
+      await storage.deleteExample(example.id)
+    }
+    ElMessage.success(`已删除 ${emptyExamples.length} 个空示例`)
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除空示例失败')
+    }
   }
 }
 

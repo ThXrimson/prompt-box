@@ -1,5 +1,6 @@
 @import './base.css';
 @import './example-input-textarea.css';
+@import 'element-plus/theme-chalk/el-message-box.css';
 
 body {
   color: var(--color-slate-800);

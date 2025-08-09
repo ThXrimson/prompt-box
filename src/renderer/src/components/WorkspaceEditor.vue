@@ -256,20 +256,13 @@
   >
     <prompt-editor :prompt-i-d="editingPromptID" />
     <template #footer>
-      <el-popconfirm
-        title="确定删除此提示词？"
-        :hide-after="0"
-        @confirm="
-          () => {
-            handleDeletePrompt(editingPromptID!)
-            editingPromptVisible = false
-          }
-        "
+      <el-button
+        type="danger"
+        class="w-full"
+        @click="handleDeletePrompt(editingPromptID!)"
       >
-        <template #reference>
-          <el-button type="danger" class="w-full"> 删除 </el-button>
-        </template>
-      </el-popconfirm>
+        删除
+      </el-button>
     </template>
   </el-dialog>
 
@@ -314,7 +307,7 @@ import {
 } from '@renderer/utils/utils'
 import EnterIcon from '@renderer/icons/Enter.vue'
 import Examples from '@renderer/views/Examples.vue'
-import { ElInput } from 'element-plus'
+import { ElInput, ElMessageBox } from 'element-plus'
 import { useBracketsWrapElInput } from '@renderer/hooks/useBracketsWrapElInput'
 
 const props = defineProps<{
@@ -616,16 +609,28 @@ function handleRemovePrompt(id: string): void {
 }
 
 async function handleDeletePrompt(id: string): Promise<void> {
-  const res = await storage.deletePrompt(id)
-  if (res) {
-    ElMessage.success('成功删除提示词')
-    promptList.value.forEach((item) => {
-      if (item.existsID === id) {
-        item.existsID = null
-      }
+  try {
+    await ElMessageBox.confirm('确定删除此提示词？', '删除提示词', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
     })
-  } else {
-    ElMessage.error('删除提示词失败')
+    const res = await storage.deletePrompt(id)
+    if (res) {
+      ElMessage.success('成功删除提示词')
+      promptList.value.forEach((item) => {
+        if (item.existsID === id) {
+          item.existsID = null
+        }
+      })
+      editingPromptVisible.value = false
+    } else {
+      ElMessage.error('删除提示词失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除提示词失败')
+    }
   }
 }
 

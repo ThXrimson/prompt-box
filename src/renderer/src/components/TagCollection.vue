@@ -117,20 +117,13 @@
   >
     <prompt-editor :prompt-i-d="editingPromptID" />
     <template #footer>
-      <el-popconfirm
-        title="确定删除此提示词？"
-        :hide-after="0"
-        @confirm="
-          () => {
-            handleDeletePrompt(editingPromptID!)
-            editPromptDialogVisible = false
-          }
-        "
+      <el-button
+        type="danger"
+        class="w-full"
+        @click="handleDeletePrompt(editingPromptID!)"
       >
-        <template #reference>
-          <el-button type="danger" class="w-full"> 删除 </el-button>
-        </template>
-      </el-popconfirm>
+        删除
+      </el-button>
     </template>
   </el-dialog>
 </template>
@@ -143,6 +136,7 @@ import { Edit, Delete } from '@element-plus/icons-vue'
 import type { Prompt, Tag } from '@shared/types'
 import { useStorage, uncategorizedTagID } from '@renderer/stores/storage'
 import { clone, cloneDeep } from 'lodash'
+import { ElMessageBox } from 'element-plus'
 
 const props = defineProps<{
   tag: Tag
@@ -276,11 +270,23 @@ async function handleRemovePromptFromTag(promptID: string): Promise<void> {
 }
 
 async function handleDeletePrompt(id: string): Promise<void> {
-  const res = await storage.deletePrompt(id)
-  if (res) {
-    ElMessage.success('成功删除提示词')
-  } else {
-    ElMessage.error('删除提示词失败')
+  try {
+    await ElMessageBox.confirm('确定删除此提示词？', '删除提示词', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    const res = await storage.deletePrompt(id)
+    if (res) {
+      ElMessage.success('成功删除提示词')
+      editPromptDialogVisible.value = false
+    } else {
+      ElMessage.error('删除提示词失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除提示词失败')
+    }
   }
 }
 </script>

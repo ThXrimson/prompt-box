@@ -268,7 +268,7 @@ export default class Storage {
       imageIDs?: string[]
     }
   ): Example {
-    const prompt = this.getPromptByID(promptID)
+    const prompt = this.db.data.prompts.find((p) => p.id === promptID)
     if (!prompt) {
       throw new Error(`Prompt with ID ${promptID} not found`)
     }
@@ -279,7 +279,7 @@ export default class Storage {
   }
 
   addExampleIDToPrompt(promptID: string, exampleID: string): Example {
-    const prompt = this.getPromptByID(promptID)
+    const prompt = this.db.data.prompts.find((p) => p.id === promptID)
     if (!prompt) {
       throw new Error(`Prompt with ID ${promptID} not found`)
     }
