@@ -98,7 +98,7 @@
                       </template>
                     </el-popconfirm>
                   </div>
-                  <el-select
+                  <el-select-v2
                     v-model="examplePrompts[example.id]"
                     value-key="id"
                     multiple
@@ -106,18 +106,10 @@
                     default-first-option
                     :reserve-keyword="false"
                     placeholder="此处更改示例所属提示词"
+                    :options="promptOptions"
                     class="flex flex-1 min-w-0"
                     @blur="handleChangeExamplePrompt(example.id)"
-                  >
-                    <el-option
-                      v-for="prompt in Array.from(storage.prompts.values()).map(
-                        (p) => ({ id: p.id, text: p.text })
-                      )"
-                      :key="prompt.id"
-                      :label="prompt.text"
-                      :value="prompt"
-                    />
-                  </el-select>
+                  />
                 </div>
                 <!-- <el-input
                   v-for="tab in tabs"
@@ -173,7 +165,6 @@ import {
   CopyDocument,
   Delete,
   DeleteFilled,
-  // Edit,
 } from '@element-plus/icons-vue'
 import { getImageUrl } from '@renderer/utils/utils'
 import { watchArray } from '@vueuse/core'
@@ -201,6 +192,16 @@ const examples = computed(() => {
         images: storage.getImagesByExampleID(example.id),
       }
     })
+})
+
+const promptOptions = computed(() => {
+  return Array.from(storage.prompts.values()).map((prompt) => ({
+    label: prompt.text,
+    value: {
+      id: prompt.id,
+      text: prompt.text,
+    },
+  }))
 })
 
 // 编辑或添加示例相关数据
