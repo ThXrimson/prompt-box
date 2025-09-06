@@ -56,7 +56,8 @@
 
         <el-select-v2
           model-value=""
-          :options="Array.from(storage.prompts.values())"
+          :options="searchPromptOptions"
+          :filter-method="findPromptByTextOrTranslation"
           :props="{
             label: 'text',
             value: 'text',
@@ -66,7 +67,16 @@
           clearable
           class="flex-1 min-w-0"
           @update:model-value="handleFindPromptAndScroll($event)"
-        />
+        >
+          <template #default="{ item }">
+            <span style="margin-right: 8px">{{ item.text }}</span>
+            <span
+              style="color: var(--el-text-color-secondary); font-size: 13px"
+            >
+              {{ item.translation }}
+            </span>
+          </template>
+        </el-select-v2>
 
         <el-select-v2
           model-value=""
@@ -76,17 +86,7 @@
             value: 'id',
           }"
           filterable
-          :filter-method="
-            (text) => {
-              tagFocusOptions = workspaceTags.filter((tag) => {
-                return (
-                  tag.text.includes(text) ||
-                  pinyinIncludes(tag.text, text) ||
-                  pinyinIncludesWithFirstLetter(tag.text, text)
-                )
-              })
-            }
-          "
+          :filter-method="findTagByTextOrPinyin"
           placeholder="查找标签"
           clearable
           class="flex-1 min-w-0"
@@ -367,8 +367,8 @@ function handleScrollToTag(tagID: string): void {
   }
 }
 
-function handleFindPromptAndScroll(prompt: string): void {
-  selectedTags.value.forEach(async (tag) => {
+async function handleFindPromptAndScroll(prompt: string): Promise<void> {
+  for (const tag of selectedTags.value) {
     const prompts = storage.getPromptsByTag(tag.id)
     const index = prompts.findIndex((p) => p.text === prompt)
     if (index !== -1) {
@@ -380,7 +380,7 @@ function handleFindPromptAndScroll(prompt: string): void {
       tc?.scrollPromptIntoView(prompt)
       return
     }
-  })
+  }
 }
 
 function defaultWorkspace(): Workspace {
@@ -393,5 +393,56 @@ function defaultWorkspace(): Workspace {
     createTime: 0,
     updateTime: 0,
   }
+}
+
+const searchPromptOptions = ref<{ text: string; translation: string }[]>([])
+onMounted(() => {
+  const options: { text: string; translation: string }[] = []
+  selectedTags.value.forEach((tag) => {
+    const prompts = storage.getPromptsByTag(tag.id)
+    prompts.forEach((prompt) => {
+      if (!options.find((o) => o.text === prompt.text)) {
+        options.push({
+          text: prompt.text,
+          translation: prompt.translation || '',
+        })
+      }
+    })
+  })
+  searchPromptOptions.value = options
+})
+
+// 根据拼音查找标签
+const findTagByTextOrPinyin = (text: string): void => {
+  tagFocusOptions.value = workspaceTags.value.filter((tag) => {
+    return (
+      tag.text.includes(text) ||
+      pinyinIncludes(tag.text, text) ||
+      pinyinIncludesWithFirstLetter(tag.text, text)
+    )
+  })
+}
+
+// 根据提示词内容或翻译查找提示词
+const findPromptByTextOrTranslation = (text: string): void => {
+  const options: { text: string; translation: string }[] = []
+  selectedTags.value.forEach((tag) => {
+    const prompts = storage.getPromptsByTag(tag.id)
+    prompts.forEach((prompt) => {
+      if (
+        prompt.text.toLowerCase().includes(text.toLowerCase()) ||
+        (prompt.translation &&
+          (prompt.translation.includes(text.toLowerCase()) ||
+            pinyinIncludes(prompt.translation, text) ||
+            pinyinIncludesWithFirstLetter(prompt.translation, text)))
+      ) {
+        options.push({
+          text: prompt.text,
+          translation: prompt.translation || '',
+        })
+      }
+    })
+  })
+  searchPromptOptions.value = options
 }
 </script>

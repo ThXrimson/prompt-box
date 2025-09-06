@@ -182,7 +182,11 @@ import {
 import { computed, nextTick, ref, useTemplateRef } from 'vue'
 import { uncategorizedTagID, useStorage } from '@renderer/stores/storage'
 import TagEditor from '@renderer/components/TagEditor.vue'
-import { pinyinIncludes, pinyinIncludesWithFirstLetter } from '@renderer/utils/pinyin-includes'
+import {
+  pinyinIncludes,
+  pinyinIncludesWithFirstLetter,
+} from '@renderer/utils/pinyin-includes'
+import { Prompt } from '@shared/types'
 
 interface PromptView {
   id: string
@@ -215,9 +219,7 @@ const promptsView = computed(() => {
       if (searchTerm.value.trim() === '') {
         return true
       }
-      return (
-        prompt.text.toLowerCase().indexOf(searchTerm.value.toLowerCase()) !== -1
-      )
+      return promptContains(prompt, searchTerm.value.trim().toLowerCase())
     })
     .filter((prompt) => {
       if (filteredTagIDs.value.length === 0) {
@@ -341,6 +343,16 @@ async function handleDeletePrompt(id: string): Promise<void> {
   } else {
     ElMessage.error('删除提示词失败')
   }
+}
+
+const promptContains = (prompt: Prompt, text: string): boolean => {
+  return (
+    prompt.text.toLowerCase().includes(text) ||
+    (Boolean(prompt.translation) &&
+      (prompt.translation.toLowerCase().includes(text) ||
+        pinyinIncludes(prompt.translation, text) ||
+        pinyinIncludesWithFirstLetter(prompt.translation, text)))
+  )
 }
 </script>
 

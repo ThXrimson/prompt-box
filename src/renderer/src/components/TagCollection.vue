@@ -137,6 +137,10 @@ import type { Prompt, Tag } from '@shared/types'
 import { useStorage, uncategorizedTagID } from '@renderer/stores/storage'
 import { clone, cloneDeep } from 'lodash'
 import { ElMessageBox } from 'element-plus'
+import {
+  pinyinIncludes,
+  pinyinIncludesWithFirstLetter,
+} from '@renderer/utils/pinyin-includes'
 
 const props = defineProps<{
   tag: Tag
@@ -162,8 +166,18 @@ const prompts = computed(() => {
 })
 const promptView = computed(() => {
   return prompts.value
-    .filter((prompt) =>
-      prompt.text.toLowerCase().includes(promptInput.value.toLowerCase())
+    .filter(
+      (prompt) =>
+        prompt.text.toLowerCase().includes(promptInput.value.toLowerCase()) ||
+        (Boolean(prompt.translation) &&
+          (prompt.translation
+            .toLowerCase()
+            .includes(promptInput.value.toLowerCase()) ||
+            pinyinIncludes(prompt.translation, promptInput.value) ||
+            pinyinIncludesWithFirstLetter(
+              prompt.translation,
+              promptInput.value
+            )))
     )
     .toSorted((a, b) => a.text.localeCompare(b.text))
 })
