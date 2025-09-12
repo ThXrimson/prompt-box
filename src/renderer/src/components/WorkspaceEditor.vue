@@ -83,67 +83,60 @@
               class="flex flex-wrap gap-1 gap-y-0 p-2"
             >
               <div v-for="item in promptList" :key="item.id">
-                <el-tooltip placement="bottom" :hide-after="0">
-                  <template #content>
-                    点击编辑该词
-                    <br />
-                    按住拖动顺序
-                  </template>
-                  <el-dropdown
-                    trigger="hover"
+                <el-dropdown
+                  trigger="hover"
+                  size="small"
+                  placement="top"
+                  :hide-on-click="false"
+                >
+                  <el-tag
+                    :type="
+                      item.disabled
+                        ? 'info'
+                        : item.existsID !== null
+                          ? 'success'
+                          : 'primary'
+                    "
                     size="small"
-                    placement="top"
-                    :hide-on-click="false"
+                    disable-transitions
+                    closable
+                    class="cursor-pointer border! border-transparent hover:border-blue-500! transition-all duration-200"
+                    :class="item.disabled ? 'line-through' : ''"
+                    @click="handleEditPrompt(item.id)"
+                    @close="handleRemovePrompt(item.id)"
                   >
-                    <el-tag
-                      :type="
-                        item.disabled
-                          ? 'info'
-                          : item.existsID !== null
-                            ? 'success'
-                            : 'primary'
-                      "
-                      size="small"
-                      disable-transitions
-                      closable
-                      class="cursor-pointer"
-                      :class="item.disabled ? 'line-through' : ''"
-                      @click="handleEditPrompt(item.id)"
-                      @close="handleRemovePrompt(item.id)"
+                    <span
+                      v-for="part in promptTextView[item.text]"
+                      :key="part.id"
+                      :class="{
+                        'bg-yellow-300': part.searched,
+                        'bg-red-400': part.focused,
+                      }"
                     >
-                      <!-- {{ promptTextView[item.text] }} -->
-                      <span
-                        v-for="part in promptTextView[item.text]"
-                        :key="part.id"
-                        :class="{
-                          'bg-yellow-300': part.searched,
-                          'bg-red-400': part.focused,
-                        }"
-                      >
-                        {{ part.text }}
-                      </span>
-                    </el-tag>
+                      {{ part.text }}
+                    </span>
+                  </el-tag>
 
-                    <template #dropdown>
-                      <el-dropdown-menu>
-                        <el-dropdown-item @click="handleAddPrompt(item.text)">
-                          收藏提示词
-                        </el-dropdown-item>
-                        <el-dropdown-item
-                          :disabled="item.existsID === null"
-                          @click="handleOpenPromptEditor(item.existsID!)"
-                        >
-                          编辑提示词
-                        </el-dropdown-item>
-                        <el-dropdown-item
-                          @click="item.disabled = !item.disabled"
-                        >
-                          {{ item.disabled ? '启用' : '禁用' }}提示词
-                        </el-dropdown-item>
-                      </el-dropdown-menu>
-                    </template>
-                  </el-dropdown>
-                </el-tooltip>
+                  <template #dropdown>
+                    <el-dropdown-menu
+                      class="flex! flex-row! p-0!"
+                      :item-classes="['px-2', 'py-1', 'whitespace-nowrap']"
+                    >
+                      <el-dropdown-item @click="handleAddPrompt(item.text)">
+                        收藏
+                      </el-dropdown-item>
+                      <el-dropdown-item
+                        :disabled="item.existsID === null"
+                        @click="handleOpenPromptEditor(item.existsID!)"
+                      >
+                        编辑
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="item.disabled = !item.disabled">
+                        {{ item.disabled ? '启用' : '禁用' }}
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
               </div>
             </vue-draggable>
           </div>
