@@ -14,11 +14,8 @@
         <el-button size="small" class="ml-0!" @click="handleEditPromptAddSquare"
           >+[]</el-button
         >
-        <el-button size="small" class="ml-0!" @click="handleEditPromptAddAngle"
-          >+&lt;&gt;</el-button
-        >
         <el-button size="small" class="ml-0!" @click="handleEditPromptDelete"
-          >-()|[]|&lt;&gt;</el-button
+          >-()|[]</el-button
         >
         <el-button size="small" class="ml-0!" @click="handleEditPromptClear"
           >括号清空</el-button
@@ -365,10 +362,6 @@ function handleEditPromptAddCurly(): void {
 
 function handleEditPromptAddSquare(): void {
   editingPromptText.value = `[${editingPromptText.value}]`
-}
-
-function handleEditPromptAddAngle(): void {
-  editingPromptText.value = `<${editingPromptText.value}>`
 }
 
 function handleEditPromptDelete(): void {

@@ -2,13 +2,12 @@ export function getImageUrl(path: string): string {
   return `image://${path}`
 }
 
-export type LeftBracket = '(' | '[' | '<'
-export type RightBracket = ')' | ']' | '>'
+export type LeftBracket = '(' | '['
+export type RightBracket = ')' | ']'
 
 export const brackets: Record<LeftBracket, RightBracket> = {
   '(': ')',
   '[': ']',
-  '<': '>',
 }
 
 // 剥离字符串的括号，返回括号和内容
