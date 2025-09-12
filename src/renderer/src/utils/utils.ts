@@ -43,10 +43,18 @@ export function joinBrackets(
 }
 
 export function stripWeight(text: string): { content: string; weight: string } {
-  const match = text.match(/(?<=:)[+-]?(\d+(\.\d*)?)$/)
+  let newText = text
+  const angled = textIsAngled(text)
+  if (angled) {
+    newText = text.slice(1, -1).trim()
+  }
+  const match = newText.match(/(?<=:)[+-]?(\d+(\.\d*)?)$/)
   if (match) {
     const weight = match[0]
-    const content = text.slice(0, -weight.length - 1).trim()
+    let content = newText.slice(0, -weight.length - 1).trim()
+    if (angled) {
+      content = `<${content}>`
+    }
     return { content, weight }
   }
   return { content: text, weight: '' }
@@ -60,9 +68,17 @@ export function joinWeight(text: string, weight: string): string {
     if (weight === '1') {
       return text.trim()
     }
+    if (textIsAngled(text)) {
+      text = text.slice(1, -1).trim()
+      return `<${text.trim()}:${weight}>`
+    }
     return `${text.trim()}:${weight}`
   }
   return text.trim()
+}
+
+function textIsAngled(text: string): boolean {
+  return text.length > 0 && text[0] === '<' && text[text.length - 1] === '>'
 }
 
 export function weightAdd(weight: string, delta: number): string {
