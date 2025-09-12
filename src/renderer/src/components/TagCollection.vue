@@ -118,7 +118,7 @@
             <div v-if="promptImageFileName[prompt.id]">
               <el-image
                 :src="getImageUrl(promptImageFileName[prompt.id])"
-                class="w-40 h-40 object-cover rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300 self-center-safe"
+                class="w-40 object-cover rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300 self-center-safe"
                 fit="cover"
                 loading="lazy"
               />
@@ -151,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { Plus, Close, CirclePlus } from '@element-plus/icons-vue'
 import DragHandle from '../icons/DragHandle.vue'
 import { Edit, Delete } from '@element-plus/icons-vue'

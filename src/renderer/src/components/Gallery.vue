@@ -1,7 +1,10 @@
 <template>
   <el-scrollbar class="w-fit flex-1 border-gray-200 border-2 rounded-md">
-    <div
+    <vue-draggable
+      v-model="images"
+      :animation="100"
       class="grid grid-cols-4 lg:grid-cols-6 p-2 gap-2 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden self-start"
+      @end="handleDragEnd"
     >
       <div
         v-for="(image, index) in images"
@@ -43,7 +46,7 @@
         class="w-30! h-30! rounded-md"
         @click="handleOpenAddImageDialog"
       />
-    </div>
+    </vue-draggable>
   </el-scrollbar>
 
   <!-- 添加图片对话框 -->
@@ -79,9 +82,11 @@
 <script setup lang="ts">
 import { useStorage } from '@renderer/stores/storage'
 import { getImageUrl } from '@renderer/utils/utils'
-import { computed, ref } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { Plus, Close } from '@element-plus/icons-vue'
 import SaveIcon from '@renderer/icons/Save.vue'
+import { VueDraggable } from 'vue-draggable-plus'
+import { Image } from '@shared/types'
 
 const props = defineProps<{
   exampleID: string
@@ -89,7 +94,14 @@ const props = defineProps<{
 
 const storage = useStorage()
 
-const images = computed(() => storage.getImagesByExampleID(props.exampleID))
+const images = ref<Image[]>([])
+watch(
+  () => storage.getImagesByExampleID(props.exampleID).map((img) => img.id),
+  () => {
+    images.value = storage.getImagesByExampleID(props.exampleID)
+  },
+  { immediate: true }
+)
 
 const addImageDialogVisible = ref(false)
 const candidateImage = ref<string>('')
@@ -164,6 +176,13 @@ async function handleCopyImageToClipboard(imageID: string): Promise<void> {
   } else {
     ElMessage.error('图片保存失败')
   }
+}
+
+async function handleDragEnd(): Promise<void> {
+  await storage.updateExample({
+    id: props.exampleID,
+    imageIDs: images.value.map((img) => img.id),
+  })
 }
 </script>
 
