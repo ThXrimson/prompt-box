@@ -82,7 +82,7 @@
 <script setup lang="ts">
 import { useStorage } from '@renderer/stores/storage'
 import { getImageUrl } from '@renderer/utils/utils'
-import { nextTick, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { Plus, Close } from '@element-plus/icons-vue'
 import SaveIcon from '@renderer/icons/Save.vue'
 import { VueDraggable } from 'vue-draggable-plus'

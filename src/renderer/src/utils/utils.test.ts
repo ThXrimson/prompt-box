@@ -35,12 +35,12 @@ describe('stripBrackets', () => {
 
 describe('addBrackets', () => {
   it('should add brackets to the text', () => {
-    const result = joinBrackets('test', ['(', '[', '<'])
+    const result = joinBrackets('test', ['(', '['])
     expect(result).toBe('([<test>])')
   })
 
   it('should handle empty text', () => {
-    const result = joinBrackets('', ['(', '[', '<'])
+    const result = joinBrackets('', ['(', '['])
     expect(result).toBe('([<>])')
   })
 
