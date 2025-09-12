@@ -1,7 +1,7 @@
 <template>
   <div
     ref="tagCard"
-    class="tag-collection h-full flex flex-col gap-1.5 border-2 border-gray-200 rounded-lg p-2 bg-white min-w-48"
+    class="tag-collection h-full flex flex-col gap-1.5 border-2 border-gray-200 rounded-lg p-2 bg-white"
   >
     <div class="drag-handle grid justify-center-safe hover:cursor-pointer">
       <drag-handle
@@ -47,62 +47,84 @@
         ref="promptCards"
         class="prompt-wrapper"
       >
-        <div
-          class="flex justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300"
-          :class="{
-            'bg-orange-400 hover:bg-orange-500': existingPromptIDs?.includes(
-              prompt.id
-            ),
-            'bg-teal-400 hover:bg-teal-500':
-              existingPromptIDs?.includes(prompt.id) === false,
-          }"
+        <el-tooltip
+          placement="top-start"
+          trigger="hover"
+          :hide-after="0"
+          :disabled="!Boolean(promptImageFileName[prompt.id])"
         >
-          <el-tooltip
-            :content="prompt.translation || prompt.text"
-            placement="top-start"
-            trigger="hover"
-            :hide-after="0"
+          <div
+            class="flex gap-1 justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300"
+            :class="{
+              'bg-orange-400 hover:bg-orange-500': existingPromptIDs?.includes(
+                prompt.id
+              ),
+              'bg-teal-400 hover:bg-teal-500':
+                existingPromptIDs?.includes(prompt.id) === false,
+            }"
           >
-            <el-text
-              truncated
-              class="cursor-pointer text-white! font-bold"
+            <div
+              class="flex flex-col gap-0.5 max-w-32 cursor-pointer items-start"
               @click="handleCopyPrompt(prompt.text)"
             >
-              {{ prompt.text }}
-            </el-text>
-          </el-tooltip>
-          <div class="flex items-center gap-1">
-            <el-tooltip content="添加到编辑栏" placement="top" :hide-after="0">
-              <el-icon
-                class="text-white! hover:text-gray-700! cursor-pointer"
-                @click="emit('add-to-workspace', cloneDeep(prompt))"
+              <el-text truncated class="text-white! font-bold self-auto!">
+                {{ prompt.text }}
+              </el-text>
+              <el-text
+                v-if="prompt.translation"
+                truncated
+                class="text-teal-100! font-light text-xs! self-auto!"
               >
-                <CirclePlus />
-              </el-icon>
-            </el-tooltip>
-            <el-tooltip content="编辑" placement="top" :hide-after="0">
-              <el-icon
-                class="text-white! hover:text-gray-700! cursor-pointer"
-                @click="handleEditPrompt(prompt.id)"
+                {{ prompt.translation }}
+              </el-text>
+            </div>
+            <div class="flex items-center gap-1">
+              <el-tooltip
+                content="添加到编辑栏"
+                placement="top"
+                :hide-after="0"
               >
-                <Edit />
-              </el-icon>
-            </el-tooltip>
-            <el-popconfirm
-              title="确定从标签中移除提示词？"
-              :hide-after="0"
-              @confirm="handleRemovePromptFromTag(prompt.id)"
-            >
-              <template #reference>
                 <el-icon
                   class="text-white! hover:text-gray-700! cursor-pointer"
+                  @click="emit('add-to-workspace', cloneDeep(prompt))"
                 >
-                  <Delete />
+                  <CirclePlus />
                 </el-icon>
-              </template>
-            </el-popconfirm>
+              </el-tooltip>
+              <el-tooltip content="编辑" placement="top" :hide-after="0">
+                <el-icon
+                  class="text-white! hover:text-gray-700! cursor-pointer"
+                  @click="handleEditPrompt(prompt.id)"
+                >
+                  <Edit />
+                </el-icon>
+              </el-tooltip>
+              <el-popconfirm
+                title="确定从标签中移除提示词？"
+                :hide-after="0"
+                @confirm="handleRemovePromptFromTag(prompt.id)"
+              >
+                <template #reference>
+                  <el-icon
+                    class="text-white! hover:text-gray-700! cursor-pointer"
+                  >
+                    <Delete />
+                  </el-icon>
+                </template>
+              </el-popconfirm>
+            </div>
           </div>
-        </div>
+          <template #content>
+            <div v-if="promptImageFileName[prompt.id]">
+              <el-image
+                :src="getImageUrl(promptImageFileName[prompt.id])"
+                class="w-40 h-40 object-cover rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300 self-center-safe"
+                fit="cover"
+                loading="lazy"
+              />
+            </div>
+          </template>
+        </el-tooltip>
       </div>
     </el-scrollbar>
   </div>
@@ -129,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { Plus, Close, CirclePlus } from '@element-plus/icons-vue'
 import DragHandle from '../icons/DragHandle.vue'
 import { Edit, Delete } from '@element-plus/icons-vue'
@@ -141,6 +163,7 @@ import {
   pinyinIncludes,
   pinyinIncludesWithFirstLetter,
 } from '@renderer/utils/pinyin-includes'
+import { getImageUrl } from '@renderer/utils/utils'
 
 const props = defineProps<{
   tag: Tag
@@ -180,6 +203,22 @@ const promptView = computed(() => {
             )))
     )
     .toSorted((a, b) => a.text.localeCompare(b.text))
+})
+const promptImageFileName = computed(() => {
+  const promptIDToImageURL = {} as Record<string, string>
+  for (const prompt of promptView.value) {
+    for (const exampleID of prompt.exampleIDs) {
+      const images = storage.getImagesByExampleID(exampleID)
+      if (images.length > 0) {
+        promptIDToImageURL[prompt.id] = images[0].fileName
+        break
+      }
+    }
+    if (promptIDToImageURL[prompt.id]) {
+      continue
+    }
+  }
+  return promptIDToImageURL
 })
 
 defineExpose({
