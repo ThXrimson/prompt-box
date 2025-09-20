@@ -40,11 +40,12 @@
         </template>
       </el-input>
     </div>
-    <el-scrollbar view-class="prompt-container flex flex-col gap-1.5">
+    <el-scrollbar view-class="prompt-container flex flex-col gap-1.5 min-w-60">
       <div
         v-for="prompt in promptView"
         :key="prompt.id"
         ref="promptCards"
+        :prompt-text="prompt.text"
         class="prompt-wrapper"
       >
         <el-tooltip
@@ -54,7 +55,7 @@
           :disabled="!Boolean(promptImageFileName[prompt.id])"
         >
           <div
-            class="flex gap-1 justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300"
+            class="max-w-100 flex gap-1 justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300"
             :class="{
               'bg-orange-400 hover:bg-orange-500': existingPromptIDs?.includes(
                 prompt.id
@@ -64,7 +65,7 @@
             }"
           >
             <div
-              class="flex flex-col gap-0.5 max-w-32 cursor-pointer items-start"
+              class="flex flex-col gap-0.5 cursor-pointer items-start flex-1 min-w-0"
               @click="handleCopyPrompt(prompt.text)"
             >
               <el-text truncated class="text-white! font-bold self-auto!">
@@ -248,9 +249,10 @@ defineExpose({
   scrollPromptIntoView: async (prompt: string) => {
     promptInput.value = ''
     await nextTick()
-    const index = promptView.value.findIndex((p) => p.text === prompt)
-    if (index !== -1) {
-      const promptElement = promptCards.value?.[index]
+    const promptElement = promptCards.value?.find(
+      (p) => p.getAttribute('prompt-text') === prompt
+    )
+    if (promptElement) {
       promptElement?.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
