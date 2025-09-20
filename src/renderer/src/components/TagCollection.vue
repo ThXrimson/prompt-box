@@ -188,21 +188,33 @@ const prompts = computed(() => {
   return storage.getPromptsByTag(props.tag.id)
 })
 const promptView = computed(() => {
-  return prompts.value
-    .filter(
-      (prompt) =>
-        prompt.text.toLowerCase().includes(promptInput.value.toLowerCase()) ||
-        (Boolean(prompt.translation) &&
-          (prompt.translation
-            .toLowerCase()
-            .includes(promptInput.value.toLowerCase()) ||
-            pinyinIncludes(prompt.translation, promptInput.value) ||
-            pinyinIncludesWithFirstLetter(
-              prompt.translation,
-              promptInput.value
-            )))
-    )
-    .toSorted((a, b) => a.text.localeCompare(b.text))
+  const existingPromptIDsSet = new Set(
+    props.existingPromptIDs ?? ([] as string[])
+  )
+  const filtered = prompts.value.filter(
+    (prompt) =>
+      prompt.text.toLowerCase().includes(promptInput.value.toLowerCase()) ||
+      (Boolean(prompt.translation) &&
+        (prompt.translation
+          .toLowerCase()
+          .includes(promptInput.value.toLowerCase()) ||
+          pinyinIncludes(prompt.translation, promptInput.value) ||
+          pinyinIncludesWithFirstLetter(prompt.translation, promptInput.value)))
+  )
+  const prioritized = filtered.sort((a, b) => {
+    const aExists = existingPromptIDsSet.has(a.id)
+    const bExists = existingPromptIDsSet.has(b.id)
+    if (aExists == bExists) {
+      return a.text.localeCompare(b.text)
+    } else if (aExists && !bExists) {
+      return -1
+    } else if (!aExists && bExists) {
+      return 1
+    } else {
+      return 0
+    }
+  })
+  return prioritized
 })
 const promptImageFileName = computed(() => {
   const promptIDToImageURL = {} as Record<string, string>

@@ -118,7 +118,20 @@
           clearable
           collapse-tags
           class="flex-1 min-w-0"
-        />
+        >
+          <template #header>
+            <el-checkbox
+              v-model="selectAllTags"
+              :indeterminate="indeterminateAll"
+              @change="handleCheckAllTags"
+            >
+              全选
+            </el-checkbox>
+            <el-checkbox v-model="selectUsedTags" @change="handleCheckUsedTags">
+              已使用
+            </el-checkbox>
+          </template>
+        </el-select-v2>
         <!-- 切换正向、负向编辑器 -->
         <el-switch
           v-model="isPositiveEditor"
@@ -168,7 +181,7 @@
 import { useStorage } from '@renderer/stores/storage'
 import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { Discount } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { CheckboxValueType, ElMessage } from 'element-plus'
 import type { Workspace } from '@shared/types'
 import { watchArray } from '@vueuse/core'
 import { VueDraggable } from 'vue-draggable-plus'
@@ -444,5 +457,44 @@ const findPromptByTextOrTranslation = (text: string): void => {
     })
   })
   searchPromptOptions.value = options
+}
+
+// 全选、已使用标签
+const selectAllTags = ref(false)
+const selectUsedTags = ref(false)
+const indeterminateAll = ref(false)
+const usedTagIDs = computed(() => {
+  const usedTagIDs = new Set<string>()
+  storage.prompts.forEach((prompt) => {
+    if (!existingPromptIDs.value.includes(prompt.id)) return
+    prompt.tagIDs.forEach((tagID) => {
+      usedTagIDs.add(tagID)
+    })
+  })
+  return Array.from(usedTagIDs)
+})
+
+function handleCheckAllTags(value: CheckboxValueType): void {
+  selectUsedTags.value = false
+  if (value) {
+    workspace.value.tagIDs = allTags.value.map((tag) => tag.id)
+  } else {
+    workspace.value.tagIDs.length = 0
+  }
+  indeterminateAll.value =
+    workspace.value.tagIDs.length > 0 &&
+    workspace.value.tagIDs.length < allTags.value.length
+}
+
+function handleCheckUsedTags(value: CheckboxValueType): void {
+  indeterminateAll.value = false
+  selectAllTags.value = false
+  if (value) {
+    workspace.value.tagIDs = usedTagIDs.value.filter((id) =>
+      allTags.value.find((tag) => tag.id === id)
+    )
+  } else {
+    workspace.value.tagIDs.length = 0
+  }
 }
 </script>
