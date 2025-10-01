@@ -1,7 +1,7 @@
 <template>
   <div
     ref="tagCard"
-    class="tag-collection h-full flex flex-col gap-1.5 border-2 border-gray-200 rounded-lg p-2 bg-white"
+    class="tag-collection h-full flex flex-col gap-1.5 border-2 border-gray-200 rounded-lg p-2 pr-0 [&>*]:mr-2 bg-white"
   >
     <div class="drag-handle grid justify-center-safe hover:cursor-pointer">
       <drag-handle
@@ -40,7 +40,11 @@
         </template>
       </el-input>
     </div>
-    <el-scrollbar view-class="prompt-container flex flex-col gap-1.5 min-w-60">
+    <el-scrollbar
+      always
+      class="mr-0!"
+      view-class="prompt-container flex flex-col gap-1.5 min-w-60 pr-2.5"
+    >
       <div
         v-for="prompt in promptView"
         :key="prompt.id"
@@ -57,11 +61,10 @@
           <div
             class="max-w-100 flex gap-1 justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300"
             :class="{
-              'bg-orange-400 hover:bg-orange-500': existingPromptIDs?.includes(
-                prompt.id
-              ),
+              'bg-orange-400 hover:bg-orange-500':
+                existingPromptIDs?.has(prompt.id) === true,
               'bg-teal-400 hover:bg-teal-500':
-                existingPromptIDs?.includes(prompt.id) === false,
+                existingPromptIDs?.has(prompt.id) === false,
             }"
           >
             <div
@@ -168,7 +171,7 @@ import { getImageUrl } from '@renderer/utils/utils'
 
 const props = defineProps<{
   tag: Tag
-  existingPromptIDs?: string[]
+  existingPromptIDs?: Set<string>
 }>()
 
 const emit = defineEmits<{
@@ -189,9 +192,6 @@ const prompts = computed(() => {
   return storage.getPromptsByTag(props.tag.id)
 })
 const promptView = computed(() => {
-  const existingPromptIDsSet = new Set(
-    props.existingPromptIDs ?? ([] as string[])
-  )
   const filtered = prompts.value.filter(
     (prompt) =>
       prompt.text.toLowerCase().includes(promptInput.value.toLowerCase()) ||
@@ -202,6 +202,7 @@ const promptView = computed(() => {
           pinyinIncludes(prompt.translation, promptInput.value) ||
           pinyinIncludesWithFirstLetter(prompt.translation, promptInput.value)))
   )
+  const existingPromptIDsSet = props.existingPromptIDs || new Set<string>()
   const prioritized = filtered.sort((a, b) => {
     const aExists = existingPromptIDsSet.has(a.id)
     const bExists = existingPromptIDsSet.has(b.id)

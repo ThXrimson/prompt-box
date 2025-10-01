@@ -679,7 +679,8 @@ watchArray(
       .filter((id) => id !== null) as string[],
   (newIDs) => {
     emit('existing-prompt-change', newIDs)
-  }
+  },
+  { immediate: true }
 )
 
 async function handleGetTextTranslation(text: string): Promise<string> {

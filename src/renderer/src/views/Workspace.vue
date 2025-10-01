@@ -155,14 +155,15 @@
       @update:model-value="handleReorderTags($event as string[])"
     >
       <el-scrollbar
+        always
         class="[&_.el-scrollbar\_\_bar>.is-vertical]:hidden"
         view-class="flex gap-2 flex-1 h-full"
         wrap-class="overflow-y-hidden!"
       >
         <tag-collection
           v-for="tag in selectedTags"
-          ref="tagCollections"
           :key="tag.id"
+          ref="tagCollections"
           :tag="tag"
           :existing-prompt-i-ds="existingPromptIDs"
           @add-to-workspace="editor?.addText($event.text)"
@@ -183,7 +184,7 @@
 </template>
 <script setup lang="ts">
 import { useStorage } from '@renderer/stores/storage'
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { Discount } from '@element-plus/icons-vue'
 import { CheckboxValueType, ElMessage } from 'element-plus'
 import type { Workspace } from '@shared/types'
@@ -211,8 +212,19 @@ const showWorkspaceNameDialog = ref(false)
 
 const workspace = ref(defaultWorkspace())
 
+const selectedTagLimit = ref(3)
+onMounted(() => {
+  let step = 1
+  setInterval(() => {
+    if (workspace.value.tagIDs.length > selectedTagLimit.value) {
+      selectedTagLimit.value += step
+      step *= 2
+    }
+  }, 100)
+})
 const selectedTags = computed(() =>
   workspace.value.tagIDs
+    .slice(0, selectedTagLimit.value)
     .map((id) => storage.getTagByID(id))
     .filter((tag) => tag !== undefined)
 )
@@ -339,9 +351,12 @@ function handleCancelEditWorkspaceName(): void {
   showWorkspaceNameDialog.value = false
 }
 
-const existingPromptIDs = ref<string[]>([])
+const existingPromptIDs = ref<Set<string>>(new Set())
 function handleExistingPromptChange(promptIDs: string[]): void {
-  existingPromptIDs.value = promptIDs
+  existingPromptIDs.value.clear()
+  for (const id of promptIDs) {
+    existingPromptIDs.value.add(id)
+  }
 }
 
 const tagCollections = useTemplateRef('tagCollections')
@@ -442,7 +457,7 @@ const indeterminateAll = ref(false)
 const usedTagIDs = computed(() => {
   const usedTagIDs = new Set<string>()
   storage.prompts.forEach((prompt) => {
-    if (!existingPromptIDs.value.includes(prompt.id)) return
+    if (!existingPromptIDs.value.has(prompt.id)) return
     prompt.tagIDs.forEach((tagID) => {
       usedTagIDs.add(tagID)
     })
