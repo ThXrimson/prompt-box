@@ -1,6 +1,12 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
-  "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*", "src/shared/types.d.ts", "src/shared/ipc-channels.ts"],
+  "include": [
+    "electron.vite.config.*",
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/shared/types.d.ts",
+    "src/shared/ipc_channels.ts"
+  ],
   "compilerOptions": {
     "composite": true,
     "types": ["electron-vite/node"],

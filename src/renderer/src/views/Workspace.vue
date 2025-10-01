@@ -94,7 +94,7 @@
         />
 
         <el-select-v2
-          v-model="workspace.tagIDs"
+          :model-value="workspace.tagIDs"
           :options="tagAddOptions"
           :props="{
             label: 'text',
@@ -118,6 +118,7 @@
           clearable
           collapse-tags
           class="flex-1 min-w-0"
+          @update:model-value="handleSelectTags($event as string[])"
         >
           <template #header>
             <el-checkbox
@@ -134,22 +135,24 @@
         </el-select-v2>
         <!-- 切换正向、负向编辑器 -->
         <el-switch
-          v-model="isPositiveEditor"
+          :model-value="isPositiveEditor"
           inline-prompt
           active-text="POSITIVE"
           inactive-text="NEGATIVE"
           style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
           class="[&_.is-text]:font-mono"
+          @update:model-value="handleSwitchEditor($event as boolean)"
         />
       </div>
     </navigator>
     <!-- 标签列表 -->
     <vue-draggable
-      v-model="workspace.tagIDs"
+      :model-value="workspace.tagIDs"
       target=".el-scrollbar__view"
       handle=".drag-handle"
       :animation="100"
       class="flex justify-center-safe flex-1 min-h-0 my-2"
+      @update:model-value="handleReorderTags($event as string[])"
     >
       <el-scrollbar
         class="[&_.el-scrollbar\_\_bar>.is-vertical]:hidden"
@@ -171,7 +174,8 @@
     <!-- 工作区编辑器 -->
     <workspace-editor
       ref="editor"
-      v-model="editorText"
+      :model-value="editorText"
+      @update:model-value="handleSaveEditorText($event)"
       @add-example="handleAddExample"
       @existing-prompt-change="handleExistingPromptChange($event)"
     />
@@ -179,11 +183,10 @@
 </template>
 <script setup lang="ts">
 import { useStorage } from '@renderer/stores/storage'
-import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { Discount } from '@element-plus/icons-vue'
 import { CheckboxValueType, ElMessage } from 'element-plus'
 import type { Workspace } from '@shared/types'
-import { watchArray } from '@vueuse/core'
 import { VueDraggable } from 'vue-draggable-plus'
 import TagEditor from '@renderer/components/TagEditor.vue'
 import TagCollection from '@renderer/components/TagCollection.vue'
@@ -207,13 +210,6 @@ const tempWorkspaceText = ref('')
 const showWorkspaceNameDialog = ref(false)
 
 const workspace = ref(defaultWorkspace())
-onMounted(() => {
-  workspace.value =
-    storage.getWorkspaceByID(props.workspaceID) ?? defaultWorkspace()
-  if (!workspace.value.id) {
-    ElMessage.error('工作区未找到')
-  }
-})
 
 const selectedTags = computed(() =>
   workspace.value.tagIDs
@@ -228,46 +224,37 @@ const workspaceTags = computed(() => {
 })
 const tagFocusOptions = ref(workspaceTags.value)
 
-// 保存标签顺序
-watchArray(
-  () => workspace.value.tagIDs,
-  (newArr, oldArr) => {
-    if (newArr.join(',') !== oldArr.join(',')) {
-      storage.updateWorkspace({
-        id: workspace.value.id,
-        tagIDs: newArr,
-      })
-    }
-  }
-)
-
 // 切换正向、负向编辑器
 const isPositiveEditor = ref(true)
 
 const editorText = ref('')
-onMounted(() => {
+const loadEditorText = (): void => {
   editorText.value = isPositiveEditor.value
     ? workspace.value?.positiveEditor || ''
     : workspace.value?.negativeEditor || ''
-})
-watch(isPositiveEditor, () => {
-  editorText.value = isPositiveEditor.value
+}
+
+const handleSwitchEditor = (value: boolean): void => {
+  isPositiveEditor.value = value
+  editorText.value = value
     ? workspace.value?.positiveEditor || ''
     : workspace.value?.negativeEditor || ''
-})
-watch(editorText, async (newText) => {
+}
+
+const handleSaveEditorText = async (text: string): Promise<void> => {
+  editorText.value = text
   if (workspace.value) {
     if (isPositiveEditor.value) {
-      workspace.value.positiveEditor = newText
+      workspace.value.positiveEditor = text
     } else {
-      workspace.value.negativeEditor = newText
+      workspace.value.negativeEditor = text
     }
-    updateWorkspace({
+    await updateWorkspace({
       positiveEditor: workspace.value.positiveEditor,
       negativeEditor: workspace.value.negativeEditor,
     })
   }
-})
+}
 
 const tagDialogVisible = ref(false)
 
@@ -277,7 +264,7 @@ async function handleDeleteTag(tag: {
 }): Promise<void> {
   const confirmed = await storage.deleteTag(tag.id)
   if (confirmed) {
-    updateWorkspace({
+    await updateWorkspace({
       tagIDs: workspace.value?.tagIDs.filter((id) => id !== tag.id) || [],
     })
   } else {
@@ -290,17 +277,6 @@ function handleCloseTag(tag: { id: string; text: string }): void {
     tagIDs: workspace.value?.tagIDs.filter((id) => id !== tag.id) || [],
   })
 }
-
-watchArray(
-  () => workspace.value.tagIDs,
-  (_newArr, _oldArr, added, removed) => {
-    if (!added.length && !removed.length) return
-    // 当标签列表变化时，更新工作区
-    updateWorkspace({
-      tagIDs: workspace.value.tagIDs,
-    })
-  }
-)
 
 async function updateWorkspace(newWorkspace: {
   name?: string
@@ -409,7 +385,7 @@ function defaultWorkspace(): Workspace {
 }
 
 const searchPromptOptions = ref<{ text: string; translation: string }[]>([])
-onMounted(() => {
+const loadSearchPromptOptions = (): void => {
   const options: { text: string; translation: string }[] = []
   selectedTags.value.forEach((tag) => {
     const prompts = storage.getPromptsByTag(tag.id)
@@ -423,7 +399,7 @@ onMounted(() => {
     })
   })
   searchPromptOptions.value = options
-})
+}
 
 // 根据拼音查找标签
 const findTagByTextOrPinyin = (text: string): void => {
@@ -484,6 +460,7 @@ function handleCheckAllTags(value: CheckboxValueType): void {
   indeterminateAll.value =
     workspace.value.tagIDs.length > 0 &&
     workspace.value.tagIDs.length < allTags.value.length
+  updateWorkspace({})
 }
 
 function handleCheckUsedTags(value: CheckboxValueType): void {
@@ -496,5 +473,29 @@ function handleCheckUsedTags(value: CheckboxValueType): void {
   } else {
     workspace.value.tagIDs.length = 0
   }
+  updateWorkspace({})
+}
+
+watch(
+  () => props.workspaceID,
+  () => {
+    workspace.value =
+      storage.getWorkspaceByID(props.workspaceID) ?? defaultWorkspace()
+    if (!workspace.value.id) {
+      ElMessage.error('工作区未找到')
+    } else {
+      loadEditorText()
+      loadSearchPromptOptions()
+    }
+  },
+  { immediate: true }
+)
+
+const handleReorderTags = (tagIDs: string[]): void => {
+  updateWorkspace({ tagIDs })
+}
+
+const handleSelectTags = (tagIDs: string[]): void => {
+  updateWorkspace({ tagIDs })
 }
 </script>

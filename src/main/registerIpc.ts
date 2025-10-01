@@ -3,7 +3,7 @@ import fs from 'fs/promises'
 import fileType from 'file-type'
 import { getImageAsArrayBuffer, getImageDir } from './utils'
 import { join } from 'path'
-import * as ipcChannels from '@shared/ipc-channels'
+import * as ipcChannels from '@shared/ipc_channels'
 import log from 'electron-log/main'
 import Storage from './storage'
 import type { Image } from '@shared/types'
@@ -375,7 +375,7 @@ export function registerIpc(): void {
         const result = await translateByDeepLX(text)
         return result
       } catch (error) {
-        log.error('Failed to translate by deeplx:', error)
+        log.verbose('Failed to translate by deeplx:', error)
         return null
       }
     }

@@ -15,7 +15,7 @@ export const useStorage = defineStore('storage', () => {
   const initPromise = ref<Promise<void> | null>(null) // 可以暴露一个 Promise
   async function init(): Promise<void> {
     if (initialized.value) return // 避免重复初始化
-    if (initPromise.value) return await initPromise.value // 如果正在初始化，等待它完成
+    if (initPromise.value) return initPromise.value // 如果正在初始化，等待它完成
 
     initPromise.value = (async () => {
       try {

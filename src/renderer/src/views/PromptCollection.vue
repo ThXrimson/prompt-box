@@ -186,7 +186,7 @@ import {
   pinyinIncludes,
   pinyinIncludesWithFirstLetter,
 } from '@renderer/utils/pinyin-includes'
-import { Prompt } from '@shared/types'
+import type { Prompt } from '@shared/types'
 
 interface PromptView {
   id: string

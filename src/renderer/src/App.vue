@@ -50,6 +50,9 @@ const activeMenu = ref('/prompt-collection')
 watch(
   () => route.path,
   (newPath) => {
+    if (newPath.startsWith('/workspace/')) {
+      newPath = '/workspaces'
+    }
     activeMenu.value = newPath
   },
   { immediate: true } // 立即执行一次，确保初始状态正确

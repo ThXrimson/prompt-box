@@ -82,7 +82,7 @@ function handleRouteToWorkspace(workspaceID: string): void {
 async function handleAddWorkspace(): Promise<void> {
   const newWorkspace = await storage.addWorkspace({ name: workspaceName.value })
   if (newWorkspace) {
-    router.push({ path: `/workspace/${newWorkspace.id}` })
+    await router.push({ path: `/workspace/${newWorkspace.id}` })
   } else {
     ElMessage.error('添加工作区失败')
   }

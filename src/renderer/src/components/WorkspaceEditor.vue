@@ -8,27 +8,31 @@
   >
     <div class="flex flex-col gap-2">
       <div class="flex gap-0.5 w-full flex-wrap">
-        <el-button size="small" class="ml-0!" @click="handleEditPromptAddCurly"
-          >+()</el-button
+        <el-button size="small" class="ml-0!" @click="handleEditPromptAddCurly">
+          +()
+        </el-button>
+        <el-button
+          size="small"
+          class="ml-0!"
+          @click="handleEditPromptAddSquare"
         >
-        <el-button size="small" class="ml-0!" @click="handleEditPromptAddSquare"
-          >+[]</el-button
-        >
-        <el-button size="small" class="ml-0!" @click="handleEditPromptDelete"
-          >-()|[]</el-button
-        >
-        <el-button size="small" class="ml-0!" @click="handleEditPromptClear"
-          >括号清空</el-button
-        >
-        <el-button size="small" class="ml-0!" @click="handleEditPromptAdd"
-          >+0.1</el-button
-        >
-        <el-button size="small" class="ml-0!" @click="handleEditPromptMinus"
-          >-0.1</el-button
-        >
-        <el-button size="small" class="ml-0!" @click="handleEditPromptZero"
-          >权重清零</el-button
-        >
+          +[]
+        </el-button>
+        <el-button size="small" class="ml-0!" @click="handleEditPromptDelete">
+          -()|[]
+        </el-button>
+        <el-button size="small" class="ml-0!" @click="handleEditPromptClear">
+          括号清空
+        </el-button>
+        <el-button size="small" class="ml-0!" @click="handleEditPromptAdd">
+          +0.1
+        </el-button>
+        <el-button size="small" class="ml-0!" @click="handleEditPromptMinus">
+          -0.1
+        </el-button>
+        <el-button size="small" class="ml-0!" @click="handleEditPromptZero">
+          权重清零
+        </el-button>
       </div>
       <el-input
         ref="promptEditorInput"
@@ -55,7 +59,7 @@
   <!-- 编辑框容器 -->
   <div
     ref="containerRef"
-    class="flex flex-col bg-white rounded-lg shadow-md min-h-50"
+    class="flex flex-col bg-white rounded-lg shadow-md min-h-70"
     :style="{ height: containerHeight + 'px' }"
   >
     <div class="flex flex-col gap-2 p-2 flex-1 min-h-0">
@@ -78,6 +82,8 @@
               v-model="promptList"
               :animation="100"
               class="flex flex-wrap gap-1 gap-y-0 p-2"
+              ghost-class="opacity-50"
+              drag-class="opacity-0"
             >
               <div v-for="item in promptList" :key="item.id">
                 <el-dropdown
@@ -85,20 +91,27 @@
                   size="small"
                   placement="top"
                   :hide-on-click="false"
+                  :disabled="item.text === BREAK"
                 >
                   <el-tag
                     :type="
-                      item.disabled
-                        ? 'info'
-                        : item.existsID !== null
-                          ? 'success'
-                          : 'primary'
+                      item.text === BREAK
+                        ? 'danger'
+                        : item.disabled
+                          ? 'info'
+                          : item.existsID !== null
+                            ? 'success'
+                            : 'primary'
                     "
+                    :color="item.text === BREAK ? '#000' : ''"
                     size="small"
                     disable-transitions
                     closable
                     class="cursor-pointer border! border-transparent hover:border-blue-500! transition-all duration-200"
-                    :class="item.disabled ? 'line-through' : ''"
+                    :class="{
+                      'line-through': item.disabled,
+                      'font-bold': item.text === BREAK,
+                    }"
                     @click="handleEditPrompt(item.id)"
                     @close="handleRemovePrompt(item.id)"
                   >
@@ -119,16 +132,24 @@
                       class="flex! flex-row! p-0!"
                       :item-classes="['px-2', 'py-1', 'whitespace-nowrap']"
                     >
-                      <el-dropdown-item @click="handleAddPrompt(item.text)">
+                      <el-dropdown-item
+                        :disabled="item.text === BREAK"
+                        @click="handleAddPrompt(item.text)"
+                      >
                         收藏
                       </el-dropdown-item>
                       <el-dropdown-item
-                        :disabled="item.existsID === null"
+                        :disabled="
+                          item.existsID === null || item.text === BREAK
+                        "
                         @click="handleOpenPromptEditor(item.existsID!)"
                       >
                         编辑
                       </el-dropdown-item>
-                      <el-dropdown-item @click="item.disabled = !item.disabled">
+                      <el-dropdown-item
+                        :disabled="item.text === BREAK"
+                        @click="item.disabled = !item.disabled"
+                      >
                         {{ item.disabled ? '启用' : '禁用' }}
                       </el-dropdown-item>
                     </el-dropdown-menu>
@@ -151,7 +172,7 @@
           >
             <el-button
               :icon="Plus"
-              @click="emit('add-example', joinPrompts())"
+              @click="emit('add-example', joinPrompts(false))"
             />
           </el-tooltip>
           <el-tooltip
@@ -192,30 +213,12 @@
             />
           </el-tooltip>
           <el-tooltip
-            content="撤销"
+            content="添加BREAK"
             :enterable="false"
             placement="top-end"
             :hide-after="0"
           >
-            <el-button
-              :icon="Back"
-              :disabled="!canUndo"
-              class="m-0!"
-              @click="handleUndoEditor"
-            />
-          </el-tooltip>
-          <el-tooltip
-            content="重做"
-            :enterable="false"
-            placement="top-end"
-            :hide-after="0"
-          >
-            <el-button
-              :icon="Right"
-              :disabled="!canRedo"
-              class="m-0!"
-              @click="handleRedoEditor"
-            />
+            <el-button class="m-0!" @click="handleAddBREAK">BREAK</el-button>
           </el-tooltip>
         </div>
 
@@ -268,37 +271,37 @@
 </template>
 
 <script setup lang="ts">
-// TODO 添加从示例添加提示词的功能，和撤回和重做的功能
-// TODO 点击tag有添加prompt功能
-
-// TODO 搜索框
-// 3、enter键跳转到下一个搜索，当前focus的搜索为红色高亮
-import {
-  Edit,
-  CopyDocument,
-  Star,
-  Plus,
-  Back,
-  Right,
-  Search,
-} from '@element-plus/icons-vue'
+import { CopyDocument, Edit, Plus, Search, Star } from '@element-plus/icons-vue'
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
-import { useManualRefHistory, watchArray } from '@vueuse/core'
-import { cloneDeep } from 'lodash'
+import { watchArray } from '@vueuse/core'
 import { useStorage } from '@renderer/stores/storage'
 import {
-  stripWeight,
+  joinBrackets,
   joinWeight,
   LeftBracket,
   stripBrackets,
-  joinBrackets,
+  stripWeight,
   weightAdd,
 } from '@renderer/utils/utils'
 import EnterIcon from '@renderer/icons/Enter.vue'
 import Examples from '@renderer/views/Examples.vue'
 import { ElInput, ElMessageBox } from 'element-plus'
 import { useBracketsWrapElInput } from '@renderer/hooks/useBracketsWrapElInput'
+
+const BREAK = 'BREAK'
+const DISABLED_PREFIX = '(disabled)'
+
+function newBREAK(): PromptView {
+  return {
+    id: crypto.randomUUID(),
+    text: BREAK,
+    leftBrackets: [],
+    weight: '',
+    existsID: null,
+    disabled: false,
+  }
+}
 
 const props = defineProps<{
   modelValue: string
@@ -315,7 +318,7 @@ const emit = defineEmits<{
 // 使输入框可以成对输入括号的功能
 const promptEditorInput =
   useTemplateRef<InstanceType<typeof ElInput>>('promptEditorInput')
-const handleOpenEditDialog = (): void => {
+function handleOpenEditDialog(): void {
   useBracketsWrapElInput(promptEditorInput)
   promptEditorInput.value?.focus()
 }
@@ -332,8 +335,10 @@ function handleEditPrompt(id: string): void {
   const p = promptList.value.find((item) => item.id === id)
   if (p) {
     editingPromptTextID.value = id
-    const showText = joinBrackets(joinWeight(p.text, p.weight), p.leftBrackets)
-    editingPromptText.value = showText
+    editingPromptText.value = joinBrackets(
+      joinWeight(p.text, p.weight),
+      p.leftBrackets
+    )
     isEditingPromptText.value = true
   }
 }
@@ -351,7 +356,7 @@ function handleConfirmEditPrompt(): void {
     item.weight = stripWeightRes.weight
     item.leftBrackets = stripBracketsRes.leftBrackets
     item.existsID = storage.getPromptIDIfExists(item.text)
-    emit('update:modelValue', joinPrompts())
+    emit('update:modelValue', joinPrompts(false))
     isEditingPromptText.value = false
   }
 }
@@ -423,7 +428,7 @@ const startY = ref(0)
 const startHeight = ref(0)
 
 // 拖动功能
-const startDragging = (event: MouseEvent): void => {
+function startDragging(event: MouseEvent): void {
   isDragging.value = true
   startY.value = event.clientY
   startHeight.value = containerHeight.value
@@ -434,16 +439,19 @@ const startDragging = (event: MouseEvent): void => {
   event.preventDefault()
 }
 
-const onDragging = (event: MouseEvent): void => {
+function onDragging(event: MouseEvent): void {
   if (!isDragging.value) return
 
   const deltaY = startY.value - event.clientY
   // 最高 800px，最低 150px
-  const newHeight = Math.max(150, Math.min(800, startHeight.value + deltaY))
-  containerHeight.value = newHeight
+
+  containerHeight.value = Math.max(
+    150,
+    Math.min(800, startHeight.value + deltaY)
+  )
 }
 
-const stopDragging = (): void => {
+function stopDragging(): void {
   isDragging.value = false
   document.removeEventListener('mousemove', onDragging)
   document.removeEventListener('mouseup', stopDragging)
@@ -462,12 +470,8 @@ interface PromptView {
 const promptList = ref<PromptView[]>([])
 watch(
   () => props.modelValue,
-  (newValue) => {
-    if (newValue) {
-      promptList.value = splitTextToPromptView(newValue)
-    } else {
-      promptList.value = []
-    }
+  () => {
+    promptList.value = splitTextToPromptView(props.modelValue)
   },
   { immediate: true }
 )
@@ -482,12 +486,8 @@ defineExpose({
       disabled: false,
     })
     inputText.value = ''
-    emit('update:modelValue', joinPrompts())
+    emit('update:modelValue', joinPrompts(false))
   },
-})
-
-const { undo, redo, canUndo, canRedo } = useManualRefHistory(promptList, {
-  clone: cloneDeep,
 })
 
 const promptTextTranslations = ref<Record<string, string>>({})
@@ -500,11 +500,10 @@ watchArray(
         promptTextTranslations.value[text] = translation
       }
     })
-    emit('update:modelValue', joinPrompts())
+    emit('update:modelValue', joinPrompts(false))
   },
   {
     immediate: true,
-    deep: true,
   }
 )
 
@@ -517,7 +516,7 @@ type TextPart = {
 
 const searchText = ref('')
 
-const handleAddPromptToEditor = (): void => {
+function handleAddPromptToEditor(): void {
   const text = searchText.value.trim()
   if (text === '') return
   promptList.value.push({
@@ -529,7 +528,7 @@ const handleAddPromptToEditor = (): void => {
     disabled: false,
   })
   searchText.value = ''
-  emit('update:modelValue', joinPrompts())
+  emit('update:modelValue', joinPrompts(false))
 }
 
 const promptTextView = computed(() => {
@@ -537,10 +536,10 @@ const promptTextView = computed(() => {
 
   const textToView: Record<string, TextPart[]> = {}
   promptList.value.forEach((item) => {
-    let text = item.text
+    let text: string
     text = joinBrackets(joinWeight(item.text, item.weight), item.leftBrackets)
     if (promptTextTranslations.value[item.text]) {
-      text += `| ${promptTextTranslations.value[item.text]}`
+      text += ` | ${promptTextTranslations.value[item.text]}`
     }
     const matchesIndices = Array.from(text.matchAll(regex)).map(
       (match) => match.index
@@ -581,17 +580,17 @@ function handleSwitchEditMode(): void {
   if (editMode.value) {
     // 切换到显示模式
     promptList.value = splitTextToPromptView(inputText.value)
-    emit('update:modelValue', joinPrompts())
+    emit('update:modelValue', joinPrompts(false))
   } else {
     // 切换到编辑模式
-    inputText.value = joinPrompts()
+    inputText.value = joinPrompts(false)
   }
   editMode.value = !editMode.value
 }
 
 function handleRemovePrompt(id: string): void {
   promptList.value = promptList.value.filter((item) => item.id !== id)
-  emit('update:modelValue', joinPrompts())
+  emit('update:modelValue', joinPrompts(false))
 }
 
 async function handleDeletePrompt(id: string): Promise<void> {
@@ -621,7 +620,7 @@ async function handleDeletePrompt(id: string): Promise<void> {
 }
 
 async function handleCopyToClipboard(): Promise<void> {
-  const textToCopy = joinPrompts()
+  const textToCopy = joinPrompts(true)
   const res = await window.api.copyToClipboard(textToCopy)
   if (res) {
     ElMessage.success('已复制到剪贴板')
@@ -630,17 +629,10 @@ async function handleCopyToClipboard(): Promise<void> {
   }
 }
 
-function handleUndoEditor(): void {
-  undo()
-  emit('update:modelValue', joinPrompts())
-}
-
-function handleRedoEditor(): void {
-  redo()
-  emit('update:modelValue', joinPrompts())
-}
-
 async function handleAddPrompt(text: string): Promise<void> {
+  if (text === BREAK) {
+    return
+  }
   for (const p of storage.prompts.values()) {
     if (p.text === text) {
       ElMessage.warning('提示词已存在')
@@ -687,11 +679,13 @@ watchArray(
       .filter((id) => id !== null) as string[],
   (newIDs) => {
     emit('existing-prompt-change', newIDs)
-  },
-  { immediate: true }
+  }
 )
 
 async function handleGetTextTranslation(text: string): Promise<string> {
+  if (text === BREAK) {
+    return ''
+  }
   for (const item of storage.prompts.values()) {
     if (item.text === text && item.translation) {
       return item.translation
@@ -704,29 +698,71 @@ async function handleGetTextTranslation(text: string): Promise<string> {
 
 function splitTextToPromptView(text: string): PromptView[] {
   if (text === '') return []
-  return text
-    .split(',')
-    .filter((item) => item !== '')
-    .map((item) => {
-      const { content, leftBrackets } = stripBrackets(item.trim())
-      const { content: text, weight } = stripWeight(content)
-      return {
-        id: crypto.randomUUID(),
-        text,
-        leftBrackets,
-        weight,
-        existsID: storage.getPromptIDIfExists(text),
-        disabled: false,
-      }
-    })
+  const tailBREAK = text.trimEnd().endsWith(BREAK)
+  const textLines = text.split(/\s+BREAK\s+/).filter((line) => line !== '')
+  const results = [] as PromptView[]
+  for (const [index, line] of textLines.entries()) {
+    const splitted = line
+      .split(',')
+      .filter((item) => item !== '')
+      .map((item) => {
+        const disabled = item.startsWith(DISABLED_PREFIX)
+        if (disabled) {
+          item = item.slice(DISABLED_PREFIX.length)
+        }
+        const { content, leftBrackets } = stripBrackets(item.trim())
+        const { content: text, weight } = stripWeight(content)
+        return {
+          id: crypto.randomUUID(),
+          text,
+          leftBrackets,
+          weight,
+          existsID: storage.getPromptIDIfExists(text),
+          disabled,
+        }
+      })
+    results.push(...splitted)
+    if (index !== textLines.length - 1) {
+      results.push(newBREAK())
+    }
+  }
+  if (tailBREAK) {
+    results.push(newBREAK())
+  }
+  return results
 }
 
-function joinPrompts(): string {
-  return promptList.value
-    .filter((item) => !item.disabled)
-    .map((item) =>
-      joinBrackets(joinWeight(item.text, item.weight), item.leftBrackets)
-    )
-    .join(', ')
+function joinPrompts(copy: boolean): string {
+  const prompts = promptList.value.filter((item) => copy || !item.disabled)
+  const splitByBREAK = prompts.reduce((acc, item) => {
+    if (item.text === BREAK) {
+      acc.push([])
+    } else {
+      if (acc.length === 0) {
+        acc.push([item])
+      } else {
+        acc[acc.length - 1].push(item)
+      }
+    }
+    return acc
+  }, [] as PromptView[][])
+  const joinEveryLine = splitByBREAK.map((line) => {
+    if (line.length === 0) return ''
+    return line
+      .map((item) =>
+        item.disabled
+          ? DISABLED_PREFIX
+          : '' +
+            joinBrackets(joinWeight(item.text, item.weight), item.leftBrackets)
+      )
+      .join(',')
+  })
+
+  return joinEveryLine.join(` ${BREAK} \n`)
+}
+
+function handleAddBREAK(): void {
+  promptList.value.push(newBREAK())
+  emit('update:modelValue', joinPrompts(false))
 }
 </script>

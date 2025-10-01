@@ -7,9 +7,9 @@ import {
   type Prompt,
   type Tag,
   type Workspace,
-} from '../shared/types'
+} from '@shared/types'
 import { ipcRenderer } from 'electron/renderer'
-import * as ipcChannels from '@shared/ipc-channels'
+import * as ipcChannels from '@shared/ipc_channels'
 
 // Custom APIs for renderer
 const api = {
