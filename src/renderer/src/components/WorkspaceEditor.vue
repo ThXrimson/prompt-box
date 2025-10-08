@@ -289,6 +289,7 @@ import EnterIcon from '@renderer/icons/Enter.vue'
 import Examples from '@renderer/views/Examples.vue'
 import { ElInput, ElMessageBox } from 'element-plus'
 import { useBracketsWrapElInput } from '@renderer/hooks/useBracketsWrapElInput'
+import { splitByCommaPlus } from '@renderer/utils/prompts-strings'
 
 const BREAK = 'BREAK'
 const DISABLED_PREFIX = '(disabled)'
@@ -481,7 +482,7 @@ defineExpose({
     promptList.value.push({
       id: crypto.randomUUID(),
       text: text.trim(),
-      leftBrackets: [],
+      leftBrackets: text.includes(',') ? ['('] : [],
       weight: '',
       existsID: storage.getPromptIDIfExists(text.trim()),
       disabled: false,
@@ -523,7 +524,7 @@ function handleAddPromptToEditor(): void {
   promptList.value.push({
     id: crypto.randomUUID(),
     text,
-    leftBrackets: [],
+    leftBrackets: text.includes(',') ? ['('] : [],
     weight: '',
     existsID: storage.getPromptIDIfExists(text),
     disabled: false,
@@ -634,11 +635,9 @@ async function handleAddPrompt(text: string): Promise<void> {
   if (text === BREAK) {
     return
   }
-  for (const p of storage.prompts.values()) {
-    if (p.text === text) {
-      ElMessage.warning('提示词已存在')
-      return
-    }
+  if (storage.prompts.has(text)) {
+    ElMessage.warning('提示词已存在')
+    return
   }
   const translation = promptTextTranslations.value[text]
   const result = await storage.addPrompt({
@@ -704,8 +703,7 @@ function splitTextToPromptView(text: string): PromptView[] {
   const textLines = text.split(/\s+BREAK\s+/).filter((line) => line !== '')
   const results = [] as PromptView[]
   for (const [index, line] of textLines.entries()) {
-    const splitted = line
-      .split(',')
+    const splitText = splitByCommaPlus(line)
       .filter((item) => item !== '')
       .map((item) => {
         const disabled = item.startsWith(DISABLED_PREFIX)
@@ -714,6 +712,13 @@ function splitTextToPromptView(text: string): PromptView[] {
         }
         const { content, leftBrackets } = stripBrackets(item.trim())
         const { content: text, weight } = stripWeight(content)
+        if (
+          leftBrackets.length > 0 &&
+          leftBrackets[0] !== '(' &&
+          text.includes(',')
+        ) {
+          leftBrackets.unshift('(')
+        }
         return {
           id: crypto.randomUUID(),
           text,
@@ -723,7 +728,7 @@ function splitTextToPromptView(text: string): PromptView[] {
           disabled,
         }
       })
-    results.push(...splitted)
+    results.push(...splitText)
     if (index !== textLines.length - 1) {
       results.push(newBREAK())
     }

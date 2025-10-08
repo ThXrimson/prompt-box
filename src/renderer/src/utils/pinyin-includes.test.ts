@@ -1,4 +1,7 @@
-import { pinyinIncludes, pinyinIncludesWithFirstLetter } from './pinyin-includes'
+import {
+  pinyinIncludes,
+  pinyinIncludesWithFirstLetter,
+} from './pinyin-includes'
 import { describe, it, expect } from '@jest/globals'
 
 describe('pinyinFilter', () => {
