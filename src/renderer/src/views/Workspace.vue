@@ -307,10 +307,10 @@ async function updateWorkspace(newWorkspace: {
   workspace.value.tagIDs = newWorkspace.tagIDs || workspace.value.tagIDs
   const w = await storage.updateWorkspace({
     id: workspace.value.id,
-    name: newWorkspace.name,
-    positiveEditor: newWorkspace.positiveEditor,
-    negativeEditor: newWorkspace.negativeEditor,
-    tagIDs: newWorkspace.tagIDs,
+    name: workspace.value.name,
+    positiveEditor: workspace.value.positiveEditor,
+    negativeEditor: workspace.value.negativeEditor,
+    tagIDs: workspace.value.tagIDs,
   })
   if (!w) {
     ElMessage.error('更新工作区失败')
