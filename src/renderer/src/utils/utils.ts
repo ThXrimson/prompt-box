@@ -94,3 +94,31 @@ export function weightAdd(weight: string, delta: number): string {
   }
   return (num + delta).toFixed(1).replace(/\.?0+$/, '')
 }
+
+/**
+ * 创建一个防抖函数，该函数会延迟调用提供的函数，
+ * 直到自上次调用以来经过了指定的时间。
+ *
+ * @template T 被防抖的函数类型。
+ * @param func 要防抖的函数。
+ * @param delay 延迟时间（毫秒）。
+ * @returns 返回一个新的防抖函数，该函数接受与原函数相同的参数并返回 void。
+ */
+export function debounced<T extends (...args: unknown[]) => unknown>(
+  func: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  return function (this: ThisParameterType<T>, ...args: Parameters<T>): void {
+    // 每次调用时都清除之前的定时器
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId)
+    }
+    // 设置新的定时器
+    timeoutId = setTimeout(() => {
+      // 使用 `apply` 确保 `this` 上下文和参数正确传递
+      func.apply(this, args)
+      timeoutId = null // 执行后将定时器ID重置
+    }, delay)
+  }
+}

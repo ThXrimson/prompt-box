@@ -277,6 +277,7 @@ import { VueDraggable } from 'vue-draggable-plus'
 import { watchArray } from '@vueuse/core'
 import { useStorage } from '@renderer/stores/storage'
 import {
+  debounced,
   joinBrackets,
   joinWeight,
   LeftBracket,
@@ -500,7 +501,7 @@ watchArray(
         promptTextTranslations.value[text] = translation
       }
     })
-    emit('update:modelValue', joinPrompts(false))
+    debounced(() => emit('update:modelValue', joinPrompts(false)), 500)
   },
   {
     immediate: true,
@@ -734,7 +735,7 @@ function splitTextToPromptView(text: string): PromptView[] {
 }
 
 function joinPrompts(copy: boolean): string {
-  const prompts = promptList.value.filter((item) => copy || !item.disabled)
+  const prompts = promptList.value.filter((item) => !(copy && item.disabled))
   const splitByBREAK = prompts.reduce((acc, item) => {
     if (item.text === BREAK) {
       acc.push([])
@@ -750,11 +751,10 @@ function joinPrompts(copy: boolean): string {
   const joinEveryLine = splitByBREAK.map((line) => {
     if (line.length === 0) return ''
     return line
-      .map((item) =>
-        item.disabled
-          ? DISABLED_PREFIX
-          : '' +
-            joinBrackets(joinWeight(item.text, item.weight), item.leftBrackets)
+      .map(
+        (item) =>
+          (item.disabled ? DISABLED_PREFIX : '') +
+          joinBrackets(joinWeight(item.text, item.weight), item.leftBrackets)
       )
       .join(',')
   })
