@@ -80,18 +80,25 @@
           <div class="h-full">
             <vue-draggable
               v-model="promptList"
-              :animation="100"
-              class="flex flex-wrap gap-1 gap-y-0 p-2"
-              ghost-class="opacity-50"
+              :animation="50"
+              class="flex flex-wrap p-2"
               drag-class="opacity-0"
+              :on-start="onDragStart"
+              :on-end="onDragEnd"
             >
               <div v-for="item in promptList" :key="item.id">
+                <div
+                  v-if="draggingID === item.id"
+                  class="w-0.5 h-5 bg-blue-600 mx-[-1px]"
+                ></div>
                 <el-dropdown
+                  v-else
                   trigger="hover"
                   size="small"
                   placement="top"
                   :hide-on-click="false"
                   :disabled="item.text === BREAK"
+                  class="mx-0.5"
                 >
                   <el-tag
                     :type="
@@ -273,7 +280,7 @@
 <script setup lang="ts">
 import { CopyDocument, Edit, Plus, Search, Star } from '@element-plus/icons-vue'
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
-import { VueDraggable } from 'vue-draggable-plus'
+import { DraggableEvent, SortableEvent, VueDraggable } from 'vue-draggable-plus'
 import { watchArray } from '@vueuse/core'
 import { useStorage } from '@renderer/stores/storage'
 import {
@@ -770,5 +777,15 @@ function joinPrompts(copy: boolean): string {
 function handleAddBREAK(): void {
   promptList.value.push(newBREAK())
   emit('update:modelValue', joinPrompts(false))
+}
+
+// 拖拽tag时显示占位符
+const draggingID = ref('')
+function onDragStart(event: unknown): void {
+  const e = event as DraggableEvent & SortableEvent
+  draggingID.value = e.data.id
+}
+function onDragEnd(): void {
+  draggingID.value = ''
 }
 </script>
