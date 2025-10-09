@@ -16,8 +16,9 @@
           :preview-src-list="images.map((img) => getImageUrl(img.fileName))"
           :initial-index="index"
           class="w-30 h-30 object-cover rounded-md border-1 border-gray-300"
-          fit="cover"
+          fit="scale-down"
           loading="lazy"
+          hide-on-click-modal
         />
         <el-icon
           size="1.2rem"

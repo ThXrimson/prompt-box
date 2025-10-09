@@ -120,7 +120,7 @@
                 v-if="example.images.length > 0"
                 :src="getImageUrl(example.images[0]?.fileName)"
                 class="w-40 h-40 object-cover rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300 self-center-safe"
-                fit="cover"
+                fit="scale-down"
                 loading="lazy"
                 @click="handleEditExampleGallery(example.id)"
               />

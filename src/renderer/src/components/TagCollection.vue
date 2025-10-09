@@ -123,7 +123,7 @@
               <el-image
                 :src="getImageUrl(promptImageFileName[prompt.id])"
                 class="w-40 object-cover rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300 self-center-safe"
-                fit="cover"
+                fit="scale-down"
                 loading="lazy"
               />
             </div>
