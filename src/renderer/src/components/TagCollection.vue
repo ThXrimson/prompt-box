@@ -358,7 +358,22 @@ async function handleDeletePrompt(id: string): Promise<void> {
 <style lang="css" scoped>
 @reference 'tailwindcss';
 
+.prompt-fallback {
+  @apply opacity-100!;
+  .el-button {
+    @apply bg-blue-50 text-blue-500 border-blue-400 border-1;
+  }
+}
+
 .tag-collection {
   transition: border-color 0.3s ease-in-out;
+}
+
+.glowing-edge {
+  @apply border-blue-400 shadow-lg shadow-blue-200;
+}
+
+.glowing-bg {
+  @apply bg-blue-400;
 }
 </style>
