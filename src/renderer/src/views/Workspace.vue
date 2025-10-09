@@ -101,17 +101,7 @@
             value: 'id',
           }"
           filterable
-          :filter-method="
-            (text) => {
-              tagAddOptions = allTags.filter((tag) => {
-                return (
-                  tag.text.includes(text) ||
-                  pinyinIncludes(tag.text, text) ||
-                  pinyinIncludesWithFirstLetter(tag.text, text)
-                )
-              })
-            }
-          "
+          :filter-method="filterTagsByTextOrPinyin"
           placeholder="选择标签"
           multiple
           collapse-tags-tooltip
@@ -182,6 +172,7 @@
     />
   </div>
 </template>
+
 <script setup lang="ts">
 import { useStorage } from '@renderer/stores/storage'
 import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
@@ -198,8 +189,8 @@ import {
 
 const storage = useStorage()
 
-const allTags = computed(() => Array.from(storage.tags.values()))
-const tagAddOptions = ref(allTags.value)
+// const allTags = computed(() => Array.from(storage.tags.values()))
+const tagAddOptions = ref(Array.from(storage.tags.values()))
 
 const editor = useTemplateRef('editor')
 
@@ -468,13 +459,16 @@ const usedTagIDs = computed(() => {
 function handleCheckAllTags(value: CheckboxValueType): void {
   selectUsedTags.value = false
   if (value) {
-    workspace.value.tagIDs = allTags.value.map((tag) => tag.id)
+    workspace.value.tagIDs = storage.tags
+      .values()
+      .map((tag) => tag.id)
+      .toArray()
   } else {
     workspace.value.tagIDs.length = 0
   }
   indeterminateAll.value =
     workspace.value.tagIDs.length > 0 &&
-    workspace.value.tagIDs.length < allTags.value.length
+    workspace.value.tagIDs.length < storage.tags.size
   updateWorkspace({})
 }
 
@@ -483,7 +477,7 @@ function handleCheckUsedTags(value: CheckboxValueType): void {
   selectAllTags.value = false
   if (value) {
     workspace.value.tagIDs = usedTagIDs.value.filter((id) =>
-      allTags.value.find((tag) => tag.id === id)
+      storage.tags.has(id)
     )
   } else {
     workspace.value.tagIDs.length = 0
@@ -512,5 +506,18 @@ const handleReorderTags = (tagIDs: string[]): void => {
 
 const handleSelectTags = (tagIDs: string[]): void => {
   updateWorkspace({ tagIDs })
+}
+
+function filterTagsByTextOrPinyin(text: string): void {
+  tagAddOptions.value.length = 0
+  for (const tag of storage.tags.values()) {
+    if (
+      tag.text.includes(text) ||
+      pinyinIncludes(tag.text, text) ||
+      pinyinIncludesWithFirstLetter(tag.text, text)
+    ) {
+      tagAddOptions.value.push(tag)
+    }
+  }
 }
 </script>
