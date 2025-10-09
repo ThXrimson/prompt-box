@@ -175,17 +175,27 @@
 
 <script setup lang="ts">
 import { useStorage } from '@renderer/stores/storage'
-import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  ref,
+  useTemplateRef,
+  watch,
+} from 'vue'
 import { Discount } from '@element-plus/icons-vue'
 import { CheckboxValueType, ElMessage } from 'element-plus'
 import type { Workspace } from '@shared/types'
 import { VueDraggable } from 'vue-draggable-plus'
 import TagEditor from '@renderer/components/TagEditor.vue'
-import TagCollection from '@renderer/components/TagCollection.vue'
 import {
   pinyinIncludes,
   pinyinIncludesWithFirstLetter,
 } from '@renderer/utils/pinyin-includes'
+
+const TagCollection = defineAsyncComponent(
+  () => import('@renderer/components/TagCollection.vue')
+)
 
 const storage = useStorage()
 
@@ -203,19 +213,8 @@ const showWorkspaceNameDialog = ref(false)
 
 const workspace = ref(defaultWorkspace())
 
-const selectedTagLimit = ref(3)
-onMounted(() => {
-  let step = 1
-  setInterval(() => {
-    if (workspace.value.tagIDs.length > selectedTagLimit.value) {
-      selectedTagLimit.value += step
-      step *= 2
-    }
-  }, 100)
-})
 const selectedTags = computed(() =>
   workspace.value.tagIDs
-    .slice(0, selectedTagLimit.value)
     .map((id) => storage.getTagByID(id))
     .filter((tag) => tag !== undefined)
 )

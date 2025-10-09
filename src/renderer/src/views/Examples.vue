@@ -24,9 +24,10 @@
       <el-scrollbar
         v-if="examples.length > 0"
         class="flex flex-col gap-2 flex-1 min-h-0 border-2 border-gray-200 rounded-md px-1"
+        @end-reached="loadExamples"
       >
         <div
-          v-for="example in examples"
+          v-for="example in examples.slice(0, exampleLimit)"
           :key="example.id"
           class="flex justify-between gap-2 my-1.5"
         >
@@ -414,5 +415,10 @@ function handleConfirmEditExampleTextFunc(exampleID: string, type: Tabs) {
         storage.examples.get(exampleID)?.[field] || ''
     }
   }
+}
+
+const exampleLimit = ref(10)
+function loadExamples(): void {
+  exampleLimit.value = Math.min(examples.value.length, exampleLimit.value + 10)
 }
 </script>
