@@ -156,11 +156,10 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
-import { Plus, Close, CirclePlus } from '@element-plus/icons-vue'
+import { CirclePlus, Close, Delete, Edit, Plus } from '@element-plus/icons-vue'
 import DragHandle from '../icons/DragHandle.vue'
-import { Edit, Delete } from '@element-plus/icons-vue'
 import type { Prompt, Tag } from '@shared/types'
-import { useStorage, uncategorizedTagID } from '@renderer/stores/storage'
+import { uncategorizedTagID, useStorage } from '@renderer/stores/storage'
 import { clone, cloneDeep } from 'lodash'
 import { ElMessageBox } from 'element-plus'
 import {
@@ -203,7 +202,8 @@ const promptView = computed(() => {
           pinyinIncludesWithFirstLetter(prompt.translation, promptInput.value)))
   )
   const existingPromptIDsSet = props.existingPromptIDs || new Set<string>()
-  const prioritized = filtered.sort((a, b) => {
+
+  return filtered.sort((a, b) => {
     const aExists = existingPromptIDsSet.has(a.id)
     const bExists = existingPromptIDsSet.has(b.id)
     if (aExists == bExists) {
@@ -216,7 +216,6 @@ const promptView = computed(() => {
       return 0
     }
   })
-  return prioritized
 })
 const promptImageFileName = computed(() => {
   const promptIDToImageURL = {} as Record<string, string>
@@ -227,9 +226,6 @@ const promptImageFileName = computed(() => {
         promptIDToImageURL[prompt.id] = images[0].fileName
         break
       }
-    }
-    if (promptIDToImageURL[prompt.id]) {
-      continue
     }
   }
   return promptIDToImageURL
@@ -362,22 +358,7 @@ async function handleDeletePrompt(id: string): Promise<void> {
 <style lang="css" scoped>
 @reference 'tailwindcss';
 
-.prompt-fallback {
-  @apply opacity-100!;
-  .el-button {
-    @apply bg-blue-50 text-blue-500 border-blue-400 border-1;
-  }
-}
-
 .tag-collection {
   transition: border-color 0.3s ease-in-out;
-}
-
-.glowing-edge {
-  @apply border-blue-400 shadow-lg shadow-blue-200;
-}
-
-.glowing-bg {
-  @apply bg-blue-400;
 }
 </style>
