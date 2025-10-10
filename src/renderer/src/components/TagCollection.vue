@@ -1,33 +1,12 @@
 <template>
   <div
-    ref="tagCard"
+    ref="tag-card"
     class="tag-collection h-full flex flex-col gap-1.5 border-2 border-gray-200 rounded-lg p-2 pr-0 [&>*]:mr-2 bg-white"
   >
-    <div class="drag-handle grid justify-center-safe hover:cursor-pointer">
-      <drag-handle
-        width="2rem"
-        stroke="#99a1af"
-        stroke-width="1"
-        class="pointer-events-none"
-      />
-    </div>
     <div class="header flex justify-between gap-0.5">
       <el-text class="font-bold">{{ tag.text }}</el-text>
-      <div class="flex items-center gap-1 [&_button]:m-0!">
-        <el-popconfirm
-          title="确定删除此标签？"
-          :hide-after="0"
-          @confirm="emit('delete', clone(tag))"
-        >
-          <template #reference>
-            <el-button link :icon="Delete" />
-          </template>
-        </el-popconfirm>
-        <el-tooltip content="关闭标签" placement="top" :hide-after="0">
-          <el-button link :icon="Close" @click="emit('close', clone(tag))" />
-        </el-tooltip>
-      </div>
     </div>
+
     <div class="add-prompt-wrapper">
       <el-input
         v-model="promptInput"
@@ -40,133 +19,38 @@
         </template>
       </el-input>
     </div>
+
     <el-scrollbar
       always
       class="mr-0!"
-      view-class="prompt-container flex flex-col gap-1.5 min-w-60 pr-2.5"
+      view-class="prompt-container flex flex-wrap gap-1.5 min-w-60 pr-2.5"
     >
-      <div
+      <prompt-card
         v-for="prompt in promptView"
         :key="prompt.id"
-        ref="promptCards"
-        :prompt-text="prompt.text"
-        class="prompt-wrapper"
-      >
-        <el-tooltip
-          placement="top-start"
-          trigger="hover"
-          :hide-after="0"
-          :disabled="!Boolean(promptImageFileName[prompt.id])"
-        >
-          <div
-            class="max-w-100 flex gap-1 justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300"
-            :class="{
-              'bg-orange-400 hover:bg-orange-500':
-                existingPromptIDs?.has(prompt.id) === true,
-              'bg-teal-400 hover:bg-teal-500':
-                existingPromptIDs?.has(prompt.id) === false,
-            }"
-          >
-            <div
-              class="flex flex-col gap-0.5 cursor-pointer items-start flex-1 min-w-0"
-              @click="handleCopyPrompt(prompt.text)"
-            >
-              <el-text truncated class="text-white! font-bold self-auto!">
-                {{ prompt.text }}
-              </el-text>
-              <el-text
-                v-if="prompt.translation"
-                truncated
-                class="text-teal-100! font-light text-xs! self-auto!"
-              >
-                {{ prompt.translation }}
-              </el-text>
-            </div>
-            <div class="flex items-center gap-1">
-              <el-tooltip
-                content="添加到编辑栏"
-                placement="top"
-                :hide-after="0"
-              >
-                <el-icon
-                  class="text-white! hover:text-gray-700! cursor-pointer"
-                  @click="emit('add-to-workspace', cloneDeep(prompt))"
-                >
-                  <CirclePlus />
-                </el-icon>
-              </el-tooltip>
-              <el-tooltip content="编辑" placement="top" :hide-after="0">
-                <el-icon
-                  class="text-white! hover:text-gray-700! cursor-pointer"
-                  @click="handleEditPrompt(prompt.id)"
-                >
-                  <Edit />
-                </el-icon>
-              </el-tooltip>
-              <el-popconfirm
-                title="确定从标签中移除提示词？"
-                :hide-after="0"
-                @confirm="handleRemovePromptFromTag(prompt.id)"
-              >
-                <template #reference>
-                  <el-icon
-                    class="text-white! hover:text-gray-700! cursor-pointer"
-                  >
-                    <Delete />
-                  </el-icon>
-                </template>
-              </el-popconfirm>
-            </div>
-          </div>
-          <template #content>
-            <div v-if="promptImageFileName[prompt.id]">
-              <el-image
-                :src="getImageUrl(promptImageFileName[prompt.id])"
-                class="w-40 object-cover rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300 self-center-safe"
-                fit="scale-down"
-                loading="lazy"
-              />
-            </div>
-          </template>
-        </el-tooltip>
-      </div>
+        :ref="promptCards.set"
+        :prompt="prompt"
+        :selected="Boolean(existingPromptIDs?.has(prompt.id))"
+        :prompt-image-file-name="promptImageFileName[prompt.id]"
+        @add-to-workspace="emit('add-to-workspace', $event)"
+        @remove="handleRemovePromptFromTag($event)"
+      />
     </el-scrollbar>
   </div>
-
-  <el-dialog
-    v-if="editPromptDialogVisible && editingPromptID !== null"
-    v-model="editPromptDialogVisible"
-    title="编辑提示词"
-    append-to-body
-    class="w-auto! h-auto! mx-10! mt-10! mb-0!"
-    @keyup.esc.stop.prevent="editPromptDialogVisible = false"
-  >
-    <prompt-editor :prompt-i-d="editingPromptID" />
-    <template #footer>
-      <el-button
-        type="danger"
-        class="w-full"
-        @click="handleDeletePrompt(editingPromptID!)"
-      >
-        删除
-      </el-button>
-    </template>
-  </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
-import { CirclePlus, Close, Delete, Edit, Plus } from '@element-plus/icons-vue'
-import DragHandle from '../icons/DragHandle.vue'
-import type { Prompt, Tag } from '@shared/types'
-import { uncategorizedTagID, useStorage } from '@renderer/stores/storage'
-import { clone, cloneDeep } from 'lodash'
-import { ElMessageBox } from 'element-plus'
+import { computed, nextTick, ref, watch } from 'vue'
+import type { Tag } from '@shared/types'
+import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/storage'
 import {
   pinyinIncludes,
   pinyinIncludesWithFirstLetter,
 } from '@renderer/utils/pinyin-includes'
-import { getImageUrl } from '@renderer/utils/utils'
+import PromptCard from '@renderer/components/PromptCard.vue'
+import { Plus } from '@element-plus/icons-vue'
+import { ElInput } from 'element-plus'
+import { useTemplateRefsList } from '@vueuse/core'
 
 const props = defineProps<{
   tag: Tag
@@ -174,13 +58,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'delete', tag: Tag): void
-  (e: 'close', tag: Tag): void
-  (e: 'add-to-workspace', prompt: Prompt): void
+  (e: 'add-to-workspace', promptText: string): void
 }>()
 
-const tagCard = useTemplateRef('tagCard')
-const promptCards = useTemplateRef('promptCards')
+const promptCards = useTemplateRefsList<InstanceType<typeof PromptCard>>()
 
 const storage = useStorage()
 
@@ -232,33 +113,19 @@ const promptImageFileName = computed(() => {
 })
 
 defineExpose({
-  scrollIntoView: () => {
-    tagCard.value?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-      inline: 'center',
-    })
-    tagCard.value?.classList.add('glowing-edge')
-    setTimeout(() => {
-      tagCard.value?.classList.remove('glowing-edge')
-    }, 1000)
-  },
   scrollPromptIntoView: async (prompt: string) => {
     promptInput.value = ''
     await nextTick()
     const promptElement = promptCards.value?.find(
-      (p) => p.getAttribute('prompt-text') === prompt
+      (p) => p.promptText === prompt
     )
     if (promptElement) {
-      promptElement?.scrollIntoView({
+      promptElement.$el.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
         inline: 'center',
       })
-      promptElement?.firstElementChild?.classList.add('glowing-bg')
-      setTimeout(() => {
-        promptElement?.firstElementChild?.classList.remove('glowing-bg')
-      }, 1000)
+      promptElement?.glow()
     }
   },
 })
@@ -286,7 +153,7 @@ async function handleAddPrompt(): Promise<void> {
     }
   }
   const tags: string[] = []
-  if (props.tag.id !== uncategorizedTagID) {
+  if (props.tag.id !== UNCATEGORIZED_TAG_ID) {
     tags.push(props.tag.id)
   }
   const newPrompt = await storage.addPrompt({
@@ -299,11 +166,6 @@ async function handleAddPrompt(): Promise<void> {
     ElMessage.error('新增提示词并添加失败')
   }
 }
-
-function handleEditPrompt(promptID: string): void {
-  editingPromptID.value = promptID
-  editPromptDialogVisible.value = true
-}
 watch(
   editPromptDialogVisible,
   (newValue) => {
@@ -313,17 +175,6 @@ watch(
   },
   { immediate: true }
 )
-
-function handleCopyPrompt(promptText: string): void {
-  window.api.copyToClipboard(promptText).then((res) => {
-    if (res) {
-      ElMessage.success('已复制到剪贴板')
-    } else {
-      ElMessage.error('复制失败，请重试')
-    }
-  })
-}
-
 async function handleRemovePromptFromTag(promptID: string): Promise<void> {
   const res = await storage.deleteTagIDFromPrompt(props.tag.id, promptID)
   if (res) {
@@ -332,48 +183,12 @@ async function handleRemovePromptFromTag(promptID: string): Promise<void> {
     ElMessage.error('提示词移除失败')
   }
 }
-
-async function handleDeletePrompt(id: string): Promise<void> {
-  try {
-    await ElMessageBox.confirm('确定删除此提示词？', '删除提示词', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
-    const res = await storage.deletePrompt(id)
-    if (res) {
-      ElMessage.success('成功删除提示词')
-      editPromptDialogVisible.value = false
-    } else {
-      ElMessage.error('删除提示词失败')
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除提示词失败')
-    }
-  }
-}
 </script>
 
 <style lang="css" scoped>
 @reference 'tailwindcss';
 
-.prompt-fallback {
-  @apply opacity-100!;
-  .el-button {
-    @apply bg-blue-50 text-blue-500 border-blue-400 border-1;
-  }
-}
-
 .tag-collection {
   transition: border-color 0.3s ease-in-out;
-}
-
-.glowing-edge {
-  @apply border-blue-400 shadow-lg shadow-blue-200;
-}
-
-.glowing-bg {
-  @apply bg-blue-400;
 }
 </style>

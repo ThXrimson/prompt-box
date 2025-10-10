@@ -22,7 +22,7 @@
               :class="{
                 'text-gray-400!': editingTag[scope.row.id],
               }"
-              :disabled="scope.row.id === uncategorizedTagID"
+              :disabled="scope.row.id === UNCATEGORIZED_TAG_ID"
               @click="handleEditTag(scope.row.id)"
             />
 
@@ -35,7 +35,7 @@
                   size="small"
                   type="danger"
                   :icon="Delete"
-                  :disabled="scope.row.id === uncategorizedTagID"
+                  :disabled="scope.row.id === UNCATEGORIZED_TAG_ID"
                 />
               </template>
             </el-popconfirm>
@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { uncategorizedTagID, useStorage } from '@renderer/stores/storage'
+import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/storage'
 import { EditPen, Delete, Plus } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 
@@ -77,7 +77,8 @@ const tagCounter = computed(() => {
   })
   storage.prompts.forEach((prompt) => {
     if (prompt.tagIDs.length === 0) {
-      tagCounter[uncategorizedTagID] = (tagCounter[uncategorizedTagID] || 0) + 1 // 统计无标签的提示词
+      tagCounter[UNCATEGORIZED_TAG_ID] =
+        (tagCounter[UNCATEGORIZED_TAG_ID] || 0) + 1 // 统计无标签的提示词
       return
     }
     prompt.tagIDs.forEach((id) => {

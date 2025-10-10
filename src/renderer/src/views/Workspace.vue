@@ -29,19 +29,6 @@
           </template>
         </el-dialog>
 
-        <!-- <el-input
-          v-model="addTag"
-          placeholder="添加标签"
-          clearable
-          class="flex-[0.5_2] min-w-0"
-          @keyup.enter="handleAddTag"
-        >
-          <template #prefix>
-            <el-icon><Discount /></el-icon>
-            <el-button :icon="Plus" link @click="handleAddTag" />
-          </template>
-        </el-input> -->
-
         <el-tooltip content="管理标签" placement="bottom-start" :hide-after="0">
           <el-button :icon="Discount" @click="tagDialogVisible = true" />
         </el-tooltip>
@@ -90,7 +77,7 @@
           placeholder="查找标签"
           clearable
           class="flex-1 min-w-0"
-          @update:model-value="handleScrollToTag($event)"
+          @update:model-value="handleFindTag"
         />
 
         <el-select-v2
@@ -136,32 +123,27 @@
       </div>
     </navigator>
     <!-- 标签列表 -->
-    <vue-draggable
-      :model-value="workspace.tagIDs"
-      target=".el-scrollbar__view"
-      handle=".drag-handle"
-      :animation="100"
-      class="flex justify-center-safe flex-1 min-h-0 my-2"
-      @update:model-value="handleReorderTags($event as string[])"
-    >
-      <el-scrollbar
-        always
-        class="[&_.el-scrollbar\_\_bar>.is-vertical]:hidden"
-        view-class="flex gap-2 flex-1 h-full"
-        wrap-class="overflow-y-hidden!"
-      >
-        <tag-collection
-          v-for="tag in selectedTags"
-          :key="tag.id"
-          ref="tagCollections"
-          :tag="tag"
-          :existing-prompt-i-ds="existingPromptIDs"
-          @add-to-workspace="editor?.addText($event.text)"
-          @delete="handleDeleteTag"
-          @close="handleCloseTag"
-        />
-      </el-scrollbar>
-    </vue-draggable>
+    <div class="flex-1 flex overflow-auto mt-2 gap-1">
+      <tag-list
+        ref="tag-list"
+        :tag-i-ds="workspace.tagIDs"
+        :selected-i-d="selectedTagID"
+        class="flex-1 min-w-0 max-w-3xs"
+        @update:tag-i-ds="handleReorderTags($event)"
+        @close-tag="handleCloseTag($event)"
+        @select="selectedTagID = $event"
+      />
+      <tag-collection
+        ref="tag-collection"
+        :tag="
+          storage.getTagByID(selectedTagID) ??
+          storage.getTagByID(UNCATEGORIZED_TAG_ID)!
+        "
+        :existing-prompt-i-ds="existingPromptIDs"
+        class="flex-1 min-w-0"
+        @add-to-workspace="editor?.addText($event)"
+      />
+    </div>
     <!-- 工作区编辑器 -->
     <workspace-editor
       ref="editor"
@@ -174,32 +156,23 @@
 </template>
 
 <script setup lang="ts">
-import { useStorage } from '@renderer/stores/storage'
-import {
-  computed,
-  defineAsyncComponent,
-  nextTick,
-  ref,
-  useTemplateRef,
-  watch,
-} from 'vue'
+import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/storage'
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { Discount } from '@element-plus/icons-vue'
 import { CheckboxValueType, ElMessage } from 'element-plus'
 import type { Workspace } from '@shared/types'
-import { VueDraggable } from 'vue-draggable-plus'
 import TagEditor from '@renderer/components/TagEditor.vue'
 import {
   pinyinIncludes,
   pinyinIncludesWithFirstLetter,
 } from '@renderer/utils/pinyin-includes'
-
-const TagCollection = defineAsyncComponent(
-  () => import('@renderer/components/TagCollection.vue')
-)
+import TagList from '@renderer/components/TagList.vue'
+import TagCollection from '@renderer/components/TagCollection.vue'
 
 const storage = useStorage()
 
-// const allTags = computed(() => Array.from(storage.tags.values()))
+const selectedTagID = ref(UNCATEGORIZED_TAG_ID)
+
 const tagAddOptions = ref(Array.from(storage.tags.values()))
 
 const editor = useTemplateRef('editor')
@@ -212,12 +185,6 @@ const tempWorkspaceText = ref('')
 const showWorkspaceNameDialog = ref(false)
 
 const workspace = ref(defaultWorkspace())
-
-const selectedTags = computed(() =>
-  workspace.value.tagIDs
-    .map((id) => storage.getTagByID(id))
-    .filter((tag) => tag !== undefined)
-)
 
 const workspaceTags = computed(() => {
   return workspace.value.tagIDs
@@ -260,23 +227,9 @@ const handleSaveEditorText = async (text: string): Promise<void> => {
 
 const tagDialogVisible = ref(false)
 
-async function handleDeleteTag(tag: {
-  id: string
-  text: string
-}): Promise<void> {
-  const confirmed = await storage.deleteTag(tag.id)
-  if (confirmed) {
-    await updateWorkspace({
-      tagIDs: workspace.value?.tagIDs.filter((id) => id !== tag.id) || [],
-    })
-  } else {
-    ElMessage.error(`删除标签 "${tag.text}" 失败`)
-  }
-}
-
-function handleCloseTag(tag: { id: string; text: string }): void {
+function handleCloseTag(tagID: string): void {
   updateWorkspace({
-    tagIDs: workspace.value?.tagIDs.filter((id) => id !== tag.id) || [],
+    tagIDs: workspace.value?.tagIDs.filter((id) => id !== tagID) || [],
   })
 }
 
@@ -349,29 +302,15 @@ function handleExistingPromptChange(promptIDs: string[]): void {
   }
 }
 
-const tagCollections = useTemplateRef('tagCollections')
-function handleScrollToTag(tagID: string): void {
-  if (!tagCollections.value) return
-  for (const tagCollection of tagCollections.value) {
-    if (tagCollection === null) continue
-    if (tagCollection.$props.tag.id === tagID) {
-      tagCollection.scrollIntoView()
-      return
-    }
-  }
-}
-
+const tagCollection = useTemplateRef('tag-collection')
 async function handleFindPromptAndScroll(prompt: string): Promise<void> {
-  for (const tag of selectedTags.value) {
+  for (const tag of workspaceTags.value) {
     const prompts = storage.getPromptsByTag(tag.id)
     const index = prompts.findIndex((p) => p.text === prompt)
     if (index !== -1) {
-      const tc = tagCollections.value?.find(
-        (tc) => tc?.$props.tag.id === tag.id
-      )
-      tc?.scrollIntoView()
+      selectedTagID.value = tag.id
       await nextTick()
-      tc?.scrollPromptIntoView(prompt)
+      tagCollection.value?.scrollPromptIntoView(prompt)
       return
     }
   }
@@ -392,7 +331,7 @@ function defaultWorkspace(): Workspace {
 const searchPromptOptions = ref<{ text: string; translation: string }[]>([])
 const loadSearchPromptOptions = (): void => {
   const options: { text: string; translation: string }[] = []
-  selectedTags.value.forEach((tag) => {
+  workspaceTags.value.forEach((tag) => {
     const prompts = storage.getPromptsByTag(tag.id)
     prompts.forEach((prompt) => {
       if (!options.find((o) => o.text === prompt.text)) {
@@ -420,7 +359,7 @@ const findTagByTextOrPinyin = (text: string): void => {
 // 根据提示词内容或翻译查找提示词
 const findPromptByTextOrTranslation = (text: string): void => {
   const options: { text: string; translation: string }[] = []
-  selectedTags.value.forEach((tag) => {
+  workspaceTags.value.forEach((tag) => {
     const prompts = storage.getPromptsByTag(tag.id)
     prompts.forEach((prompt) => {
       if (
@@ -504,7 +443,14 @@ const handleReorderTags = (tagIDs: string[]): void => {
 }
 
 const handleSelectTags = (tagIDs: string[]): void => {
-  updateWorkspace({ tagIDs })
+  if (tagIDs.length > workspaceTags.value.length) {
+    const val = tagIDs[tagIDs.length - 1]
+    tagIDs.length--
+    tagIDs.unshift(val)
+    updateWorkspace({ tagIDs })
+  } else if (tagIDs.length < workspaceTags.value.length) {
+    updateWorkspace({ tagIDs })
+  }
 }
 
 function filterTagsByTextOrPinyin(text: string): void {
@@ -518,5 +464,15 @@ function filterTagsByTextOrPinyin(text: string): void {
       tagAddOptions.value.push(tag)
     }
   }
+}
+
+const tagListRef = useTemplateRef('tag-list')
+function handleFindTag(tagID: string): void {
+  if (!tagID) {
+    selectedTagID.value = UNCATEGORIZED_TAG_ID
+    return
+  }
+  selectedTagID.value = tagID
+  tagListRef.value?.scrollTagIntoView(tagID)
 }
 </script>

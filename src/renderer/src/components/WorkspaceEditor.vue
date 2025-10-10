@@ -51,7 +51,7 @@
   <!-- 可拖动的handle -->
   <div
     ref="dragHandleRef"
-    class="h-1 cursor-ns-resize rounded-t-lg flex items-center justify-center hover:[&>div]:bg-gray-600"
+    class="mt-1 h-1 cursor-ns-resize rounded-t-lg flex items-center justify-center hover:[&>div]:bg-gray-600"
     @mousedown="startDragging"
   >
     <div class="w-8 h-0.5 bg-gray-400 rounded"></div>
@@ -285,6 +285,7 @@ import { watchArray } from '@vueuse/core'
 import { useStorage } from '@renderer/stores/storage'
 import {
   debounced,
+  isLoraPrompt,
   joinBrackets,
   joinWeight,
   LeftBracket,
@@ -500,16 +501,23 @@ defineExpose({
 })
 
 const promptTextTranslations = ref<Record<string, string>>({})
+const debouncedUpdate = debounced(
+  () => emit('update:modelValue', joinPrompts(false)),
+  500
+)
 watchArray(
   () => promptList.value.map(({ text }) => text),
   (_newArr, _oldArr, added) => {
     added.forEach(async (text) => {
+      if (text === BREAK || isLoraPrompt(text)) {
+        return
+      }
       const translation = await handleGetTextTranslation(text)
       if (translation) {
         promptTextTranslations.value[text] = translation
       }
     })
-    debounced(() => emit('update:modelValue', joinPrompts(false)), 500)
+    debouncedUpdate()
   },
   {
     immediate: true,

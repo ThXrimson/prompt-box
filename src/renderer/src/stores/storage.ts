@@ -27,10 +27,9 @@ export const useStorage = defineStore('storage', () => {
 
         prompts.value = new Map(allPrompts.map((p) => [p.id, p]))
         tags.value = new Map(
-          [{ id: uncategorizedTagID, text: '未分类' }, ...allTags].map((t) => [
-            t.id,
-            t,
-          ])
+          [{ id: UNCATEGORIZED_TAG_ID, text: '未分类' }, ...allTags].map(
+            (t) => [t.id, t]
+          )
         )
         examples.value = new Map(allExamples.map((e) => [e.id, e]))
         images.value = new Map(allImages.map((i) => [i.id, i]))
@@ -91,7 +90,7 @@ export const useStorage = defineStore('storage', () => {
   }
 
   function getPromptsByTag(tagID: string): Prompt[] {
-    if (tagID === uncategorizedTagID) {
+    if (tagID === UNCATEGORIZED_TAG_ID) {
       // 如果是未分类的标签，返回没有任何标签的 prompts
       return cloneDeep(Array.from(prompts.value.values())).filter(
         (prompt) => prompt.tagIDs.length === 0
@@ -652,4 +651,4 @@ export const useStorage = defineStore('storage', () => {
   }
 })
 
-export const uncategorizedTagID = '0'
+export const UNCATEGORIZED_TAG_ID = '0'

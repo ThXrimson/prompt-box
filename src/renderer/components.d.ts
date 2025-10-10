@@ -36,11 +36,13 @@ declare module 'vue' {
     ExistingExamples: typeof import('./src/components/ExistingExamples.vue')['default']
     Gallery: typeof import('./src/components/Gallery.vue')['default']
     Navigator: typeof import('./src/components/Navigator.vue')['default']
+    PromptCard: typeof import('./src/components/PromptCard.vue')['default']
     PromptEditor: typeof import('./src/components/PromptEditor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     TagCollection: typeof import('./src/components/TagCollection.vue')['default']
     TagEditor: typeof import('./src/components/TagEditor.vue')['default']
+    TagList: typeof import('./src/components/TagList.vue')['default']
     WorkspaceEditor: typeof import('./src/components/WorkspaceEditor.vue')['default']
   }
   export interface GlobalDirectives {

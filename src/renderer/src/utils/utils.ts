@@ -16,7 +16,6 @@ export function stripBrackets(text: string): {
   leftBrackets: LeftBracket[]
 } {
   const leftBrackets: LeftBracket[] = []
-  let content = text
 
   // 从左到右遍历字符串
   for (let i = 0; i < text.length; i++) {
@@ -28,7 +27,10 @@ export function stripBrackets(text: string): {
     break
   }
 
-  content = text.slice(leftBrackets.length, text.length - leftBrackets.length)
+  const content = text.slice(
+    leftBrackets.length,
+    text.length - leftBrackets.length
+  )
 
   return { content, leftBrackets }
 }
@@ -121,4 +123,8 @@ export function debounced<T extends (...args: unknown[]) => unknown>(
       timeoutId = null // 执行后将定时器ID重置
     }, delay)
   }
+}
+
+export function isLoraPrompt(text: string): boolean {
+  return /^<lora:.+>$/.test(text)
 }
