@@ -110,6 +110,7 @@
                             ? 'success'
                             : 'primary'
                     "
+                    effect="dark"
                     :color="item.text === BREAK ? '#000' : ''"
                     size="small"
                     disable-transitions
@@ -117,7 +118,7 @@
                     class="cursor-pointer border! border-transparent hover:border-blue-500! transition-all duration-200"
                     :class="{
                       'line-through': item.disabled,
-                      'font-bold': item.text === BREAK,
+                      'font-bold': true,
                     }"
                     @click="handleEditPrompt(item.id)"
                     @close="handleRemovePrompt(item.id)"
