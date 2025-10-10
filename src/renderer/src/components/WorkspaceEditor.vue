@@ -179,7 +179,7 @@
           >
             <el-button
               :icon="Plus"
-              @click="emit('add-example', joinPrompts(false))"
+              @click="handleAddExample(joinPrompts(false))"
             />
           </el-tooltip>
           <el-tooltip
@@ -227,6 +227,20 @@
           >
             <el-button class="m-0!" @click="handleAddBREAK">BREAK</el-button>
           </el-tooltip>
+
+          <!-- 切换正向、负向编辑器 -->
+          <el-switch
+            :model-value="isPositiveEditor"
+            inline-prompt
+            active-text="POSITIVE"
+            inactive-text="NEGATIVE"
+            style="
+              --el-switch-on-color: #13ce66;
+              --el-switch-off-color: #ff4949;
+            "
+            class="[&_.is-text]:font-mono"
+            @update:model-value="handleSwitchEditor($event as boolean)"
+          />
         </div>
 
         <el-input
@@ -295,7 +309,7 @@ import {
 } from '@renderer/utils/utils'
 import EnterIcon from '@renderer/icons/Enter.vue'
 import Examples from '@renderer/views/Examples.vue'
-import { ElInput, ElMessageBox } from 'element-plus'
+import { ElInput, ElMessage, ElMessageBox } from 'element-plus'
 import { useBracketsWrapElInput } from '@renderer/hooks/useBracketsWrapElInput'
 import { splitByCommaPlus } from '@renderer/utils/prompts-strings'
 
@@ -314,16 +328,35 @@ function newBREAK(): PromptView {
 }
 
 const props = defineProps<{
-  modelValue: string
+  positiveEditor: string
+  negativeEditor: string
 }>()
 
 const storage = useStorage()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
-  (e: 'add-example', text: string): void
+  (e: 'update-positive-editor', value: string): void
+  (e: 'update-negative-editor', value: string): void
   (e: 'existing-prompt-change', existingIDs: string[]): void
 }>()
+
+function emitUpdateEditor(): void {
+  if (isPositiveEditor.value) {
+    emit('update-positive-editor', joinPrompts(false))
+  } else {
+    emit('update-negative-editor', joinPrompts(false))
+  }
+}
+
+// 切换正向、负向编辑器
+const isPositiveEditor = ref(true)
+const editorText = computed(() =>
+  isPositiveEditor.value ? props.positiveEditor : props.negativeEditor
+)
+
+const handleSwitchEditor = (value: boolean): void => {
+  isPositiveEditor.value = value
+}
 
 // 使输入框可以成对输入括号的功能
 const promptEditorInput =
@@ -366,7 +399,7 @@ function handleConfirmEditPrompt(): void {
     item.weight = stripWeightRes.weight
     item.leftBrackets = stripBracketsRes.leftBrackets
     item.existsID = storage.getPromptIDIfExists(item.text)
-    emit('update:modelValue', joinPrompts(false))
+    emitUpdateEditor()
     isEditingPromptText.value = false
   }
 }
@@ -479,9 +512,9 @@ interface PromptView {
 }
 const promptList = ref<PromptView[]>([])
 watch(
-  () => props.modelValue,
+  editorText,
   () => {
-    promptList.value = splitTextToPromptView(props.modelValue)
+    promptList.value = splitTextToPromptView(editorText.value)
   },
   { immediate: true }
 )
@@ -496,15 +529,12 @@ defineExpose({
       disabled: false,
     })
     inputText.value = ''
-    emit('update:modelValue', joinPrompts(false))
+    emitUpdateEditor()
   },
 })
 
 const promptTextTranslations = ref<Record<string, string>>({})
-const debouncedUpdate = debounced(
-  () => emit('update:modelValue', joinPrompts(false)),
-  500
-)
+const debouncedUpdate = debounced(() => emitUpdateEditor(), 500)
 watchArray(
   () => promptList.value.map(({ text }) => text),
   (_newArr, _oldArr, added) => {
@@ -545,7 +575,7 @@ function handleAddPromptToEditor(): void {
     disabled: false,
   })
   searchText.value = ''
-  emit('update:modelValue', joinPrompts(false))
+  emitUpdateEditor()
 }
 
 const promptTextView = computed(() => {
@@ -597,7 +627,7 @@ function handleSwitchEditMode(): void {
   if (editMode.value) {
     // 切换到显示模式
     promptList.value = splitTextToPromptView(inputText.value)
-    emit('update:modelValue', joinPrompts(false))
+    emitUpdateEditor()
   } else {
     // 切换到编辑模式
     inputText.value = joinPrompts(false)
@@ -607,7 +637,7 @@ function handleSwitchEditMode(): void {
 
 function handleRemovePrompt(id: string): void {
   promptList.value = promptList.value.filter((item) => item.id !== id)
-  emit('update:modelValue', joinPrompts(false))
+  emitUpdateEditor()
 }
 
 async function handleDeletePrompt(id: string): Promise<void> {
@@ -784,7 +814,7 @@ function joinPrompts(copy: boolean): string {
 
 function handleAddBREAK(): void {
   promptList.value.push(newBREAK())
-  emit('update:modelValue', joinPrompts(false))
+  emitUpdateEditor()
 }
 
 // 拖拽tag时显示占位符
@@ -795,5 +825,17 @@ function onDragStart(event: unknown): void {
 }
 function onDragEnd(): void {
   draggingID.value = ''
+}
+
+async function handleAddExample(text: string): Promise<void> {
+  const example = await storage.addExample({
+    id: crypto.randomUUID(),
+    [isPositiveEditor.value ? 'positivePrompt' : 'negativePrompt']: text,
+  })
+  if (example) {
+    ElMessage.success('示例添加成功')
+  } else {
+    ElMessage.error('添加示例失败')
+  }
 }
 </script>

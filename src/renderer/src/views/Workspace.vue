@@ -110,16 +110,6 @@
             </el-checkbox>
           </template>
         </el-select-v2>
-        <!-- 切换正向、负向编辑器 -->
-        <el-switch
-          :model-value="isPositiveEditor"
-          inline-prompt
-          active-text="POSITIVE"
-          inactive-text="NEGATIVE"
-          style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-          class="[&_.is-text]:font-mono"
-          @update:model-value="handleSwitchEditor($event as boolean)"
-        />
       </div>
     </navigator>
     <!-- 标签列表 -->
@@ -147,9 +137,10 @@
     <!-- 工作区编辑器 -->
     <workspace-editor
       ref="editor"
-      :model-value="editorText"
-      @update:model-value="handleSaveEditorText($event)"
-      @add-example="handleAddExample"
+      :positive-editor="workspace.positiveEditor"
+      :negative-editor="workspace.negativeEditor"
+      @update-positive-editor="updateWorkspace({ positiveEditor: $event })"
+      @update-negative-editor="updateWorkspace({ negativeEditor: $event })"
       @existing-prompt-change="handleExistingPromptChange($event)"
     />
   </div>
@@ -193,38 +184,6 @@ const workspaceTags = computed(() => {
 })
 const tagFocusOptions = ref(workspaceTags.value)
 
-// 切换正向、负向编辑器
-const isPositiveEditor = ref(true)
-
-const editorText = ref('')
-const loadEditorText = (): void => {
-  editorText.value = isPositiveEditor.value
-    ? workspace.value?.positiveEditor || ''
-    : workspace.value?.negativeEditor || ''
-}
-
-const handleSwitchEditor = (value: boolean): void => {
-  isPositiveEditor.value = value
-  editorText.value = value
-    ? workspace.value?.positiveEditor || ''
-    : workspace.value?.negativeEditor || ''
-}
-
-const handleSaveEditorText = async (text: string): Promise<void> => {
-  editorText.value = text
-  if (workspace.value) {
-    if (isPositiveEditor.value) {
-      workspace.value.positiveEditor = text
-    } else {
-      workspace.value.negativeEditor = text
-    }
-    await updateWorkspace({
-      positiveEditor: workspace.value.positiveEditor,
-      negativeEditor: workspace.value.negativeEditor,
-    })
-  }
-}
-
 const tagDialogVisible = ref(false)
 
 function handleCloseTag(tagID: string): void {
@@ -259,18 +218,6 @@ async function updateWorkspace(newWorkspace: {
     ElMessage.error('更新工作区失败')
   } else {
     workspace.value = w
-  }
-}
-
-async function handleAddExample(text: string): Promise<void> {
-  const example = await storage.addExample({
-    id: crypto.randomUUID(),
-    [isPositiveEditor.value ? 'positivePrompt' : 'negativePrompt']: text,
-  })
-  if (example) {
-    ElMessage.success('示例添加成功')
-  } else {
-    ElMessage.error('添加示例失败')
   }
 }
 
@@ -431,7 +378,6 @@ watch(
     if (!workspace.value.id) {
       ElMessage.error('工作区未找到')
     } else {
-      loadEditorText()
       loadSearchPromptOptions()
     }
   },
