@@ -76,10 +76,13 @@
       v-model="isPromptEditorVisible"
       title="编辑提示词"
       append-to-body
-      class="w-auto! h-auto! mx-10! mt-10! mb-0!"
+      class="h-[90vh] mt-[5vh]! mb-0! flex flex-col"
+      body-class="flex-1 min-h-0 border-1 rounded-md border-neutral-200 p-2"
       @keyup.esc.stop.prevent="isPromptEditorVisible = false"
     >
-      <prompt-editor :prompt-i-d="prompt.id" />
+      <el-scrollbar>
+        <prompt-editor :prompt-i-d="prompt.id" />
+      </el-scrollbar>
       <template #footer>
         <el-button
           type="danger"
