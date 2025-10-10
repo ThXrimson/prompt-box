@@ -148,7 +148,7 @@
                     'opacity-100!': selectedPromptID === prompt.id,
                   }"
                 >
-                  <Close />
+                  <Delete />
                 </el-icon>
               </template>
             </el-popconfirm>
@@ -178,6 +178,7 @@ import {
   Check,
   Sort,
   Discount,
+  Delete,
 } from '@element-plus/icons-vue'
 import { computed, nextTick, ref, useTemplateRef } from 'vue'
 import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/storage'

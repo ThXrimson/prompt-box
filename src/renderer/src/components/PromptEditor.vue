@@ -105,6 +105,14 @@
           >
             从已有示例添加
           </el-button>
+          <el-button
+            type="success"
+            :icon="CirclePlusFilled"
+            class="mb-2 self-start!"
+            @click="handleAddImage"
+          >
+            添加示例图片
+          </el-button>
         </div>
         <div
           v-if="examples.length > 0"
@@ -175,6 +183,15 @@
                     <el-popconfirm
                       title="确定从该提示词中删除此示例？"
                       :hide-after="0"
+                      @confirm="handleDeleteExampleFromPrompt(example.id)"
+                    >
+                      <template #reference>
+                        <el-button link :icon="Remove" class="ml-0!" />
+                      </template>
+                    </el-popconfirm>
+                    <el-popconfirm
+                      title="确定删除此示例？"
+                      :hide-after="0"
                       @confirm="handleDeleteExample(example.id)"
                     >
                       <template #reference>
@@ -231,12 +248,46 @@
       @add-example="handleAddExampleFromExisting"
     />
   </el-dialog>
+
+  <!--添加图片对话框-->
+  <el-dialog
+    v-model="addImageDialogVisible"
+    title="添加图片"
+    @keyup.esc.stop.prevent="handleCancelAddImage"
+  >
+    <el-text>图片地址（URL或本地文件）</el-text>
+    <div class="flex gap-2">
+      <el-input
+        v-model="candidateImage"
+        @paste="handlePaste"
+        @drop.prevent="handleDrop"
+      />
+      <el-button type="success" @click="handleSelectImageFile">
+        选择图片
+      </el-button>
+    </div>
+    <template #footer>
+      <div>
+        <el-button type="primary" @click="handleConfirmAddImage">
+          确定
+        </el-button>
+        <el-button type="danger" @click="handleCancelAddImage">
+          取消
+        </el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
 import { useStorage } from '@renderer/stores/storage'
-import { CirclePlusFilled, CopyDocument, Delete } from '@element-plus/icons-vue'
+import {
+  CirclePlusFilled,
+  CopyDocument,
+  Delete,
+  Remove,
+} from '@element-plus/icons-vue'
 import { getImageUrl } from '@renderer/utils/utils'
 import lodash from 'lodash'
 import ConfirmInput from '@renderer/components/ConfirmInput.vue'
@@ -436,8 +487,17 @@ async function handleAddExample(): Promise<void> {
   ElMessage.success('添加示例成功')
 }
 
-async function handleDeleteExample(id: string): Promise<void> {
+async function handleDeleteExampleFromPrompt(id: string): Promise<void> {
   const success = await storage.deleteExampleIDFromPrompt(props.promptID, id)
+  if (!success) {
+    ElMessage.error('删除示例失败')
+  } else {
+    ElMessage.success('删除示例成功')
+  }
+}
+
+async function handleDeleteExample(id: string): Promise<void> {
+  const success = await storage.deleteExample(id)
   if (!success) {
     ElMessage.error('删除示例失败')
   } else {
@@ -499,6 +559,56 @@ async function handleAddExampleFromExisting(exampleID: string): Promise<void> {
     return
   }
   ElMessage.success('添加示例成功')
+}
+
+const addImageDialogVisible = ref(false)
+const candidateImage = ref('')
+function handleAddImage(): void {
+  addImageDialogVisible.value = true
+  candidateImage.value = ''
+}
+function handleCancelAddImage(): void {
+  addImageDialogVisible.value = false
+  candidateImage.value = ''
+}
+function handlePaste(event: ClipboardEvent): void {
+  if (event.clipboardData === null || event.clipboardData.items.length === 0) {
+    return
+  }
+  const item = event.clipboardData.items[0]
+  if (item.kind === 'file') {
+    candidateImage.value = window.api.getPathForFile(item.getAsFile()!)
+  }
+}
+
+function handleDrop(event: DragEvent): void {
+  if (event.dataTransfer === null || event.dataTransfer.files.length === 0) {
+    return
+  }
+  const file = event.dataTransfer.files[0]
+  candidateImage.value = window.api.getPathForFile(file)
+}
+async function handleSelectImageFile(): Promise<void> {
+  const result = await window.api.openImageDialog()
+  if (result) {
+    candidateImage.value = result
+  }
+}
+async function handleConfirmAddImage(): Promise<void> {
+  const example = await storage.addExampleToPrompt(props.promptID, {})
+  if (example?.id === undefined) {
+    ElMessage.error('添加示例失败，无法添加图片')
+    return
+  }
+  addImageDialogVisible.value = false
+  const image = await storage.addImageToExample(
+    example.id,
+    candidateImage.value
+  )
+  if (!image) {
+    ElMessage.warning('添加图片失败，请检查路径或格式是否正确')
+  }
+  candidateImage.value = ''
 }
 </script>
 

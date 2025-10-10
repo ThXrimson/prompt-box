@@ -331,28 +331,6 @@ async function handleDeleteEmptyExamples(): Promise<void> {
   }
 }
 
-// async function handleEditExampleText(
-//   exampleID: string,
-//   type: 'positive' | 'negative' | 'extra'
-// ): Promise<void> {
-//   if (canEditExamplesText.value[type][exampleID]) {
-//     const field = tabToField[type]
-//     const success = await storage.updateExample({
-//       id: exampleID,
-//       [field]: examplesText.value[type][exampleID],
-//     })
-//     if (success) {
-//       ElMessage.success('示例文本更新成功')
-//     } else {
-//       ElMessage.error('示例文本更新失败')
-//       examplesText.value[type][exampleID] =
-//         storage.examples.get(exampleID)?.[field] || ''
-//     }
-//   }
-//   canEditExamplesText.value[type][exampleID] =
-//     !canEditExamplesText.value[type][exampleID]
-// }
-
 function handleEditExampleGallery(exampleID: string): void {
   editGalleryExampleID.value = exampleID
   editGalleryVisible.value = true

@@ -242,6 +242,13 @@ export default class Storage {
     const exampleIndex = this.db.data.examples.findIndex(
       (example) => example.id === exampleID
     )
+    for (const prompt of this.db.data.prompts) {
+      const idx = prompt.exampleIDs.findIndex((id) => id === exampleID)
+      if (idx !== -1) {
+        prompt.exampleIDs.splice(idx, 1)
+      }
+    }
+    this.write()
     if (exampleIndex !== -1) {
       // Remove example from all prompts
       this.db.data.prompts.forEach((prompt) => {
