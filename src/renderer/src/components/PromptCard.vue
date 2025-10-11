@@ -1,11 +1,12 @@
 <template>
   <div>
     <el-tooltip
-      placement="top-start"
+      placement="bottom-start"
       trigger="hover"
-      :show-after="250"
+      :show-after="0"
       :hide-after="0"
       :disabled="!Boolean(promptImageFileName)"
+      :enterable="false"
     >
       <div
         ref="card"
@@ -63,7 +64,7 @@
         <div v-if="promptImageFileName">
           <el-image
             :src="getImageUrl(promptImageFileName)"
-            class="w-40 object-cover rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300 self-center-safe"
+            class="w-60 object-cover rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300 self-center-safe"
             fit="scale-down"
             loading="lazy"
           />
