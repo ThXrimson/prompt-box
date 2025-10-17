@@ -3,6 +3,7 @@ import log from 'electron-log'
 import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
 import { cloneDeep } from 'lodash'
+import { clearLoraWeight } from '@renderer/utils/edit-weight'
 
 export const useStorage = defineStore('storage', () => {
   const prompts = ref(new Map<string, Prompt>())
@@ -584,6 +585,7 @@ export const useStorage = defineStore('storage', () => {
   //#endregion
 
   function getPromptIDIfExists(text: string): string | null {
+    text = clearLoraWeight(text)
     for (const prompt of prompts.value.values()) {
       if (prompt.text === text) {
         return prompt.id

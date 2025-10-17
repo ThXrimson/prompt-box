@@ -5,6 +5,7 @@ import {
   stripWeight,
   joinWeight,
   weightAdd,
+  removeLoraPrompts,
 } from './utils'
 
 describe('stripBrackets', () => {
@@ -133,5 +134,23 @@ describe('weightAdd', () => {
   it('should return delta as string if weight is empty', () => {
     const result = weightAdd('', 2.5)
     expect(result).toBe('3.5')
+  })
+})
+
+describe('removeLoraPrompts', () => {
+  it('should remove all lora prompts from the string', () => {
+    const result = removeLoraPrompts(
+      '<lora:name:1.1> some text <lora:another_name:0.5>'
+    )
+    expect(result).toBe('some text')
+  })
+  it('should handle strings without lora prompts', () => {
+    const result = removeLoraPrompts('no lora prompts here')
+    expect(result).toBe('no lora prompts here')
+  })
+
+  it('should handle empty strings', () => {
+    const result = removeLoraPrompts('')
+    expect(result).toBe('')
   })
 })

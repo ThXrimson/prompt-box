@@ -220,6 +220,18 @@
               @click="handleCopyToClipboard"
             />
           </el-tooltip>
+          <!-- 去掉lora -->
+          <el-switch
+            v-model="removeLora"
+            inline-prompt
+            active-text="去掉LORA"
+            inactive-text="保留LORA"
+            style="
+              --el-switch-on-color: #13ce66;
+              --el-switch-off-color: #ff4949;
+            "
+            class="[&_.is-text]:font-mono"
+          />
           <el-tooltip
             content="添加BREAK"
             :enterable="false"
@@ -308,6 +320,7 @@ import {
   joinBrackets,
   joinWeight,
   LeftBracket,
+  removeLoraPrompts,
   stripBrackets,
   stripWeight,
   weightAdd,
@@ -317,6 +330,7 @@ import Examples from '@renderer/views/Examples.vue'
 import { ElInput, ElMessage, ElMessageBox } from 'element-plus'
 import { useBracketsWrapElInput } from '@renderer/hooks/useBracketsWrapElInput'
 import { splitByCommaPlus } from '@renderer/utils/prompts-strings'
+import { clearLoraWeight, modifyLoraWeight } from '@renderer/utils/edit-weight'
 
 const BREAK = 'BREAK'
 const DISABLED_PREFIX = '(disabled)'
@@ -437,29 +451,41 @@ function handleEditPromptAdd(): void {
   const stripBracketsRes = stripBrackets(editingPromptText.value)
   const stripWeightRes = stripWeight(stripBracketsRes.content)
   const newWeight = weightAdd(stripWeightRes.weight, 0.1)
-  editingPromptText.value = joinBrackets(
+  let newStr = joinBrackets(
     joinWeight(stripWeightRes.content, newWeight),
     stripBracketsRes.leftBrackets
   )
+  if (!isLoraPrompt(newStr)) {
+    newStr = modifyLoraWeight(newStr, 0.1)
+  }
+  editingPromptText.value = newStr
 }
 
 function handleEditPromptMinus(): void {
   const stripBracketsRes = stripBrackets(editingPromptText.value)
   const stripWeightRes = stripWeight(stripBracketsRes.content)
   const newWeight = weightAdd(stripWeightRes.weight, -0.1)
-  editingPromptText.value = joinBrackets(
+  let newStr = joinBrackets(
     joinWeight(stripWeightRes.content, newWeight),
     stripBracketsRes.leftBrackets
   )
+  if (!isLoraPrompt(newStr)) {
+    newStr = modifyLoraWeight(newStr, -0.1)
+  }
+  editingPromptText.value = newStr
 }
 
 function handleEditPromptZero(): void {
   const stripBracketsRes = stripBrackets(editingPromptText.value)
   const stripWeightRes = stripWeight(stripBracketsRes.content)
-  editingPromptText.value = joinBrackets(
+  let newStr = joinBrackets(
     stripWeightRes.content,
     stripBracketsRes.leftBrackets
   )
+  if (!isLoraPrompt(newStr)) {
+    newStr = clearLoraWeight(newStr)
+  }
+  editingPromptText.value = newStr
 }
 
 // 拖动相关的状态
@@ -671,8 +697,12 @@ async function handleDeletePrompt(id: string): Promise<void> {
   }
 }
 
+const removeLora = ref(false)
 async function handleCopyToClipboard(): Promise<void> {
-  const textToCopy = joinPrompts(true)
+  let textToCopy = joinPrompts(true)
+  if (removeLora.value) {
+    textToCopy = removeLoraPrompts(textToCopy)
+  }
   const res = await window.api.copyToClipboard(textToCopy)
   if (res) {
     ElMessage.success('已复制到剪贴板')

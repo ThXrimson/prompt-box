@@ -73,3 +73,56 @@ export function clearWeight(input: string): string {
   // 清除所有括号内的权重信息
   return input.replace(/:\d+(\.\d+)?/g, '').replace(/:\s*$/, '')
 }
+
+export function modifyLoraWeight(input: string, delta: number = 0.1): string {
+  // 匹配类似 "<lora:name:1.1>" 或 "<lora:name>" 的字符串
+  const loraRegex = /<lora:([^:>]+)(?<weight>:(-?\d+(\.\d+)?))?>/g
+  const weightRegex = /:(-?\d+(\.\d+)?)>/g
+  let output = input
+  for (const res of input.matchAll(loraRegex)) {
+    // 判断是否有 weight 捕获组
+    if (res.groups && res.groups.weight) {
+      const offset = res[0].search(weightRegex)
+      if (offset !== -1) {
+        const originalWeightStr = res[0].substring(
+          offset + 1,
+          res[0].length - 1
+        ) // 提取数字字符串
+        const originalWeight = parseFloat(originalWeightStr)
+        const newWeight = originalWeight + delta
+        const resultWeight = newWeight.toFixed(2).replace(/\.?0+$/, '') // 保留两位小数，去除多余的0
+        // 替换原字符串中的权重部分
+        output = output.replace(
+          res[0],
+          res[0].replace(`:${originalWeightStr}>`, `:${resultWeight}>`)
+        )
+      }
+      continue
+    }
+    // 如果没有 weight 捕获组，说明没有权重，添加默认权重 1 + delta
+    const resultWeight = (1 + delta).toFixed(1).replace(/\.?0+$/, '') // 保留一位小数，去除多余的0
+    output = output.replace(
+      res[0],
+      `${res[0].substring(0, res[0].length - 1)}:${resultWeight}>`
+    )
+  }
+  return output
+}
+
+export function clearLoraWeight(input: string): string {
+  // 匹配类似 "<lora:name:1.1>" 或 "<lora:name>" 的字符串
+  const loraRegex = /<lora:([^:>]+)(?<weight>:(-?\d+(\.\d+)?))?>/g
+  const weightRegex = /:(-?\d+(\.\d+)?)>/g
+  let output = input
+  for (const res of input.matchAll(loraRegex)) {
+    // 判断是否有 weight 捕获组
+    if (res.groups && res.groups.weight) {
+      const offset = res[0].search(weightRegex)
+      if (offset !== -1) {
+        // 替换原字符串中的权重部分
+        output = output.replace(res[0], res[0].replace(weightRegex, '>'))
+      }
+    }
+  }
+  return output
+}

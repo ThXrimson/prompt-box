@@ -67,9 +67,6 @@ export function joinWeight(text: string, weight: string): string {
     if (!/^[+-]?(\d+(\.\d*)?)$/.test(weight)) {
       throw new Error('Weight must be a valid number')
     }
-    if (weight === '1') {
-      return text.trim()
-    }
     if (textIsAngled(text)) {
       text = text.slice(1, -1).trim()
       return `<${text.trim()}:${weight}>`
@@ -127,4 +124,8 @@ export function debounced<T extends (...args: unknown[]) => unknown>(
 
 export function isLoraPrompt(text: string): boolean {
   return /^<lora:.+>$/.test(text)
+}
+
+export function removeLoraPrompts(text: string): string {
+  return text.replace(/<lora:[^>]+>/g, '').trim()
 }

@@ -1,5 +1,10 @@
 import { describe, it, expect } from '@jest/globals'
-import { addWeight, clearWeight } from './edit-weight'
+import {
+  addWeight,
+  clearLoraWeight,
+  clearWeight,
+  modifyLoraWeight,
+} from './edit-weight'
 
 describe('addWeight', () => {
   it('should add 0.1 to existing number after colon', () => {
@@ -92,5 +97,75 @@ describe('clearWeight', () => {
   it('should remove weights without brackets', () => {
     const result = clearWeight('another:2.2')
     expect(result).toBe('another')
+  })
+})
+
+describe('modifyLoraWeight', () => {
+  it('should add 0.1 to existing lora weight', () => {
+    const result = modifyLoraWeight('<lora:name:1.1>')
+    expect(result).toBe('<lora:name:1.2>')
+  })
+  it('should add default weight when none exists', () => {
+    const result = modifyLoraWeight('<lora:name>', 0.1)
+    expect(result).toBe('<lora:name:1.1>')
+  })
+  it('should minus default weight when none exists', () => {
+    const result = modifyLoraWeight('<lora:name>', -0.1)
+    expect(result).toBe('<lora:name:0.9>')
+  })
+  it('should handle multiple lora tags in one string', () => {
+    const result = modifyLoraWeight('(<lora:first:0.5>,<lora:second:2.0>)')
+    expect(result).toBe('(<lora:first:0.6>,<lora:second:2.1>)')
+  })
+  it('should handle negative weights', () => {
+    const result = modifyLoraWeight('<lora:name:-1.0>')
+    expect(result).toBe('<lora:name:-0.9>')
+  })
+  it('should handle decimal weights correctly', () => {
+    const result = modifyLoraWeight('<lora:name:2.75>')
+    expect(result).toBe('<lora:name:2.85>')
+  })
+  it('should handle weights without decimal points', () => {
+    const result = modifyLoraWeight('<lora:name:3>')
+    expect(result).toBe('<lora:name:3.1>')
+  })
+  it('should handle multiple replicates of the same lora tag', () => {
+    const result = modifyLoraWeight('<lora:name:1.0> and <lora:name:1.0>')
+    expect(result).toBe('<lora:name:1.1> and <lora:name:1.1>')
+  })
+  it('should handle other weight in the string without modification', () => {
+    const result = modifyLoraWeight('(<lora:name:1.0>, high quality:2.0)')
+    expect(result).toBe('(<lora:name:1.1>, high quality:2.0)')
+  })
+  it('should handle name end with digits', () => {
+    const result = modifyLoraWeight('<lora:model123:1>')
+    expect(result).toBe('<lora:model123:1.1>')
+  })
+  it('should handle name end with digits mius', () => {
+    const result = modifyLoraWeight('<lora:model123:1>', -0.1)
+    expect(result).toBe('<lora:model123:0.9>')
+  })
+})
+
+describe('clearLoraWeight', () => {
+  it('should remove lora weights from the string', () => {
+    const result = clearLoraWeight('<lora:name:1.1>')
+    expect(result).toBe('<lora:name>')
+  })
+  it('should not affect non-lora weights', () => {
+    const result = clearLoraWeight('high quality:2.0')
+    expect(result).toBe('high quality:2.0')
+  })
+  it('should handle multiple lora tags and remove their weights', () => {
+    const result = clearLoraWeight('(<lora:first:0.5>,<lora:second:2.0>)')
+    expect(result).toBe('(<lora:first>,<lora:second>)')
+  })
+  it('should handle lora tags without weights gracefully', () => {
+    const result = clearLoraWeight('<lora:name>')
+    expect(result).toBe('<lora:name>')
+  })
+  it('should handle empty strings', () => {
+    const result = clearLoraWeight('')
+    expect(result).toBe('')
   })
 })
