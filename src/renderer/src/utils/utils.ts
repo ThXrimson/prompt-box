@@ -129,3 +129,8 @@ export function isLoraPrompt(text: string): boolean {
 export function removeLoraPrompts(text: string): string {
   return text.replace(/<lora:[^>]+>/g, '').trim()
 }
+
+export function extractLoraPrompts(text: string): string[] {
+  const matches = text.match(/<lora:[^>]+>/g)
+  return matches ? matches : []
+}

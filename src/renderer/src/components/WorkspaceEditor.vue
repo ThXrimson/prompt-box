@@ -120,7 +120,9 @@
                       'line-through': item.disabled,
                       'font-bold': true,
                     }"
-                    @click="handleEditPrompt(item.id)"
+                    @click.left="handleClickPromptTag(item)"
+                    @click.right="handleCopyPrompt(item.text)"
+                    @mousedown.middle.prevent.stop="handleRemovePrompt(item.id)"
                     @close="handleRemovePrompt(item.id)"
                   >
                     <span
@@ -233,6 +235,16 @@
             class="[&_.is-text]:font-mono"
           />
           <el-tooltip
+            content="复制Lora提示词"
+            :enterable="false"
+            placement="top-start"
+            :hide-after="0"
+          >
+            <el-button class="m-0!" @click="handleCopyLoraToClipboard">
+              Lora
+            </el-button>
+          </el-tooltip>
+          <el-tooltip
             content="添加BREAK"
             :enterable="false"
             placement="top-end"
@@ -316,6 +328,7 @@ import { watchArray } from '@vueuse/core'
 import { useStorage } from '@renderer/stores/storage'
 import {
   debounced,
+  extractLoraPrompts,
   isLoraPrompt,
   joinBrackets,
   joinWeight,
@@ -393,6 +406,27 @@ const isEditingPromptText = ref(false)
 const editingPromptTextID = ref<string | null>(null)
 const editingPromptText = ref('')
 
+let promptTagClickCount = 0
+let promptTagClickTimer: ReturnType<typeof setTimeout> | undefined = undefined
+const PROMPT_TAG_CLICK_DELAY = 250 // 定义一个延迟时间，用于区分单击和双击
+
+function handleClickPromptTag(item: PromptView): void {
+  promptTagClickCount++
+  if (promptTagClickCount === 1) {
+    // 第一次点击，设置一个定时器
+    promptTagClickTimer = setTimeout(() => {
+      // 如果在 DELAY 时间内没有第二次点击，则认为是单次点击
+      handleEditPrompt(item.id)
+      promptTagClickCount = 0 // 重置点击次数
+    }, PROMPT_TAG_CLICK_DELAY)
+  } else {
+    // 第二次点击，清除定时器，执行双击操作
+    clearTimeout(promptTagClickTimer)
+    handleDoubleClickPrompt(item)
+    promptTagClickCount = 0 // 重置点击次数
+  }
+}
+
 function handleEditPrompt(id: string): void {
   const p = promptList.value.find((item) => item.id === id)
   if (p) {
@@ -403,6 +437,22 @@ function handleEditPrompt(id: string): void {
     )
     isEditingPromptText.value = true
   }
+}
+
+function handleDoubleClickPrompt(item: PromptView): void {
+  if (item.text !== BREAK) {
+    item.disabled = !item.disabled
+  }
+}
+
+function handleCopyPrompt(text: string): void {
+  window.api.copyToClipboard(text).then((res) => {
+    if (res) {
+      ElMessage.success('已复制到剪贴板')
+    } else {
+      ElMessage.error('复制失败，请重试')
+    }
+  })
 }
 
 function handleConfirmEditPrompt(): void {
@@ -706,6 +756,17 @@ async function handleCopyToClipboard(): Promise<void> {
   const res = await window.api.copyToClipboard(textToCopy)
   if (res) {
     ElMessage.success('已复制到剪贴板')
+  } else {
+    ElMessage.warning('复制失败，请重试')
+  }
+}
+
+async function handleCopyLoraToClipboard(): Promise<void> {
+  let textToCopy = joinPrompts(true)
+  textToCopy = extractLoraPrompts(textToCopy).join(',')
+  const res = await window.api.copyToClipboard(textToCopy)
+  if (res) {
+    ElMessage.success('Lora提示词已复制到剪贴板')
   } else {
     ElMessage.warning('复制失败，请重试')
   }
