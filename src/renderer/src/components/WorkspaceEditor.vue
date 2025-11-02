@@ -271,10 +271,17 @@
         <el-input
           v-model="searchText"
           placeholder="搜索或添加"
-          :prefix-icon="Search"
           clearable
           @keyup.enter="handleAddPromptToEditor"
         >
+          <template #prefix>
+            <el-icon
+              class="cursor-pointer"
+              @click.stop="handleToCopySearchText"
+            >
+              <copy-document />
+            </el-icon>
+          </template>
           <template #suffix>
             <el-icon
               class="cursor-pointer"
@@ -321,7 +328,7 @@
 </template>
 
 <script setup lang="ts">
-import { CopyDocument, Edit, Plus, Search, Star } from '@element-plus/icons-vue'
+import { CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { DraggableEvent, SortableEvent, VueDraggable } from 'vue-draggable-plus'
 import { watchArray } from '@vueuse/core'
@@ -754,6 +761,16 @@ async function handleCopyToClipboard(): Promise<void> {
     textToCopy = removeLoraPrompts(textToCopy)
   }
   const res = await window.api.copyToClipboard(textToCopy)
+  if (res) {
+    ElMessage.success('已复制到剪贴板')
+  } else {
+    ElMessage.warning('复制失败，请重试')
+  }
+}
+
+async function handleToCopySearchText(): Promise<void> {
+  if (searchText.value === '') return
+  const res = await window.api.copyToClipboard(searchText.value)
   if (res) {
     ElMessage.success('已复制到剪贴板')
   } else {
