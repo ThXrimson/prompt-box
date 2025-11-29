@@ -4,8 +4,7 @@
     "electron.vite.config.*",
     "src/main/**/*",
     "src/preload/**/*",
-    "src/shared/types.d.ts",
-    "src/shared/ipc-channel.ts"
+    "src/shared/**/*",
   ],
   "compilerOptions": {
     "composite": true,

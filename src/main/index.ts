@@ -5,9 +5,8 @@ import fs from 'fs'
 import icon from '../../resources/icon.png?asset'
 import log from 'electron-log/main'
 import dayjs from 'dayjs'
-import Storage from './storage'
 import { getImageDir, getAppDir } from './utils'
-import { registerIpc } from './registerIpc'
+import { initHandlers } from './handlers'
 
 Menu.setApplicationMenu(null)
 
@@ -21,15 +20,6 @@ function init(): void {
         log.transports.file.resolvePathFn = () => {
             return join(getAppDir(), 'logs', `${dayjs().format('YYYY-MM-DD')}.log`)
         }
-    }
-    {
-        Storage.getInstance() // Ensure storage is initialized
-    }
-}
-
-function cleanup(): void {
-    {
-        Storage.getInstance().write()
     }
 }
 
@@ -107,9 +97,8 @@ app.whenReady().then(async () => {
         optimizer.watchWindowShortcuts(window)
     })
 
-    registerIpc()
-
-    createWindow()
+    const mainWindow = createWindow()
+    await initHandlers(mainWindow)
 
     app.on('activate', function () {
         // On macOS it's common to re-create a window in the app when the
@@ -130,6 +119,4 @@ app.on('window-all-closed', () => {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 
-app.on('before-quit', () => {
-    cleanup()
-})
+app.on('before-quit', () => {})

@@ -23,4 +23,6 @@ export interface NewWorkspace {
     tagIds?: string[]
 }
 
-export type UpdateWorkspace = Partial<NewWorkspace>
+export type UpdateWorkspace = Partial<NewWorkspace> & {
+    id: string
+}

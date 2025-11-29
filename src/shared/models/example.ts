@@ -24,4 +24,6 @@ export interface NewExample {
     imageIds?: string[]
 }
 
-export type UpdateExample = NewExample
+export type UpdateExample = NewExample & {
+    id: string
+}

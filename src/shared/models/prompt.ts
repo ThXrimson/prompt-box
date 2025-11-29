@@ -20,4 +20,6 @@ export interface NewPrompt {
     exampleIds?: string[]
 }
 
-export type UpdatePrompt = Partial<NewPrompt>
+export type UpdatePrompt = Partial<NewPrompt> & {
+    id: string
+}

@@ -12,8 +12,12 @@ export function getAppDir(): string {
         : (process.env.PORTABLE_EXECUTABLE_DIR ?? dirname(app.getPath('exe')))
 }
 
+export function getDataDir(): string {
+    return join(getAppDir(), 'data')
+}
+
 export function getImageDir(): string {
-    return join(getAppDir(), 'data', 'images')
+    return join(getDataDir(), 'images')
 }
 
 /**

@@ -5,6 +5,15 @@ export interface Tag {
     updateTime: number
 }
 
+export interface NewTag {
+    text: string
+}
+
+export interface UpdateTag {
+    id: string
+    text?: string
+}
+
 const UNCATEGORIZED_TAG_ID = 'uncategorized'
 export function NewUncategorizedTag(): Tag {
     return {

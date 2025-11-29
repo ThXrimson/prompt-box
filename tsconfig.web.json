@@ -5,10 +5,9 @@
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.vue",
     "src/preload/index.d.ts",
-    "src/shared/types.d.ts",
     "src/renderer/auto-imports.d.ts",
     "src/renderer/components.d.ts",
-    "src/shared/ipc_channels.ts",
+    "src/shared/**/*",
     "src/types/preload.d.ts"
   ],
   "compilerOptions": {

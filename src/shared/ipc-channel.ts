@@ -1,31 +1,32 @@
-export const getAllPrompts = 'get-all-prompts'
-export const getAllTags = 'select-all-tags'
-export const getPromptByID = 'select-prompt-by-id'
-export const openImageDialog = 'open-image-dialog'
-export const addImage = 'add-image'
-export const deleteImage = 'delete-image'
-export const getAllExamples = 'get-all-examples'
-export const getAllImages = 'get-all-images'
-export const writeStorage = 'write-storage'
-export const addImageToExample = 'add-image-to-example'
-export const addExample = 'add-example'
-export const updateExample = 'update-example'
-export const deleteImageFromExample = 'delete-example-image'
-export const addPrompt = 'add-prompt'
-export const updatePrompt = 'update-prompt'
-export const addTag = 'add-tag'
-export const deletePrompt = 'delete-prompt'
-export const addExampleToPrompt = 'add-example-to-prompt'
-export const deleteExample = 'delete-example'
-export const deleteExampleFromPrompt = 'delete-example-from-prompt'
-export const deleteTag = 'delete-tag'
-export const updateTag = 'update-tag'
-export const getAllWorkspaces = 'get-all-workspaces'
-export const updateWorkspace = 'update-workspace'
-export const copyToClipboard = 'copy-to-clipboard'
-export const addExampleIDToPrompt = 'add-example-id-to-prompt'
-export const deleteExampleIDFromPrompt = 'delete-example-id-from-prompt'
-export const deleteWorkspace = 'delete-workspace'
-export const addWorkspace = 'add-workspace'
-export const saveImageTo = 'save-image-to'
-export const translateByDeepLX = 'translate-by-deeplx'
+export enum IpcChannels {
+    // get
+    GetAllPrompts = 'get-all-prompts',
+    GetAllWorkspaces = 'get-all-workspaces',
+    GetAllExamples = 'get-all-examples',
+    GetAllImages = 'get-all-images',
+    GetAllTags = 'get-all-tags',
+    // create
+    CreatePrompts = 'create-prompts',
+    CreateWorkspaces = 'create-workspaces',
+    CreateExamples = 'create-examples',
+    CreateImages = 'create-images',
+    CreateTags = 'create-tags',
+    // update
+    UpdatePrompts = 'update-prompts',
+    UpdateWorkspaces = 'update-workspaces',
+    UpdateExamples = 'update-examples',
+    UpdateImages = 'update-images',
+    UpdateTags = 'update-tags',
+    // delete
+    DeletePrompts = 'delete-prompts',
+    DeleteWorkspaces = 'delete-workspaces',
+    DeleteExamples = 'delete-examples',
+    DeleteImages = 'delete-images',
+    DeleteTags = 'delete-tags',
+    // notify
+    NotifyPrompts = 'notify-prompts',
+    NotifyWorkspaces = 'notify-workspaces',
+    NotifyExamples = 'notify-examples',
+    NotifyImages = 'notify-images',
+    NotifyTags = 'notify-tags',
+}
