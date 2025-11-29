@@ -3,55 +3,55 @@
 @import 'element-plus/theme-chalk/el-message-box.css';
 
 body {
-  color: var(--color-slate-800);
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  background-color: var(--color-gray-100);
-  background-size: cover;
-  user-select: none;
+    color: var(--color-slate-800);
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: var(--color-gray-100);
+    background-size: cover;
+    user-select: none;
 }
 
 code {
-  font-weight: 600;
-  padding: 3px 5px;
-  border-radius: 2px;
-  background-color: var(--color-background-mute);
-  font-family:
-    ui-monospace,
-    SFMono-Regular,
-    SF Mono,
-    Menlo,
-    Consolas,
-    Liberation Mono,
-    monospace;
-  font-size: 85%;
+    font-weight: 600;
+    padding: 3px 5px;
+    border-radius: 2px;
+    background-color: var(--color-background-mute);
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        SF Mono,
+        Menlo,
+        Consolas,
+        Liberation Mono,
+        monospace;
+    font-size: 85%;
 }
 
 .confirm-text.el-text {
-  align-self: flex-start;
+    align-self: flex-start;
 }
 
 #app {
-  width: 100vw;
-  height: 100vh;
+    width: 100vw;
+    height: 100vh;
 }
 
 @media (max-width: 720px) {
-  .text {
-    font-size: 20px;
-  }
+    .text {
+        font-size: 20px;
+    }
 }
 
 @media (max-width: 620px) {
-  .versions {
-    display: none;
-  }
+    .versions {
+        display: none;
+    }
 }
 
 @media (max-width: 350px) {
-  .tip,
-  .actions {
-    display: none;
-  }
+    .tip,
+    .actions {
+        display: none;
+    }
 }

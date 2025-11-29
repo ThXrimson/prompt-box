@@ -7,37 +7,37 @@ import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig({
-  main: {
-    plugins: [externalizeDepsPlugin()],
-    resolve: {
-      alias: {
-        '@shared': resolve('src/shared'),
-      },
+    main: {
+        plugins: [externalizeDepsPlugin()],
+        resolve: {
+            alias: {
+                '@shared': resolve('src/shared'),
+            },
+        },
     },
-  },
-  preload: {
-    plugins: [externalizeDepsPlugin()],
-    resolve: {
-      alias: {
-        '@shared': resolve('src/shared'),
-      },
+    preload: {
+        plugins: [externalizeDepsPlugin()],
+        resolve: {
+            alias: {
+                '@shared': resolve('src/shared'),
+            },
+        },
     },
-  },
-  renderer: {
-    resolve: {
-      alias: {
-        '@renderer': resolve('src/renderer/src'),
-      },
+    renderer: {
+        resolve: {
+            alias: {
+                '@renderer': resolve('src/renderer/src'),
+            },
+        },
+        plugins: [
+            vue(),
+            tailwindcss(),
+            AutoImport({
+                resolvers: [ElementPlusResolver()],
+            }),
+            Components({
+                resolvers: [ElementPlusResolver()],
+            }),
+        ],
     },
-    plugins: [
-      vue(),
-      tailwindcss(),
-      AutoImport({
-        resolvers: [ElementPlusResolver()],
-      }),
-      Components({
-        resolvers: [ElementPlusResolver()],
-      }),
-    ],
-  },
 })
