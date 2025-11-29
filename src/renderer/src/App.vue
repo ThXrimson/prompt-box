@@ -3,15 +3,15 @@
         <el-menu :default-active="activeMenu" collapse @select="handleMenuSelect">
             <el-menu-item index="/prompt-collection">
                 <el-icon><prompt-icon /></el-icon>
-                <template #title>提示词库</template>
+                <template #title> 提示词库 </template>
             </el-menu-item>
             <el-menu-item index="/workspaces">
                 <el-icon><workspace-icon /></el-icon>
-                <template #title>工作区</template>
+                <template #title> 工作区 </template>
             </el-menu-item>
             <el-menu-item index="/examples">
                 <el-icon><document-icon /></el-icon>
-                <template #title>示例</template>
+                <template #title> 示例 </template>
             </el-menu-item>
         </el-menu>
         <div class="flex flex-col flex-1 min-w-0 self-stretch my-1 mr-1">

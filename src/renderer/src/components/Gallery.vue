@@ -40,7 +40,7 @@
                 :key="i"
                 v-loading="true"
                 class="w-30! h-30! rounded-md bg-gray-400"
-            ></div>
+            />
             <!-- 添加图片 -->
             <el-button
                 :icon="Plus"

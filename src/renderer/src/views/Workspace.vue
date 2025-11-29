@@ -152,7 +152,6 @@ import type { Workspace } from '@shared/types'
 import TagEditor from '@renderer/components/TagEditor.vue'
 import { pinyinIncludes, pinyinIncludesWithFirstLetter } from '@renderer/utils/pinyin-includes'
 import TagList from '@renderer/components/TagList.vue'
-import TagCollection from '@renderer/components/TagCollection.vue'
 
 const storage = useStorage()
 

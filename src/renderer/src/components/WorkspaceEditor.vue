@@ -48,7 +48,7 @@
         class="mt-1 h-1 cursor-ns-resize rounded-t-lg flex items-center justify-center hover:[&>div]:bg-gray-600"
         @mousedown="startDragging"
     >
-        <div class="w-8 h-0.5 bg-gray-400 rounded"></div>
+        <div class="w-8 h-0.5 bg-gray-400 rounded" />
     </div>
     <!-- 编辑框容器 -->
     <div
@@ -84,7 +84,7 @@
                                 <div
                                     v-if="draggingID === item.id"
                                     class="w-0.5 h-5 bg-blue-600 mx-[-1px]"
-                                ></div>
+                                />
                                 <el-dropdown
                                     v-else
                                     trigger="hover"

@@ -34,6 +34,9 @@ export default tseslint.config(
             ],
             '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
             'no-undef': 'off',
+            'vue/html-indent': 'off',
+            'vue/singleline-html-element-content-newline': 'off',
+            'vue/max-attributes-per-line': 'off',
         },
     }
 )
