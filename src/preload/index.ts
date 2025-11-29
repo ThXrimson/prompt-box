@@ -3,7 +3,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 import log from 'electron-log'
 import { type Example, type Image, type Prompt, type Tag, type Workspace } from '@shared/types'
 import { ipcRenderer } from 'electron/renderer'
-import * as ipcChannels from '@shared/ipc_channels'
+import * as ipcChannels from '@shared/ipc-channel'
 
 // Custom APIs for renderer
 const api = {
