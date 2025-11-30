@@ -303,7 +303,7 @@ import { CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { DraggableEvent, SortableEvent, VueDraggable } from 'vue-draggable-plus'
 import { watchArray } from '@vueuse/core'
-import { useStorage } from '@renderer/stores/storage'
+import { useStorage } from '@renderer/stores/data'
 import {
     debounced,
     extractLoraPrompts,

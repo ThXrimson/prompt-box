@@ -1,6 +1,6 @@
 import { isNil } from 'lodash'
 
-const enum Bracket {
+export const enum Bracket {
     Square = 'square',
     Round = 'round',
 }
@@ -17,7 +17,7 @@ const openBracketToEnum = {
     '(': Bracket.Round,
 } as const
 function splitStringIgnoringBrackets(inputString: string): string[] {
-    const result = []
+    const result = [] as string[]
     let currentSegment = ''
 
     // 跟踪圆括号和方括号的计数
@@ -53,7 +53,7 @@ function splitStringIgnoringBrackets(inputString: string): string[] {
     }
     return result
 }
-const enum PromptTagKind {
+export const enum PromptTagKind {
     Mono = 'mono',
     Group = 'group',
     Lora = 'lora',

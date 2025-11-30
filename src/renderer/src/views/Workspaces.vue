@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { useStorage } from '@renderer/stores/storage'
+import { useStorage } from '@renderer/stores/data'
 import { computed, ref } from 'vue'
 import { Delete } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'

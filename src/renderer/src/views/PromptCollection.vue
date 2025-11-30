@@ -178,7 +178,7 @@ import {
     Delete,
 } from '@element-plus/icons-vue'
 import { computed, nextTick, ref, useTemplateRef } from 'vue'
-import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/storage'
+import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/data'
 import TagEditor from '@renderer/components/TagEditor.vue'
 import { pinyinIncludes, pinyinIncludesWithFirstLetter } from '@renderer/utils/pinyin-includes'
 import type { Prompt } from '@shared/types'

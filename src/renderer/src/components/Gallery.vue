@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { useStorage } from '@renderer/stores/storage'
+import { useStorage } from '@renderer/stores/data'
 import { getImageUrl } from '@renderer/utils/utils'
 import { ref, watch } from 'vue'
 import { Plus, Close } from '@element-plus/icons-vue'

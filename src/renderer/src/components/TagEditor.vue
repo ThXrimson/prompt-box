@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/storage'
+import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/data'
 import { EditPen, Delete, Plus } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 

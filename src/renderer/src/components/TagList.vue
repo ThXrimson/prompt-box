@@ -35,7 +35,7 @@
 
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
-import { useStorage } from '@renderer/stores/storage'
+import { useStorage } from '@renderer/stores/data'
 import { Close } from '@element-plus/icons-vue'
 import { useTemplateRefsList } from '@vueuse/core'
 

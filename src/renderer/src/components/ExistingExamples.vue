@@ -110,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { useStorage } from '@renderer/stores/storage'
+import { useStorage } from '@renderer/stores/data'
 import { computed, ref, watch } from 'vue'
 import { CopyDocument, Delete } from '@element-plus/icons-vue'
 import { getImageUrl } from '@renderer/utils/utils'

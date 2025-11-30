@@ -95,7 +95,7 @@ import { getImageUrl } from '@renderer/utils/utils'
 import { CirclePlus, Delete, Edit } from '@element-plus/icons-vue'
 import type { Prompt } from '@shared/types'
 import { ref, useTemplateRef } from 'vue'
-import { useStorage } from '@renderer/stores/storage'
+import { useStorage } from '@renderer/stores/data'
 import { ElMessageBox } from 'element-plus'
 
 const props = defineProps<{

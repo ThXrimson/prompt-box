@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useStorage } from '@renderer/stores/storage'
+import { useStorage } from '@renderer/stores/data'
 import { ElLoading } from 'element-plus'
 import { Document as DocumentIcon } from '@element-plus/icons-vue'
 import PromptIcon from '@renderer/icons/Prompt.vue'

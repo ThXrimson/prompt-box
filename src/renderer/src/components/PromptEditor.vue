@@ -250,7 +250,7 @@
 
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { useStorage } from '@renderer/stores/storage'
+import { useStorage } from '@renderer/stores/data'
 import { CirclePlusFilled, CopyDocument, Delete, Remove } from '@element-plus/icons-vue'
 import { getImageUrl } from '@renderer/utils/utils'
 import lodash from 'lodash'

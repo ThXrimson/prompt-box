@@ -144,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/storage'
+import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/data'
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { Discount } from '@element-plus/icons-vue'
 import { CheckboxValueType, ElMessage } from 'element-plus'

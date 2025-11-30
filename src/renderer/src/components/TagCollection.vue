@@ -42,7 +42,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { Tag } from '@shared/types'
-import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/storage'
+import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/data'
 import { pinyinIncludes, pinyinIncludesWithFirstLetter } from '@renderer/utils/pinyin-includes'
 import PromptCard from '@renderer/components/PromptCard.vue'
 import { Plus } from '@element-plus/icons-vue'
