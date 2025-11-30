@@ -47,7 +47,7 @@ export default class ImageLowdbService implements ImageService {
         }
         db.data.images.push(...newImages)
         db.write()
-        return db.data.images
+        return newImages
     }
     async delete(ids: string[]): Promise<boolean> {
         const db = await this.getDb()

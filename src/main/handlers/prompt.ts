@@ -1,13 +1,21 @@
 import { BrowserWindow, ipcMain } from 'electron/main'
 import PromptLowdbService from '../services/prompt'
-import { IpcChannels } from '@shared/ipc-channel'
+import { IpcChannel } from '@shared/ipc-channel'
+import { NewPrompt, UpdatePrompt } from '@shared/models/prompt'
 
 export async function initPromptHandlers(mainWindow: BrowserWindow): Promise<void> {
-    // TODO
     const promptService = PromptLowdbService.getInstance()
-    ipcMain.handle(IpcChannels.CreatePrompts, () => {})
-    ipcMain.handle(IpcChannels.GetAllPrompts, () => {})
-    ipcMain.handle(IpcChannels.UpdatePrompts, () => {})
-    ipcMain.handle(IpcChannels.DeletePrompts, () => {})
-    mainWindow.webContents.send(IpcChannels.NotifyPrompts, await promptService.getAll())
+    ipcMain.handle(IpcChannel.CreatePrompts, (_event, prompts: NewPrompt[]) => {
+        return promptService.create(prompts)
+    })
+    ipcMain.handle(IpcChannel.GetAllPrompts, () => {
+        return promptService.getAll()
+    })
+    ipcMain.handle(IpcChannel.UpdatePrompts, (_event, prompts: UpdatePrompt[]) => {
+        return promptService.update(prompts)
+    })
+    ipcMain.handle(IpcChannel.DeletePrompts, (_event, ids: string[]) => {
+        return promptService.delete(ids)
+    })
+    mainWindow.webContents.send(IpcChannel.NotifyPrompts, await promptService.getAll())
 }

@@ -51,7 +51,7 @@ export default class PromptLowdbService implements PromptService {
         }
         db.data.prompts.push(...newPrompts)
         db.write()
-        return db.data.prompts
+        return newPrompts
     }
     async delete(ids: string[]): Promise<boolean> {
         const db = await this.getDb()

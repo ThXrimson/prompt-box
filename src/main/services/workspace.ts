@@ -48,8 +48,9 @@ export default class WorkspaceLowdbService implements WorkspaceService {
             }
             newWorkspaces.push(newWorkspace)
         }
+        db.data.workspaces.push(...newWorkspaces)
         db.write()
-        return db.data.workspaces
+        return newWorkspaces
     }
     async delete(ids: string[]): Promise<boolean> {
         const db = await this.getDb()
@@ -73,6 +74,6 @@ export default class WorkspaceLowdbService implements WorkspaceService {
             }
         }
         db.write()
-        return db.data.workspaces
+        return updatedWorkspaces
     }
 }

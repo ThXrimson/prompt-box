@@ -1,4 +1,4 @@
-export enum IpcChannels {
+export enum IpcChannel {
     // get
     GetAllPrompts = 'get-all-prompts',
     GetAllWorkspaces = 'get-all-workspaces',
@@ -29,4 +29,9 @@ export enum IpcChannels {
     NotifyExamples = 'notify-examples',
     NotifyImages = 'notify-images',
     NotifyTags = 'notify-tags',
+    // other
+    SaveImage = 'save-image',
+    OpenImageDialog = 'open-image-dialog',
+    CopyToClipboard = 'copy-to-clipboard',
+    TranslateByDeepLX = 'translate-by-deep-lx',
 }

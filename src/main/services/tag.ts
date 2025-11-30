@@ -43,8 +43,9 @@ export default class TagLowdbService implements TagService {
             }
             newTags.push(newTag)
         }
+        db.data.tags.push(...newTags)
         db.write()
-        return db.data.tags
+        return newTags
     }
     async delete(ids: string[]): Promise<boolean> {
         const db = await this.getDb()
@@ -68,6 +69,6 @@ export default class TagLowdbService implements TagService {
             }
         }
         db.write()
-        return db.data.tags
+        return updatedTags
     }
 }

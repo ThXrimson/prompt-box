@@ -48,8 +48,9 @@ export default class ExampleLowdbService implements ExampleService {
             }
             newExamples.push(newExample)
         }
+        db.data.examples.push(...newExamples)
         db.write()
-        return db.data.examples
+        return newExamples
     }
     async delete(ids: string[]): Promise<boolean> {
         const db = await this.getDb()
@@ -73,6 +74,6 @@ export default class ExampleLowdbService implements ExampleService {
             }
         }
         db.write()
-        return db.data.examples
+        return updateExamples
     }
 }
