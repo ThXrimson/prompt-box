@@ -18,4 +18,7 @@ export default {
     notify(listener: (event: IpcRendererEvent, images: Image[]) => void) {
         ipcRenderer.on(IpcChannel.NotifyImages, listener)
     },
+    saveImage(id: string): Promise<boolean> {
+        return ipcRenderer.invoke(IpcChannel.SaveImage, id)
+    },
 }

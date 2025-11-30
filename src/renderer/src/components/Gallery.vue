@@ -23,7 +23,7 @@
                 <el-icon
                     size="1.2rem"
                     class="delete-button absolute! top-1 right-1 rounded-full bg-gray-200 text-gray-600! opacity-0 transition-all duration-300 cursor-pointer hover:bg-gray-400"
-                    @click="handleDeleteExampleImage(image.id)"
+                    @click="deleteImage(image.id)"
                 >
                     <Close />
                 </el-icon>
@@ -71,25 +71,34 @@
 </template>
 
 <script setup lang="ts">
-import { useStorage } from '@renderer/stores/data'
+import { useDataStore } from '@renderer/stores/data'
 import { getImageUrl } from '@renderer/utils/utils'
 import { ref, watch } from 'vue'
 import { Plus, Close } from '@element-plus/icons-vue'
 import SaveIcon from '@renderer/icons/Save.vue'
 import { VueDraggable } from 'vue-draggable-plus'
-import { Image } from '@shared/types'
+import { Image } from '@shared/models/image'
+import { isNil } from 'lodash'
 
 const props = defineProps<{
-    exampleID: string
+    exampleId: string
 }>()
 
-const storage = useStorage()
+const dataStore = useDataStore()
 
 const images = ref<Image[]>([])
 watch(
-    () => storage.getImagesByExampleID(props.exampleID).map((img) => img.id),
-    () => {
-        images.value = storage.getImagesByExampleID(props.exampleID)
+    () => dataStore.example.idToImages.get(props.exampleId) || [],
+    (newImages) => {
+        images.value = [] as Image[]
+        for (const image of newImages) {
+            images.value.push({
+                id: image.id,
+                fileName: image.fileName,
+                createTime: image.createTime,
+                updateTime: image.updateTime,
+            })
+        }
     },
     { immediate: true }
 )
@@ -106,7 +115,7 @@ function handlePaste(event: ClipboardEvent): void {
     }
     const item = event.clipboardData.items[0]
     if (item.kind === 'file') {
-        candidateImage.value = window.api.getPathForFile(item.getAsFile()!)
+        candidateImage.value = window.api.other.getPathForFile(item.getAsFile()!)
     }
 }
 
@@ -115,11 +124,11 @@ function handleDrop(event: DragEvent): void {
         return
     }
     const file = event.dataTransfer.files[0]
-    candidateImage.value = window.api.getPathForFile(file)
+    candidateImage.value = window.api.other.getPathForFile(file)
 }
 
 async function handleSelectImageFile(): Promise<void> {
-    const result = await window.api.openImageDialog()
+    const result = await window.api.other.openImageDialog()
     if (result) {
         candidateImage.value = result
     }
@@ -134,16 +143,29 @@ function handleOpenAddImageDialog(): void {
 async function handleConfirmAddExampleImage(): Promise<void> {
     loadingPlaceholder.value += 1
     addImageDialogVisible.value = false
-    const image = await storage.addImageToExample(props.exampleID, candidateImage.value)
-    if (!image) {
+    if (candidateImage.value === '') {
+        ElMessage.warning('请输入图片路径或选择图片文件')
+        return
+    }
+    const exampleIndex = dataStore.example.readonly.findIndex((e) => e.id === props.exampleId)
+    if (exampleIndex === -1) {
+        ElMessage.error('示例不存在')
+        return
+    }
+    const image = await dataStore.image.create(candidateImage.value)
+    if (isNil(image)) {
         ElMessage.warning('添加图片失败，请检查路径或格式是否正确')
     }
+    await dataStore.example.update({
+        id: props.exampleId,
+        imageIds: [...dataStore.example.readonly[exampleIndex].imageIds, image.id],
+    })
     loadingPlaceholder.value -= 1
     candidateImage.value = ''
 }
 
-async function handleDeleteExampleImage(imageID: string): Promise<void> {
-    const success = await storage.deleteImageFromExample(props.exampleID, imageID)
+async function deleteImage(imageID: string): Promise<void> {
+    const success = await dataStore.image.delete(imageID)
     if (!success) {
         ElMessage.error('删除图片失败，请稍后再试')
     } else {
@@ -157,8 +179,8 @@ function handleCancelAddExampleImage(): void {
     candidateImage.value = ''
 }
 
-async function handleCopyImageToClipboard(imageID: string): Promise<void> {
-    const success = await window.api.saveImageTo(imageID)
+async function handleCopyImageToClipboard(imageId: string): Promise<void> {
+    const success = await window.api.image.saveImage(imageId)
     if (success) {
         ElMessage.success('图片已保存')
     } else {
@@ -167,9 +189,9 @@ async function handleCopyImageToClipboard(imageID: string): Promise<void> {
 }
 
 async function handleDragEnd(): Promise<void> {
-    await storage.updateExample({
-        id: props.exampleID,
-        imageIDs: images.value.map((img) => img.id),
+    await dataStore.example.update({
+        id: props.exampleId,
+        imageIds: images.value.map((img) => img.id),
     })
 }
 </script>

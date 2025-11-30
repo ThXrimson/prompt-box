@@ -278,7 +278,7 @@
         body-class="flex-1 min-h-0 border-1 rounded-md border-neutral-200 p-2"
     >
         <el-scrollbar>
-            <prompt-editor :prompt-i-d="editingPromptID" />
+            <prompt-editor :promptId="editingPromptID" />
         </el-scrollbar>
         <template #footer>
             <el-button type="danger" class="w-full" @click="handleDeletePrompt(editingPromptID!)">

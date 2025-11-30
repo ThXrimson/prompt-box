@@ -12,8 +12,8 @@
                 >
                     <div class="flex gap-2 flex-1 min-w-0">
                         <el-image
-                            v-if="example.images.length > 0"
-                            :src="getImageUrl(example.images[0]?.fileName)"
+                            v-if="!isNil(exampleImageCover.get(example.id))"
+                            :src="exampleImageCover.get(example.id)"
                             class="w-40 h-40 object-cover rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300"
                             fit="scale-down"
                             loading="lazy"
@@ -31,34 +31,23 @@
                                 <div class="flex justify-between gap-1">
                                     <div>
                                         <el-segmented
-                                            v-model="editorTab[example.id]"
-                                            :options="
-                                                tabs.map((tab) => {
-                                                    switch (tab) {
-                                                        case 'positive':
-                                                            return { label: '正向', value: tab }
-                                                        case 'negative':
-                                                            return { label: '负向', value: tab }
-                                                        case 'extra':
-                                                            return { label: '额外', value: tab }
-                                                    }
-                                                })
-                                            "
+                                            v-model="exampleTab[example.id]"
+                                            :options="tabOptions"
                                         />
                                         <el-button
                                             :icon="CopyDocument"
                                             link
                                             class="self-center flex-1 min-h-0 ml-0!"
                                             @click="
-                                                handleCopyExampleText(
-                                                    examplesText[editorTab[example.id]][example.id]
+                                                copyExampleText(
+                                                    exampleText[example.id][exampleTab[example.id]]
                                                 )
                                             "
                                         />
                                         <el-popconfirm
                                             title="确定删除此示例？"
                                             :hide-after="0"
-                                            @confirm="handleDeleteExample(example.id)"
+                                            @confirm="deleteExample(example.id)"
                                         >
                                             <template #reference>
                                                 <el-button :icon="Delete" link class="ml-0!" />
@@ -67,23 +56,21 @@
                                     </div>
                                     <el-button
                                         round
-                                        :disabled="example.disabled"
+                                        :disabled="exampleIdSet.has(example.id)"
                                         class="ml-0!"
-                                        @click="handleAddExample(example.id)"
+                                        @click="addExample(example.id)"
                                     >
                                         添加到提示词
                                     </el-button>
                                 </div>
                                 <confirm-input
-                                    v-for="tab in tabs"
-                                    v-show="editorTab[example.id] === tab"
+                                    v-for="tab in tabKinds"
+                                    v-show="exampleTab[example.id] === tab"
                                     :key="tab"
-                                    :model-value="examplesText[tab][example.id]"
+                                    :model-value="exampleText[example.id][exampleTab[example.id]]"
                                     placeholder="请输入示例文本"
                                     class="flex-1 min-h-0"
-                                    @save="
-                                        handleConfirmEditExampleTextFunc(example.id, tab)($event)
-                                    "
+                                    @save="confirmEditExampleTextFunc(example.id, tab)($event)"
                                 />
                             </div>
                         </div>
@@ -94,7 +81,7 @@
 
         <!-- 编辑图片 -->
         <el-dialog
-            v-if="editGalleryExampleID !== null"
+            v-if="!isNil(editGalleryExampleId)"
             v-model="editGalleryVisible"
             title="编辑图片"
             align-center
@@ -103,113 +90,94 @@
             @keyup.esc.stop.prevent="editGalleryVisible = false"
         >
             <template #default>
-                <Gallery :example-i-d="editGalleryExampleID" />
+                <Gallery :example-id="editGalleryExampleId" />
             </template>
         </el-dialog>
     </div>
 </template>
 
 <script setup lang="ts">
-import { useStorage } from '@renderer/stores/data'
+import { useDataStore } from '@renderer/stores/data'
 import { computed, ref, watch } from 'vue'
 import { CopyDocument, Delete } from '@element-plus/icons-vue'
 import { getImageUrl } from '@renderer/utils/utils'
 import { watchArray } from '@vueuse/core'
+import { isNil } from 'lodash'
+import { existsError, notFoundError } from '@renderer/stores/error'
 
 const props = defineProps<{
-    promptID: string
+    promptId: string
 }>()
 
-const tabs = ['positive', 'negative', 'extra'] as const
-const tabToField: Record<string, string> = {
-    positive: 'positivePrompt',
-    negative: 'negativePrompt',
-    extra: 'extra',
+const enum Tab {
+    Positive = 'positive',
+    Negative = 'negative',
+    Extra = 'extra',
 }
-type Tabs = (typeof tabs)[number]
+const tabKinds = [Tab.Positive, Tab.Negative, Tab.Extra]
+const tabToField: Record<Tab, string> = {
+    [Tab.Positive]: 'positive',
+    [Tab.Negative]: 'negative',
+    [Tab.Extra]: 'extra',
+}
+const tabOptions = [
+    { label: '正面', value: Tab.Positive },
+    { label: '负面', value: Tab.Negative },
+    { label: '额外', value: Tab.Extra },
+]
 
-const storage = useStorage()
+const dataStore = useDataStore()
 
-const examples = computed(() => {
-    return Array.from(storage.examples.values())
-        .reverse()
-        .map((example) => {
-            return {
-                id: example.id,
-                positivePrompt: example.positivePrompt,
-                negativePrompt: example.negativePrompt,
-                extra: example.extra,
-                images: storage.getImagesByExampleID(example.id),
-                disabled: storage
-                    .getExamplesByPromptID(props.promptID)
-                    .some((e) => e.id === example.id),
-            }
-        })
+const examples = dataStore.example.readonly
+const exampleImageCover = computed(() => {
+    const idToCover = new Map<string, string>()
+    for (const example of examples) {
+        if (example.imageIds.length > 0) {
+            idToCover.set(example.id, getImageUrl(example.imageIds[0]))
+        }
+    }
+    return idToCover
+})
+const exampleIdSet = computed(() => {
+    const prompt = dataStore.prompt.readonly.find((p) => p.id === props.promptId)
+    if (isNil(prompt)) {
+        return new Set([] as string[])
+    }
+    return new Set(prompt.exampleIds)
 })
 
 // 编辑或添加示例相关数据
-const editGalleryExampleID = ref<string | null>(null)
+const editGalleryExampleId = ref<string | null>(null)
 const editGalleryVisible = ref(false)
 
 // 示例的编辑框当前的tab
-const editorTab = ref<Record<string, Tabs>>({})
-// 示例所属提示词
-const examplePrompts = ref<Record<string, { id: string; text: string }[]>>({})
-// 暂存示例文本, id -> 文本
-const examplesText = ref<Record<Tabs, Record<string, string>>>({
-    positive: {},
-    negative: {},
-    extra: {},
-})
+const exampleTab = ref<Record<string, Tab>>({})
 watchArray(
-    () => examples.value.map((e) => e.id),
-    (_newArr, _oldArr, added, removed) => {
-        added.forEach((id) => {
-            // for (const tab of tabs) {
-            //   canEditExamplesText.value[tab][id] =
-            //     canEditExamplesText.value[tab][id] ?? false
-            // }
-            for (const [tab, field] of Object.entries(tabToField)) {
-                examplesText.value[tab][id] = examples.value.find((e) => e.id === id)?.[field] || ''
+    examples.map((e) => e.id),
+    (ids) => {
+        for (const id of ids) {
+            if (!isNil(exampleTab.value[id])) {
+                continue
             }
-            editorTab.value[id] = 'positive'
-            examplePrompts.value[id] = storage.getPromptsByExampleID(id)
-        })
-        if (removed) {
-            removed.forEach((id) => {
-                // for (const tab of tabs) {
-                //   delete canEditExamplesText.value[tab][id]
-                // }
-                delete editorTab.value[id]
-                delete examplePrompts.value[id]
-                for (const tab of tabs) {
-                    delete examplesText.value[tab][id]
-                }
-            })
+            exampleTab.value[id] = Tab.Positive
         }
-    },
-    { immediate: true }
+    }
 )
-watchArray(
-    () =>
-        examples.value.map((e) => ({
-            id: e.id,
-            positivePrompt: e.positivePrompt,
-            negativePrompt: e.negativePrompt,
-            extra: e.extra,
-        })),
-    (newArr) => {
-        newArr.forEach((example) => {
-            for (const tab of tabs) {
-                examplesText.value[tab][example.id] = example[tabToField[tab]] || ''
-            }
-        })
-    },
-    { deep: true, immediate: true }
-)
+// 暂存示例文本, id -> tab -> 文本
+const exampleText = computed(() => {
+    const result: Record<string, Record<Tab, string>> = {}
+    for (const example of examples) {
+        result[example.id] = {
+            [Tab.Positive]: example.positive || '',
+            [Tab.Negative]: example.negative || '',
+            [Tab.Extra]: example.extra || '',
+        }
+    }
+    return result
+})
 
-async function handleDeleteExample(id: string): Promise<void> {
-    const success = await storage.deleteExample(id)
+async function deleteExample(id: string): Promise<void> {
+    const success = await dataStore.example.delete(id)
     if (!success) {
         ElMessage.error('删除示例失败')
     } else {
@@ -217,18 +185,18 @@ async function handleDeleteExample(id: string): Promise<void> {
     }
 }
 
-function handleEditExampleGallery(exampleID: string): void {
-    editGalleryExampleID.value = exampleID
+function handleEditExampleGallery(exampleId: string): void {
+    editGalleryExampleId.value = exampleId
     editGalleryVisible.value = true
 }
 watch(editGalleryVisible, (visible) => {
     if (!visible) {
-        editGalleryExampleID.value = null
+        editGalleryExampleId.value = null
     }
 })
 
-async function handleCopyExampleText(text: string): Promise<void> {
-    const success = await window.api.copyToClipboard(text)
+async function copyExampleText(text: string): Promise<void> {
+    const success = await window.api.other.copyToClipboard(text)
     if (success) {
         ElMessage.success('已复制到剪贴板')
     } else {
@@ -236,27 +204,41 @@ async function handleCopyExampleText(text: string): Promise<void> {
     }
 }
 
-function handleConfirmEditExampleTextFunc(exampleID: string, type: Tabs) {
-    const field = tabToField[type]
+function confirmEditExampleTextFunc(exampleId: string, kind: Tab) {
+    const field = tabToField[kind]
     return async (text: string) => {
-        const success = await storage.updateExample({
-            id: exampleID,
+        const success = await dataStore.example.update({
+            id: exampleId,
             [field]: text,
         })
         if (success) {
             ElMessage.success('示例文本更新成功')
         } else {
             ElMessage.error('示例文本更新失败')
-            examplesText.value[type][exampleID] = storage.examples.get(exampleID)?.[field] || ''
         }
     }
 }
 
-const emit = defineEmits<{
-    (e: 'add-example', exampleID: string): void
-}>()
-
-function handleAddExample(exampleID: string): void {
-    emit('add-example', exampleID)
+async function addExample(exampleId: string): Promise<void> {
+    const index = dataStore.prompt.readonly.findIndex((p) => p.id === props.promptId)
+    if (index === -1) {
+        ElMessage.error('提示词不存在')
+        return
+    }
+    try {
+        await dataStore.prompt.update({
+            id: props.promptId,
+            exampleIds: [...dataStore.prompt.readonly[index].exampleIds, exampleId],
+        })
+    } catch (error) {
+        if (error === notFoundError) {
+            ElMessage.error('提示词不存在')
+        } else if (error === existsError) {
+            ElMessage.error('示例已存在')
+        } else {
+            ElMessage.error('添加示例失败')
+        }
+    }
+    ElMessage.success('添加示例成功')
 }
 </script>

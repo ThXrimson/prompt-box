@@ -160,7 +160,7 @@
             <el-scrollbar
                 class="bg-white border-2 box-border border-gray-200 rounded-lg p-3 flex-1"
             >
-                <prompt-editor v-if="selectedPromptID !== null" :prompt-i-d="selectedPromptID" />
+                <prompt-editor v-if="selectedPromptID !== null" :promptId="selectedPromptID" />
             </el-scrollbar>
         </div>
     </div>

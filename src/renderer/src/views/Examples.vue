@@ -66,19 +66,6 @@
                                                 })
                                             "
                                         />
-                                        <!-- <el-button
-                      :icon="Edit"
-                      :type="
-                        canEditExamplesText[editorTab[example.id]][example.id]
-                          ? 'primary'
-                          : 'default'
-                      "
-                      link
-                      class="self-center flex-1 min-h-0"
-                      @click="
-                        handleEditExampleText(example.id, editorTab[example.id])
-                      "
-                    /> -->
                                         <el-button
                                             :icon="CopyDocument"
                                             link
@@ -112,17 +99,6 @@
                                         @blur="handleChangeExamplePrompt(example.id)"
                                     />
                                 </div>
-                                <!-- <el-input
-                  v-for="tab in tabs"
-                  v-show="editorTab[example.id] === tab"
-                  :key="tab"
-                  v-model="examplesText[tab][example.id]"
-                  placeholder="请输入示例文本"
-                  type="textarea"
-                  resize="none"
-                  :disabled="!canEditExamplesText[tab][example.id]"
-                  class="example-input"
-                /> -->
                                 <confirm-input
                                     v-for="tab in tabs"
                                     v-show="editorTab[example.id] === tab"
@@ -152,14 +128,14 @@
             @keyup.esc.stop.prevent="editGalleryVisible = false"
         >
             <template #default>
-                <Gallery :example-i-d="editGalleryExampleID" />
+                <Gallery :exampleId="editGalleryExampleID" />
             </template>
         </el-dialog>
     </div>
 </template>
 
 <script setup lang="ts">
-import { useStorage } from '@renderer/stores/data'
+import { useDataStore } from '@renderer/stores/data'
 import { computed, ref, watch } from 'vue'
 import { CirclePlusFilled, CopyDocument, Delete, DeleteFilled } from '@element-plus/icons-vue'
 import { getImageUrl } from '@renderer/utils/utils'
@@ -174,10 +150,10 @@ const tabToField: Record<string, string> = {
 }
 type Tabs = (typeof tabs)[number]
 
-const storage = useStorage()
+const dataStore = useDataStore()
 
 const examples = computed(() => {
-    return Array.from(storage.examples.values())
+    return Array.from(dataStore.examples.values())
         .reverse()
         .map((example) => {
             return {
@@ -185,13 +161,13 @@ const examples = computed(() => {
                 positivePrompt: example.positivePrompt,
                 negativePrompt: example.negativePrompt,
                 extra: example.extra,
-                images: storage.getImagesByExampleID(example.id),
+                images: dataStore.getImagesByExampleID(example.id),
             }
         })
 })
 
 const promptOptions = computed(() => {
-    return Array.from(storage.prompts.values()).map((prompt) => ({
+    return Array.from(dataStore.prompts.values()).map((prompt) => ({
         label: prompt.text,
         value: {
             id: prompt.id,
@@ -204,12 +180,6 @@ const promptOptions = computed(() => {
 const editGalleryExampleID = ref<string | null>(null)
 const editGalleryVisible = ref(false)
 
-// 是否可以编辑示例文本
-// const canEditExamplesText = ref<Record<Tabs, Record<string, boolean>>>({
-//   positive: {},
-//   negative: {},
-//   extra: {},
-// })
 // 示例的编辑框当前的tab
 const editorTab = ref<Record<string, Tabs>>({})
 // 示例所属提示词
@@ -232,7 +202,7 @@ watchArray(
                 examplesText.value[tab][id] = examples.value.find((e) => e.id === id)?.[field] || ''
             }
             editorTab.value[id] = 'positive'
-            examplePrompts.value[id] = storage.getPromptsByExampleID(id)
+            examplePrompts.value[id] = dataStore.getPromptsByExampleID(id)
         })
         if (removed) {
             removed.forEach((id) => {
@@ -268,7 +238,7 @@ watchArray(
 )
 
 async function handleAddExample(): Promise<void> {
-    const example = await storage.addExample({})
+    const example = await dataStore.addExample({})
     if (!example) {
         ElMessage.error('添加示例失败')
         return
@@ -277,7 +247,7 @@ async function handleAddExample(): Promise<void> {
 }
 
 async function handleDeleteExample(id: string): Promise<void> {
-    const success = await storage.deleteExample(id)
+    const success = await dataStore.deleteExample(id)
     if (!success) {
         ElMessage.error('删除示例失败')
     } else {
@@ -286,7 +256,7 @@ async function handleDeleteExample(id: string): Promise<void> {
 }
 
 async function handleDeleteEmptyExamples(): Promise<void> {
-    const emptyExamples = Array.from(storage.examples.values()).filter(
+    const emptyExamples = Array.from(dataStore.examples.values()).filter(
         (example) =>
             example.positivePrompt === '' &&
             example.negativePrompt === '' &&
@@ -303,15 +273,15 @@ async function handleDeleteEmptyExamples(): Promise<void> {
             cancelButtonText: '取消',
             type: 'warning',
         })
-        for (const prompt of storage.prompts.values()) {
+        for (const prompt of dataStore.prompts.values()) {
             const exampleIDs = prompt.exampleIDs.filter(
                 (id) => !emptyExamples.some((e) => e.id === id)
             )
             if (exampleIDs.length === prompt.exampleIDs.length) continue
-            await storage.updatePromptExampleIDs(prompt.id, exampleIDs)
+            await dataStore.updatePromptExampleIDs(prompt.id, exampleIDs)
         }
         for (const example of emptyExamples) {
-            await storage.deleteExample(example.id)
+            await dataStore.deleteExample(example.id)
         }
         ElMessage.success(`已删除 ${emptyExamples.length} 个空示例`)
     } catch (error) {
@@ -341,7 +311,7 @@ async function handleCopyExampleText(text: string): Promise<void> {
 }
 
 async function handleChangeExamplePrompt(exampleID: string): Promise<void> {
-    const originalPromptIDs = storage.getPromptsByExampleID(exampleID).map((p) => p.id)
+    const originalPromptIDs = dataStore.getPromptsByExampleID(exampleID).map((p) => p.id)
     const addedPromptIDs: string[] = []
     const removedPromptIDs: string[] = []
     examplePrompts.value[exampleID].forEach((prompt) => {
@@ -356,12 +326,12 @@ async function handleChangeExamplePrompt(exampleID: string): Promise<void> {
     })
     if (addedPromptIDs.length > 0) {
         for (const promptID of addedPromptIDs) {
-            await storage.addExampleIDToPrompt(promptID, exampleID)
+            await dataStore.addExampleIDToPrompt(promptID, exampleID)
         }
     }
     if (removedPromptIDs.length > 0) {
         for (const promptID of removedPromptIDs) {
-            await storage.deleteExampleIDFromPrompt(promptID, exampleID)
+            await dataStore.deleteExampleIDFromPrompt(promptID, exampleID)
         }
     }
 }
@@ -369,7 +339,7 @@ async function handleChangeExamplePrompt(exampleID: string): Promise<void> {
 function handleConfirmEditExampleTextFunc(exampleID: string, type: Tabs) {
     const field = tabToField[type]
     return async (text: string) => {
-        const success = await storage.updateExample({
+        const success = await dataStore.updateExample({
             id: exampleID,
             [field]: text,
         })
@@ -377,7 +347,7 @@ function handleConfirmEditExampleTextFunc(exampleID: string, type: Tabs) {
             ElMessage.success('示例文本更新成功')
         } else {
             ElMessage.error('示例文本更新失败')
-            examplesText.value[type][exampleID] = storage.examples.get(exampleID)?.[field] || ''
+            examplesText.value[type][exampleID] = dataStore.examples.get(exampleID)?.[field] || ''
         }
     }
 }

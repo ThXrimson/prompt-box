@@ -4,7 +4,7 @@ import { Tag } from '@shared/models/tag'
 import { Image } from '@shared/models/image'
 import { NewWorkspace, UpdateWorkspace, Workspace } from '@shared/models/workspace'
 import { defineStore } from 'pinia'
-import { readonly, ref } from 'vue'
+import { computed, readonly, ref } from 'vue'
 import { createError, existsError, notFoundError } from './error'
 import { isNil } from 'lodash'
 
@@ -93,6 +93,22 @@ export const useDataStore = defineStore('data', () => {
     }
     const exampleView = {
         readonly: readonly(examples.value),
+        idToImages: readonly(
+            computed(() => {
+                const map = new Map<string, Image[]>()
+                for (const example of examples.value) {
+                    const imgs = [] as Image[]
+                    for (const imageId of example.imageIds) {
+                        const image = images.value.find((i) => i.id === imageId)
+                        if (!isNil(image)) {
+                            imgs.push(image)
+                        }
+                    }
+                    map.set(example.id, imgs)
+                }
+                return map
+            })
+        ),
         async create(example: NewExample): Promise<Example> {
             const [newExample] = await window.api.example.create([example])
             if (isNil(newExample)) {
@@ -224,10 +240,10 @@ export const useDataStore = defineStore('data', () => {
     }
 
     return {
-        promptView,
-        exampleView,
-        tagView,
-        workspaceView,
-        imageView,
+        prompt: promptView,
+        example: exampleView,
+        tag: tagView,
+        workspace: workspaceView,
+        image: imageView,
     }
 })

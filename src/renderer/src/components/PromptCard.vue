@@ -79,10 +79,10 @@
             @keyup.esc.stop.prevent="isPromptEditorVisible = false"
         >
             <el-scrollbar>
-                <prompt-editor :prompt-i-d="prompt.id" />
+                <prompt-editor :prompt-id="prompt.id" />
             </el-scrollbar>
             <template #footer>
-                <el-button type="danger" class="w-full" @click="handleDeletePrompt(prompt.id)">
+                <el-button type="danger" class="w-full" @click="deletePrompt(prompt.id)">
                     删除
                 </el-button>
             </template>
@@ -93,9 +93,9 @@
 <script setup lang="ts">
 import { getImageUrl } from '@renderer/utils/utils'
 import { CirclePlus, Delete, Edit } from '@element-plus/icons-vue'
-import type { Prompt } from '@shared/types'
+import type { Prompt } from '@shared/models/prompt'
 import { ref, useTemplateRef } from 'vue'
-import { useStorage } from '@renderer/stores/data'
+import { useDataStore } from '@renderer/stores/data'
 import { ElMessageBox } from 'element-plus'
 
 const props = defineProps<{
@@ -120,12 +120,12 @@ defineExpose({
     promptText: props.prompt.text,
 })
 
-const storage = useStorage()
+const dataStore = useDataStore()
 
 const isPromptEditorVisible = ref(false)
 
-function handleCopyPrompt(promptText: string): void {
-    window.api.copyToClipboard(promptText).then((res) => {
+function handleCopyPrompt(text: string): void {
+    window.api.other.copyToClipboard(text).then((res) => {
         if (res) {
             ElMessage.success('已复制到剪贴板')
         } else {
@@ -134,14 +134,14 @@ function handleCopyPrompt(promptText: string): void {
     })
 }
 
-async function handleDeletePrompt(id: string): Promise<void> {
+async function deletePrompt(id: string): Promise<void> {
     try {
         await ElMessageBox.confirm('确定删除此提示词？', '删除提示词', {
             confirmButtonText: '删除',
             cancelButtonText: '取消',
             type: 'warning',
         })
-        const res = await storage.deletePrompt(id)
+        const res = await dataStore.prompt.delete(id)
         if (res) {
             ElMessage.success('成功删除提示词')
             isPromptEditorVisible.value = false

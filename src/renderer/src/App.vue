@@ -22,29 +22,12 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useStorage } from '@renderer/stores/data'
-import { ElLoading } from 'element-plus'
 import { Document as DocumentIcon } from '@element-plus/icons-vue'
 import PromptIcon from '@renderer/icons/Prompt.vue'
 import WorkspaceIcon from '@renderer/icons/Workspace.vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 
-const storage = useStorage()
 const route = useRoute()
-
-const loadingInstance = ElLoading.service({ body: true })
-
-const initialized = ref(false)
-watch(
-    () => storage.initialized,
-    () => {
-        if (storage.initialized) {
-            initialized.value = true
-            loadingInstance.close()
-        }
-    },
-    { immediate: true }
-)
 
 const activeMenu = ref('/prompt-collection')
 watch(
