@@ -1,5 +1,5 @@
 <template>
-    <div class="flex justify-start h-full w-full gap-1">
+    <div v-if="false" class="flex justify-start h-full w-full gap-1">
         <el-menu :default-active="activeMenu" collapse @select="handleMenuSelect">
             <el-menu-item index="/prompt-collection">
                 <el-icon><prompt-icon /></el-icon>
@@ -18,6 +18,9 @@
             <router-view />
         </div>
     </div>
+    <div class="flex justify-start h-full w-full gap-1">
+        <PromptCollection />
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -26,6 +29,7 @@ import { Document as DocumentIcon } from '@element-plus/icons-vue'
 import PromptIcon from '@renderer/icons/Prompt.vue'
 import WorkspaceIcon from '@renderer/icons/Workspace.vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
+import PromptCollection from './views/PromptCollection.vue'
 
 const route = useRoute()
 

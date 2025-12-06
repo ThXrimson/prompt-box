@@ -15,7 +15,7 @@ export default {
     delete(ids: string[]): Promise<boolean> {
         return ipcRenderer.invoke(IpcChannel.DeletePrompts, ids)
     },
-    notify(listener: (event: IpcRendererEvent, prompts: Prompt[]) => void) {
+    onNotify(listener: (event: IpcRendererEvent, prompts: Prompt[]) => void) {
         ipcRenderer.on(IpcChannel.NotifyPrompts, listener)
     },
 }

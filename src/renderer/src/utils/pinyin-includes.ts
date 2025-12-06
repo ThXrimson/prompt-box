@@ -1,5 +1,15 @@
 import { pinyin } from 'pinyin-pro'
 
+export function matchTextPlus(text: string, target: string): boolean {
+    const normalizedText = text.trim().toLowerCase()
+    const normalizedTarget = target.trim().toLowerCase()
+    return (
+        normalizedText.includes(target) ||
+        pinyinIncludes(normalizedText, normalizedTarget) ||
+        pinyinIncludesWithFirstLetter(normalizedText, normalizedTarget)
+    )
+}
+
 export function pinyinIncludes(input: string, target: string): boolean {
     const normalizedTarget = target.trim().toLowerCase()
     if (normalizedTarget === '') {

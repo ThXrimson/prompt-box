@@ -34,4 +34,5 @@ export enum IpcChannel {
     OpenImageDialog = 'open-image-dialog',
     CopyToClipboard = 'copy-to-clipboard',
     TranslateByDeepLX = 'translate-by-deep-lx',
+    DataStoreReady = 'data-store-ready',
 }

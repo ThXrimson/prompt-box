@@ -79,7 +79,7 @@
             @keyup.esc.stop.prevent="isPromptEditorVisible = false"
         >
             <el-scrollbar>
-                <prompt-editor :prompt-id="prompt.id" />
+                <PromptDetail :prompt-id="prompt.id" />
             </el-scrollbar>
             <template #footer>
                 <el-button type="danger" class="w-full" @click="deletePrompt(prompt.id)">
@@ -94,12 +94,12 @@
 import { getImageUrl } from '@renderer/utils/utils'
 import { CirclePlus, Delete, Edit } from '@element-plus/icons-vue'
 import type { Prompt } from '@shared/models/prompt'
-import { ref, useTemplateRef } from 'vue'
+import { DeepReadonly, ref, useTemplateRef } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
 import { ElMessageBox } from 'element-plus'
 
 const props = defineProps<{
-    prompt: Prompt
+    prompt: DeepReadonly<Prompt>
     selected: boolean
     promptImageFileName?: string
 }>()

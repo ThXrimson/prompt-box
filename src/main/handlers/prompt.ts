@@ -3,7 +3,7 @@ import PromptLowdbService from '../services/prompt'
 import { IpcChannel } from '@shared/ipc-channel'
 import { NewPrompt, UpdatePrompt } from '@shared/models/prompt'
 
-export async function initPromptHandlers(mainWindow: BrowserWindow): Promise<void> {
+export async function initPromptHandlers(_mainWindow: BrowserWindow): Promise<void> {
     const promptService = PromptLowdbService.getInstance()
     ipcMain.handle(IpcChannel.CreatePrompts, (_event, prompts: NewPrompt[]) => {
         return promptService.create(prompts)
@@ -17,5 +17,4 @@ export async function initPromptHandlers(mainWindow: BrowserWindow): Promise<voi
     ipcMain.handle(IpcChannel.DeletePrompts, (_event, ids: string[]) => {
         return promptService.delete(ids)
     })
-    mainWindow.webContents.send(IpcChannel.NotifyPrompts, await promptService.getAll())
 }

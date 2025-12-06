@@ -14,8 +14,8 @@ export interface UpdateTag {
     text?: string
 }
 
-const UNCATEGORIZED_TAG_ID = 'uncategorized'
-export function NewUncategorizedTag(): Tag {
+export const UNCATEGORIZED_TAG_ID = 'uncategorized'
+export function newUncategorizedTag(): Tag {
     return {
         id: UNCATEGORIZED_TAG_ID,
         text: '未分类',

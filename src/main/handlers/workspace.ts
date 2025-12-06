@@ -4,7 +4,7 @@ import { IpcChannel } from '@shared/ipc-channel'
 import { ipcMain } from 'electron/main'
 import { NewWorkspace, UpdateWorkspace } from '@shared/models/workspace'
 
-export async function initWorkspaceHandlers(mainWindow: BrowserWindow): Promise<void> {
+export async function initWorkspaceHandlers(_mainWindow: BrowserWindow): Promise<void> {
     const workspaceService = WorkspaceLowdbService.getInstance()
     ipcMain.handle(IpcChannel.CreateWorkspaces, (_event, workspaces: NewWorkspace[]) => {
         return workspaceService.create(workspaces)
@@ -18,5 +18,4 @@ export async function initWorkspaceHandlers(mainWindow: BrowserWindow): Promise<
     ipcMain.handle(IpcChannel.DeleteWorkspaces, (_event, ids: string[]) => {
         return workspaceService.delete(ids)
     })
-    mainWindow.webContents.send(IpcChannel.NotifyWorkspaces, await workspaceService.getAll())
 }

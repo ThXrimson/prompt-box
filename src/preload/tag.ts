@@ -15,7 +15,7 @@ export default {
     delete(ids: string[]): Promise<boolean> {
         return ipcRenderer.invoke(IpcChannel.DeleteTags, ids)
     },
-    notify(listener: (event: IpcRendererEvent, tags: Tag[]) => void) {
+    onNotify(listener: (event: IpcRendererEvent, tags: Tag[]) => void) {
         ipcRenderer.on(IpcChannel.NotifyTags, listener)
     },
 }

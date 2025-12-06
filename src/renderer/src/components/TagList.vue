@@ -1,30 +1,30 @@
 <template>
     <el-scrollbar class="border-2 rounded-md border-gray-200">
         <vue-draggable
-            :model-value="tagIDs"
+            :model-value="tagIds"
             :animation="50"
             class="flex flex-col gap-1 p-2 pr-2.5"
             @update:model-value="emit('update:tagIDs', $event)"
         >
             <div
-                v-for="tagID in tagIDs"
-                :ref="tagIDRefs.set"
-                :key="tagID"
-                :tag-id="tagID"
+                v-for="tagId in tagIds"
+                :ref="tagIdRefs.set"
+                :key="tagId"
+                :tag-id="tagId"
                 class="flex flex-1 cursor-pointer rounded-md p-2 justify-between items-center-safe transition-colors"
                 :class="{
-                    'bg-teal-400 hover:bg-teal-600': selectedID !== tagID,
-                    'bg-sky-400 hover:bg-sky-600': selectedID === tagID,
+                    'bg-teal-400 hover:bg-teal-600': selectedID !== tagId,
+                    'bg-sky-400 hover:bg-sky-600': selectedID === tagId,
                 }"
-                @click="emit('select', tagID)"
+                @click="emit('select', tagId)"
             >
                 <el-text class="text-white! font-bold!">
-                    {{ getTagText(tagID) }}
+                    {{ getTagText(tagId) }}
                 </el-text>
                 <el-icon
                     size="20px"
                     class="rounded-full hover:bg-teal-800"
-                    @click.stop="emit('closeTag', tagID)"
+                    @click.stop="emit('closeTag', tagId)"
                 >
                     <close class="text-white!" />
                 </el-icon>
@@ -35,12 +35,12 @@
 
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
-import { useStorage } from '@renderer/stores/data'
+import { useDataStore } from '@renderer/stores/data'
 import { Close } from '@element-plus/icons-vue'
 import { useTemplateRefsList } from '@vueuse/core'
 
 defineProps<{
-    tagIDs: string[]
+    tagIds: string[]
     selectedID: string
 }>()
 
@@ -50,11 +50,11 @@ const emit = defineEmits<{
     (e: 'select', tagID: string): void
 }>()
 
-const tagIDRefs = useTemplateRefsList()
+const tagIdRefs = useTemplateRefsList()
 
 defineExpose({
     scrollTagIntoView(tagID: string): void {
-        for (const ref of tagIDRefs.value) {
+        for (const ref of tagIdRefs.value) {
             if (ref.getAttribute('tag-id') === tagID) {
                 ref.scrollIntoView({
                     behavior: 'smooth',
@@ -67,9 +67,9 @@ defineExpose({
     },
 })
 
-const storage = useStorage()
+const dataStore = useDataStore()
 
 function getTagText(tagID: string): string {
-    return storage.getTagByID(tagID)?.text ?? 'undefined'
+    return dataStore.tag.readonly.find((t) => t.id === tagID)?.text ?? 'undefined'
 }
 </script>

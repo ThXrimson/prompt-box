@@ -15,7 +15,7 @@ export default {
     delete(ids: string[]): Promise<boolean> {
         return ipcRenderer.invoke(IpcChannel.DeleteWorkspaces, ids)
     },
-    notify(listener: (event: IpcRendererEvent, workspaces: Workspace[]) => void) {
+    onNotify(listener: (event: IpcRendererEvent, workspaces: Workspace[]) => void) {
         ipcRenderer.on(IpcChannel.NotifyWorkspaces, listener)
     },
 }

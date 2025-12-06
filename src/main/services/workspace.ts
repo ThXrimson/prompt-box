@@ -4,12 +4,14 @@ import { WorkspaceService } from './interfaces/workspace'
 import { Workspace, NewWorkspace, UpdateWorkspace } from '@shared/models/workspace'
 import { JSONFilePreset } from 'lowdb/node'
 import { isNil } from 'lodash'
+import fs from 'fs/promises'
+import path from 'path'
 
 const DB_FILENAME = 'workspace.json'
 const DB_PATH = join(getDataDir(), DB_FILENAME)
 
 export default class WorkspaceLowdbService implements WorkspaceService {
-    private db?: Awaited<ReturnType<typeof JSONFilePreset<{ workspaces: Workspace[] }>>>
+    private db?: Awaited<ReturnType<typeof JSONFilePreset<Workspace[]>>>
     private static instance?: WorkspaceLowdbService
     private constructor() {
         //
@@ -20,18 +22,17 @@ export default class WorkspaceLowdbService implements WorkspaceService {
         }
         return WorkspaceLowdbService.instance
     }
-    private async getDb(): Promise<
-        Awaited<ReturnType<typeof JSONFilePreset<{ workspaces: Workspace[] }>>>
-    > {
+    private async getDb(): Promise<Awaited<ReturnType<typeof JSONFilePreset<Workspace[]>>>> {
         if (isNil(this.db)) {
-            this.db = await JSONFilePreset<{ workspaces: Workspace[] }>(DB_PATH, { workspaces: [] })
+            await fs.mkdir(path.dirname(DB_PATH), { recursive: true })
+            this.db = await JSONFilePreset<Workspace[]>(DB_PATH, [])
             await this.db.read()
         }
         return this.db
     }
     async getAll(): Promise<Workspace[]> {
         const db = await this.getDb()
-        return db.data.workspaces
+        return db.data
     }
     async create(workspaces: NewWorkspace[]): Promise<Workspace[]> {
         const db = await this.getDb()
@@ -48,13 +49,13 @@ export default class WorkspaceLowdbService implements WorkspaceService {
             }
             newWorkspaces.push(newWorkspace)
         }
-        db.data.workspaces.push(...newWorkspaces)
+        db.data.push(...newWorkspaces)
         db.write()
         return newWorkspaces
     }
     async delete(ids: string[]): Promise<boolean> {
         const db = await this.getDb()
-        db.data.workspaces = db.data.workspaces.filter((workspace) => !ids.includes(workspace.id))
+        db.data = db.data.filter((workspace) => !ids.includes(workspace.id))
         db.write()
         return true
     }
@@ -62,15 +63,15 @@ export default class WorkspaceLowdbService implements WorkspaceService {
         const db = await this.getDb()
         const updatedWorkspaces = [] as Workspace[]
         for (const workspace of workspaces) {
-            const index = db.data.workspaces.findIndex((w) => w.id === workspace.id)
+            const index = db.data.findIndex((w) => w.id === workspace.id)
             if (index !== -1) {
                 const updatedWorkspace = {
-                    ...db.data.workspaces[index],
+                    ...db.data[index],
                     ...workspace,
                     updateTime: Date.now(),
                 }
                 updatedWorkspaces.push(updatedWorkspace)
-                db.data.workspaces[index] = updatedWorkspace
+                db.data[index] = updatedWorkspace
             }
         }
         db.write()

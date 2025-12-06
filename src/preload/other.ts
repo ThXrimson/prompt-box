@@ -15,4 +15,7 @@ export default {
     getPathForFile(file: File): string {
         return webUtils.getPathForFile(file)
     },
+    async sendDataStoreReady(): Promise<void> {
+        await ipcRenderer.send(IpcChannel.DataStoreReady)
+    },
 }

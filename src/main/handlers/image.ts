@@ -10,7 +10,7 @@ import fs from 'fs/promises'
 import { isNil } from 'lodash'
 import log from 'electron-log'
 
-export async function initImageHandlers(mainWindow: BrowserWindow): Promise<void> {
+export async function initImageHandlers(_mainWindow: BrowserWindow): Promise<void> {
     const imageService = ImageLowdbService.getInstance()
     ipcMain.handle(IpcChannel.CreateImages, (_event, paths: string[]) => {
         return createImages(paths)
@@ -27,7 +27,6 @@ export async function initImageHandlers(mainWindow: BrowserWindow): Promise<void
     ipcMain.handle(IpcChannel.SaveImage, (_event, id: string) => {
         return saveImage(id)
     })
-    mainWindow.webContents.send(IpcChannel.NotifyImages, await imageService.getAll())
 }
 
 async function createImages(paths: string[]): Promise<Image[]> {

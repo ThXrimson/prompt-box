@@ -73,16 +73,16 @@
                 >
                     <div class="h-full">
                         <vue-draggable
-                            v-model="promptList"
+                            v-model="currentEditorMut"
                             :animation="50"
                             class="flex flex-wrap p-2"
                             drag-class="opacity-0"
                             :on-start="onDragStart"
                             :on-end="onDragEnd"
                         >
-                            <div v-for="item in promptList" :key="item.id">
+                            <div v-for="item in currentEditorMut" :key="item.id">
                                 <div
-                                    v-if="draggingID === item.id"
+                                    v-if="draggingId === item.id"
                                     class="w-0.5 h-5 bg-blue-600 mx-[-1px]"
                                 />
                                 <el-dropdown
@@ -91,21 +91,11 @@
                                     size="small"
                                     placement="top"
                                     :hide-on-click="false"
-                                    :disabled="item.text === BREAK"
                                     class="mx-0.5"
                                 >
                                     <el-tag
-                                        :type="
-                                            item.text === BREAK
-                                                ? 'danger'
-                                                : item.disabled
-                                                  ? 'info'
-                                                  : item.existsID !== null
-                                                    ? 'success'
-                                                    : 'primary'
-                                        "
+                                        :type="getTagType(item)"
                                         effect="dark"
-                                        :color="item.text === BREAK ? '#000' : ''"
                                         size="small"
                                         disable-transitions
                                         closable
@@ -114,21 +104,12 @@
                                             'line-through': item.disabled,
                                             'font-bold': true,
                                         }"
-                                        @click.left="handleClickPromptTag(item)"
-                                        @click.right="handleCopyPrompt(item.text)"
-                                        @mousedown.middle.prevent.stop="handleRemovePrompt(item.id)"
-                                        @close="handleRemovePrompt(item.id)"
+                                        @click.left="handleLeftClickPromptTag(item)"
+                                        @click.right="copyText(promptTagToString(item))"
+                                        @mousedown.middle.prevent.stop="removePrompt(item.id)"
+                                        @close="removePrompt(item.id)"
                                     >
-                                        <span
-                                            v-for="part in promptTextView[item.text]"
-                                            :key="part.id"
-                                            :class="{
-                                                'bg-yellow-300': part.searched,
-                                                'bg-red-400': part.focused,
-                                            }"
-                                        >
-                                            {{ part.text }}
-                                        </span>
+                                        {{ promptTagToString(item) }}
                                     </el-tag>
 
                                     <template #dropdown>
@@ -137,21 +118,15 @@
                                             :item-classes="['px-2', 'py-1', 'whitespace-nowrap']"
                                         >
                                             <el-dropdown-item
-                                                :disabled="item.text === BREAK"
-                                                @click="handleAddPrompt(item.text)"
+                                                :disabled="isPromptTagCollected(item)"
+                                                @click="createPrompt(item)"
                                             >
                                                 收藏
                                             </el-dropdown-item>
-                                            <el-dropdown-item
-                                                :disabled="
-                                                    item.existsID === null || item.text === BREAK
-                                                "
-                                                @click="handleOpenPromptEditor(item.existsID!)"
-                                            >
+                                            <el-dropdown-item @click="openPromptEditor(item)">
                                                 编辑
                                             </el-dropdown-item>
                                             <el-dropdown-item
-                                                :disabled="item.text === BREAK"
                                                 @click="item.disabled = !item.disabled"
                                             >
                                                 {{ item.disabled ? '启用' : '禁用' }}
@@ -174,7 +149,7 @@
                         placement="top-end"
                         :hide-after="0"
                     >
-                        <el-button :icon="Plus" @click="handleAddExample(joinPrompts(false))" />
+                        <el-button :icon="Plus" />
                     </el-tooltip>
                     <el-tooltip
                         content="选择示例为模板"
@@ -182,7 +157,7 @@
                         placement="top-end"
                         :hide-after="0"
                     >
-                        <el-button :icon="Star" class="m-0!" @click="handleOpenExamplesDialog" />
+                        <el-button :icon="Star" class="m-0!" />
                     </el-tooltip>
                     <el-tooltip
                         :content="!editMode ? '编辑模式' : '显示模式'"
@@ -194,7 +169,7 @@
                             :icon="Edit"
                             :type="!editMode ? 'default' : 'success'"
                             class="m-0!"
-                            @click="handleSwitchEditMode"
+                            @click="switchEditMode"
                         />
                     </el-tooltip>
                     <el-tooltip
@@ -203,11 +178,7 @@
                         placement="top-start"
                         :hide-after="0"
                     >
-                        <el-button
-                            :icon="CopyDocument"
-                            class="m-0!"
-                            @click="handleCopyToClipboard"
-                        />
+                        <el-button :icon="CopyDocument" class="m-0!" @click="copyEditor" />
                     </el-tooltip>
                     <!-- 去掉lora -->
                     <el-switch
@@ -224,9 +195,7 @@
                         placement="top-start"
                         :hide-after="0"
                     >
-                        <el-button class="m-0!" @click="handleCopyLoraToClipboard">
-                            Lora
-                        </el-button>
+                        <el-button class="m-0!"> Lora </el-button>
                     </el-tooltip>
                     <el-tooltip
                         content="添加BREAK"
@@ -234,7 +203,7 @@
                         placement="top-end"
                         :hide-after="0"
                     >
-                        <el-button class="m-0!" @click="handleAddBREAK">BREAK</el-button>
+                        <el-button class="m-0!">BREAK</el-button>
                     </el-tooltip>
 
                     <!-- 切换正向、负向编辑器 -->
@@ -245,7 +214,7 @@
                         inactive-text="NEGATIVE"
                         style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
                         class="[&_.is-text]:font-mono"
-                        @update:model-value="handleSwitchEditor($event as boolean)"
+                        @update:model-value="switchEditor($event as boolean)"
                     />
                 </div>
 
@@ -253,15 +222,15 @@
                     v-model="searchText"
                     placeholder="搜索或添加"
                     clearable
-                    @keyup.enter="handleAddPromptToEditor"
+                    @keyup.enter="addPromptTag(searchText)"
                 >
                     <template #prefix>
-                        <el-icon class="cursor-pointer" @click.stop="handleToCopySearchText">
+                        <el-icon class="cursor-pointer" @click.stop="copySearchText">
                             <copy-document />
                         </el-icon>
                     </template>
                     <template #suffix>
-                        <el-icon class="cursor-pointer" @click.stop="handleAddPromptToEditor">
+                        <el-icon class="cursor-pointer" @click.stop="addPromptTag(searchText)">
                             <enter-icon />
                         </el-icon>
                     </template>
@@ -271,17 +240,17 @@
     </div>
 
     <el-dialog
-        v-if="editingPromptID !== null"
+        v-if="editingPromptId !== null"
         v-model="editingPromptVisible"
         title="编辑提示词"
         class="h-[90vh] mt-[5vh]! mb-0! flex flex-col"
         body-class="flex-1 min-h-0 border-1 rounded-md border-neutral-200 p-2"
     >
         <el-scrollbar>
-            <prompt-editor :promptId="editingPromptID" />
+            <PromptDetail :prompt-id="editingPromptId!" />
         </el-scrollbar>
         <template #footer>
-            <el-button type="danger" class="w-full" @click="handleDeletePrompt(editingPromptID!)">
+            <el-button type="danger" class="w-full" @click="deletePrompt(editingPromptId!)">
                 删除
             </el-button>
         </template>
@@ -294,7 +263,7 @@
         class="h-[100vh] flex flex-col"
         body-class="flex-1 min-h-0 flex flex-col"
     >
-        <examples />
+        <example-list />
     </el-dialog>
 </template>
 
@@ -302,69 +271,85 @@
 import { CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { DraggableEvent, SortableEvent, VueDraggable } from 'vue-draggable-plus'
-import { watchArray } from '@vueuse/core'
-import { useStorage } from '@renderer/stores/data'
+import { useDataStore } from '@renderer/stores/data'
 import {
-    debounced,
-    extractLoraPrompts,
     isLoraPrompt,
     joinBrackets,
     joinWeight,
-    LeftBracket,
-    removeLoraPrompts,
     stripBrackets,
     stripWeight,
     weightAdd,
 } from '@renderer/utils/utils'
 import EnterIcon from '@renderer/icons/Enter.vue'
-import Examples from '@renderer/views/Examples.vue'
+import ExampleList from '@renderer/views/ExampleList.vue'
 import { ElInput, ElMessage, ElMessageBox } from 'element-plus'
 import { useBracketsWrapElInput } from '@renderer/hooks/useBracketsWrapElInput'
-import { splitByCommaPlus } from '@renderer/utils/prompts-strings'
 import { clearLoraWeight, modifyLoraWeight } from '@renderer/utils/edit-weight'
-
-const BREAK = 'BREAK'
-const DISABLED_PREFIX = '(disabled)'
-
-function newBREAK(): PromptView {
-    return {
-        id: crypto.randomUUID(),
-        text: BREAK,
-        leftBrackets: [],
-        weight: '',
-        existsID: null,
-        disabled: false,
-    }
-}
+import { isNil } from 'lodash'
+import {
+    editorToString,
+    isGroupPromptTag,
+    isLoraPromptTag,
+    PromptTag,
+    promptTagToString,
+    stringToEditor,
+    stringToMonoPromptTag,
+} from '@shared/models/prompt-tag'
+import { Nullish } from 'utility-types'
+import { notFoundError } from '@renderer/stores/error'
+import { useHandleClickGesture } from '@renderer/hooks/useHandleClickGesture'
 
 const props = defineProps<{
-    positiveEditor: string
-    negativeEditor: string
+    workspaceId: string
 }>()
+// TODO 处理 workspaceId 不合法的情况
 
-const storage = useStorage()
-
-const emit = defineEmits<{
-    (e: 'update-positive-editor', value: string): void
-    (e: 'update-negative-editor', value: string): void
-    (e: 'existing-prompt-change', existingIDs: string[]): void
-}>()
-
-function emitUpdateEditor(): void {
-    if (isPositiveEditor.value) {
-        emit('update-positive-editor', joinPrompts(false))
-    } else {
-        emit('update-negative-editor', joinPrompts(false))
-    }
-}
+const dataStore = useDataStore()
 
 // 切换正向、负向编辑器
 const isPositiveEditor = ref(true)
-const editorText = computed(() =>
-    isPositiveEditor.value ? props.positiveEditor : props.negativeEditor
-)
+const currentEditorMut = computed({
+    get() {
+        {
+            const workspace = dataStore.workspace.ref.find((w) => w.id === props.workspaceId)
+            if (isNil(workspace)) {
+                return []
+            }
+            return isPositiveEditor.value ? workspace.positive : workspace.negative
+        }
+    },
+    set(newVal: PromptTag[]) {
+        const workspace = dataStore.workspace.ref.find((w) => w.id === props.workspaceId)
+        if (isNil(workspace)) {
+            return
+        }
+        if (isPositiveEditor.value) {
+            workspace.positive = newVal
+        } else {
+            workspace.negative = newVal
+        }
+    },
+})
+// 监听当前编辑器的变化，更新 workspace
+watch(currentEditorMut.value, (newVal) => {
+    if (isPositiveEditor.value) {
+        window.api.workspace.update([
+            {
+                id: props.workspaceId,
+                positive: newVal,
+            },
+        ])
+    } else {
+        window.api.workspace.update([
+            {
+                id: props.workspaceId,
+                negative: newVal,
+            },
+        ])
+    }
+})
 
-const handleSwitchEditor = (value: boolean): void => {
+const switchEditor = (value: boolean): void => {
     isPositiveEditor.value = value
 }
 
@@ -380,47 +365,29 @@ const editMode = ref(false)
 
 // 是否正在编辑提示词
 const isEditingPromptText = ref(false)
-const editingPromptTextID = ref<string | null>(null)
+const editingPromptTextId = ref<string | null>(null)
 const editingPromptText = ref('')
 
-let promptTagClickCount = 0
-let promptTagClickTimer: ReturnType<typeof setTimeout> | undefined = undefined
-const PROMPT_TAG_CLICK_DELAY = 250 // 定义一个延迟时间，用于区分单击和双击
-
-function handleClickPromptTag(item: PromptView): void {
-    promptTagClickCount++
-    if (promptTagClickCount === 1) {
-        // 第一次点击，设置一个定时器
-        promptTagClickTimer = setTimeout(() => {
-            // 如果在 DELAY 时间内没有第二次点击，则认为是单次点击
-            handleEditPrompt(item.id)
-            promptTagClickCount = 0 // 重置点击次数
-        }, PROMPT_TAG_CLICK_DELAY)
-    } else {
-        // 第二次点击，清除定时器，执行双击操作
-        clearTimeout(promptTagClickTimer)
-        handleDoubleClickPrompt(item)
-        promptTagClickCount = 0 // 重置点击次数
-    }
+const handleClickGesture = useHandleClickGesture()
+function handleLeftClickPromptTag(item: PromptTag): void {
+    handleClickGesture(
+        () => {
+            editPrompt(item)
+        },
+        () => {
+            item.disabled = !item.disabled
+        }
+    )
 }
 
-function handleEditPrompt(id: string): void {
-    const p = promptList.value.find((item) => item.id === id)
-    if (p) {
-        editingPromptTextID.value = id
-        editingPromptText.value = joinBrackets(joinWeight(p.text, p.weight), p.leftBrackets)
-        isEditingPromptText.value = true
-    }
+function editPrompt(item: PromptTag): void {
+    editingPromptTextId.value = item.id
+    editingPromptText.value = promptTagToString(item)
+    isEditingPromptText.value = true
 }
 
-function handleDoubleClickPrompt(item: PromptView): void {
-    if (item.text !== BREAK) {
-        item.disabled = !item.disabled
-    }
-}
-
-function handleCopyPrompt(text: string): void {
-    window.api.copyToClipboard(text).then((res) => {
+function copyText(text: string): void {
+    window.api.other.copyToClipboard(text).then((res) => {
         if (res) {
             ElMessage.success('已复制到剪贴板')
         } else {
@@ -430,19 +397,7 @@ function handleCopyPrompt(text: string): void {
 }
 
 function handleConfirmEditPrompt(): void {
-    if (!editingPromptText.value.trim()) return
-    const item = promptList.value.find((item) => item.id === editingPromptTextID.value)
-    if (item) {
-        const showText = editingPromptText.value.trim()
-        const stripBracketsRes = stripBrackets(showText)
-        const stripWeightRes = stripWeight(stripBracketsRes.content)
-        item.text = stripWeightRes.content
-        item.weight = stripWeightRes.weight
-        item.leftBrackets = stripBracketsRes.leftBrackets
-        item.existsID = storage.getPromptIDIfExists(item.text)
-        emitUpdateEditor()
-        isEditingPromptText.value = false
-    }
+    //
 }
 
 function handleEditPromptAddCurly(): void {
@@ -548,58 +503,11 @@ function stopDragging(): void {
     document.body.style.userSelect = ''
 }
 
-interface PromptView {
-    id: string
-    text: string
-    leftBrackets: LeftBracket[]
-    weight: string
-    // 是否存在于存储中
-    existsID: string | null
-    disabled: boolean
-}
-const promptList = ref<PromptView[]>([])
-watch(
-    editorText,
-    () => {
-        promptList.value = splitTextToPromptView(editorText.value)
-    },
-    { immediate: true }
-)
 defineExpose({
-    addText: (text: string) => {
-        promptList.value.push({
-            id: crypto.randomUUID(),
-            text: text.trim(),
-            leftBrackets: text.includes(',') ? ['('] : [],
-            weight: '',
-            existsID: storage.getPromptIDIfExists(text.trim()),
-            disabled: false,
-        })
-        inputText.value = ''
-        emitUpdateEditor()
-    },
+    addText: (_text: string) => {},
 })
 
 const promptTextTranslations = ref<Record<string, string>>({})
-const debouncedUpdate = debounced(() => emitUpdateEditor(), 500)
-watchArray(
-    () => promptList.value.map(({ text }) => text),
-    (_newArr, _oldArr, added) => {
-        added.forEach(async (text) => {
-            if (text === BREAK || isLoraPrompt(text)) {
-                return
-            }
-            const translation = await handleGetTextTranslation(text)
-            if (translation) {
-                promptTextTranslations.value[text] = translation
-            }
-        })
-        debouncedUpdate()
-    },
-    {
-        immediate: true,
-    }
-)
 
 type TextPart = {
     id: string
@@ -610,114 +518,60 @@ type TextPart = {
 
 const searchText = ref('')
 
-function handleAddPromptToEditor(): void {
-    const text = searchText.value.trim()
+function addPromptTag(text: string): void {
+    text = text.trim()
     if (text === '') return
-    promptList.value.push({
-        id: crypto.randomUUID(),
-        text,
-        leftBrackets: text.includes(',') ? ['('] : [],
-        weight: '',
-        existsID: storage.getPromptIDIfExists(text),
-        disabled: false,
-    })
-    searchText.value = ''
-    emitUpdateEditor()
+    const tag = stringToMonoPromptTag(text)
+    if (!isNil(tag)) {
+        currentEditorMut.value.push(tag)
+    }
 }
 
-const promptTextView = computed(() => {
-    const regex = new RegExp(searchText.value, 'ig')
-
-    const textToView: Record<string, TextPart[]> = {}
-    promptList.value.forEach((item) => {
-        let text: string
-        text = joinBrackets(joinWeight(item.text, item.weight), item.leftBrackets)
-        if (promptTextTranslations.value[item.text]) {
-            text += ` | ${promptTextTranslations.value[item.text]}`
-        }
-        const matchesIndices = Array.from(text.matchAll(regex)).map((match) => match.index)
-
-        textToView[item.text] = []
-        let prevIndex = 0
-        for (const index of matchesIndices) {
-            if (prevIndex !== index) {
-                textToView[item.text].push({
-                    id: item.id,
-                    text: text.slice(prevIndex, index),
-                    searched: false,
-                    focused: false,
-                })
-            }
-            textToView[item.text].push({
-                id: item.id,
-                text: text.slice(index, index + searchText.value.length),
-                searched: true,
-                focused: false,
-            })
-            prevIndex = index + searchText.value.length
-        }
-        if (prevIndex < text.length) {
-            textToView[item.text].push({
-                id: item.id,
-                text: text.slice(prevIndex),
-                searched: false,
-                focused: false,
-            })
-        }
-    })
-    return textToView
-})
-
-function handleSwitchEditMode(): void {
+function switchEditMode(): void {
     if (editMode.value) {
         // 切换到显示模式
-        promptList.value = splitTextToPromptView(inputText.value)
-        emitUpdateEditor()
+        currentEditorMut.value = stringToEditor(inputText.value)
     } else {
         // 切换到编辑模式
-        inputText.value = joinPrompts(false)
+        inputText.value = editorToString(currentEditorMut.value, false)
     }
     editMode.value = !editMode.value
 }
 
-function handleRemovePrompt(id: string): void {
-    promptList.value = promptList.value.filter((item) => item.id !== id)
-    emitUpdateEditor()
+function removePrompt(id: string): void {
+    //
 }
 
-async function handleDeletePrompt(id: string): Promise<void> {
+async function deletePrompt(id: string): Promise<void> {
     try {
         await ElMessageBox.confirm('确定删除此提示词？', '删除提示词', {
             confirmButtonText: '删除',
             cancelButtonText: '取消',
             type: 'warning',
         })
-        const res = await storage.deletePrompt(id)
-        if (res) {
-            ElMessage.success('成功删除提示词')
-            promptList.value.forEach((item) => {
-                if (item.existsID === id) {
-                    item.existsID = null
-                }
-            })
-            editingPromptVisible.value = false
-        } else {
-            ElMessage.error('删除提示词失败')
-        }
+        await dataStore.prompt.delete(id)
+        ElMessage.success('成功删除提示词')
+        editingPromptVisible.value = false
     } catch (error) {
+        if (error === notFoundError) {
+            ElMessage.error('提示词不存在')
+            return
+        }
         if (error !== 'cancel') {
             ElMessage.error('删除提示词失败')
         }
     }
 }
 
+// 去掉 lora 的提示词
 const removeLora = ref(false)
-async function handleCopyToClipboard(): Promise<void> {
-    let textToCopy = joinPrompts(true)
+async function copyEditor(): Promise<void> {
+    let candidates = currentEditorMut.value
     if (removeLora.value) {
-        textToCopy = removeLoraPrompts(textToCopy)
+        candidates = candidates.filter((item) => !isLoraPromptTag(item))
     }
-    const res = await window.api.copyToClipboard(textToCopy)
+    const text = editorToString(candidates)
+    const res = await window.api.other.copyToClipboard(text)
     if (res) {
         ElMessage.success('已复制到剪贴板')
     } else {
@@ -725,9 +579,9 @@ async function handleCopyToClipboard(): Promise<void> {
     }
 }
 
-async function handleToCopySearchText(): Promise<void> {
+async function copySearchText(): Promise<void> {
     if (searchText.value === '') return
-    const res = await window.api.copyToClipboard(searchText.value)
+    const res = await window.api.other.copyToClipboard(searchText.value)
     if (res) {
         ElMessage.success('已复制到剪贴板')
     } else {
@@ -735,48 +589,36 @@ async function handleToCopySearchText(): Promise<void> {
     }
 }
 
-async function handleCopyLoraToClipboard(): Promise<void> {
-    let textToCopy = joinPrompts(true)
-    textToCopy = extractLoraPrompts(textToCopy).join(',')
-    const res = await window.api.copyToClipboard(textToCopy)
-    if (res) {
-        ElMessage.success('Lora提示词已复制到剪贴板')
-    } else {
-        ElMessage.warning('复制失败，请重试')
-    }
-}
-
-async function handleAddPrompt(text: string): Promise<void> {
-    if (text === BREAK) {
+async function createPrompt(promptTag: PromptTag): Promise<void> {
+    if (isGroupPromptTag(promptTag)) {
+        ElMessage.warning('不能添加组提示词')
         return
     }
-    if (storage.prompts.has(text)) {
+    const text = promptTagToString(promptTag, false, false)
+    if (dataStore.prompt.readonly.some((p) => p.text === text)) {
         ElMessage.warning('提示词已存在')
         return
     }
-    const translation = promptTextTranslations.value[text]
-    const result = await storage.addPrompt({
+    const translation = promptTextTranslations.value[promptTagToString(promptTag)]
+    const result = await dataStore.prompt.create({
         text,
         translation,
     })
     if (result) {
-        const index = promptList.value.findIndex((item) => item.text === text)
-        if (index !== -1) {
-            promptList.value[index].existsID = result.id
-        }
         ElMessage.success('成功添加提示词')
     } else {
-        ElMessage.success('添加提示词失败')
+        ElMessage.error('添加提示词失败')
     }
 }
 
 const editingPromptVisible = ref(false)
-const editingPromptID = ref<string | null>(null)
+const editingPromptId = ref<string | Nullish>(null)
 
-function handleOpenPromptEditor(promptID: string): void {
-    if (promptID) {
+function openPromptEditor(item: PromptTag): void {
+    const promptId = findPromptId(item)
+    if (!isNil(promptId)) {
         editingPromptVisible.value = true
-        editingPromptID.value = promptID
+        editingPromptId.value = promptId
     } else {
         ElMessage.warning('提示词不存在')
     }
@@ -787,118 +629,35 @@ function handleOpenExamplesDialog(): void {
     examplesDialogVisible.value = true
 }
 
-watchArray(
-    () => promptList.value.map((item) => item.existsID).filter((id) => id !== null) as string[],
-    (newIDs) => {
-        emit('existing-prompt-change', newIDs)
-    },
-    { immediate: true }
-)
-
 async function handleGetTextTranslation(text: string): Promise<string> {
-    if (text === BREAK) {
-        return ''
-    }
-    for (const item of storage.prompts.values()) {
-        if (item.text === text && item.translation) {
-            return item.translation
-        }
-    }
-    const result = await window.api.translateByDeepLX(text)
-    if (result) return result
+    //
     return ''
 }
 
-function splitTextToPromptView(text: string): PromptView[] {
-    if (text === '') return []
-    const tailBREAK = text.trimEnd().endsWith(BREAK)
-    const textLines = text.split(/\s+BREAK\s+/).filter((line) => line !== '')
-    const results = [] as PromptView[]
-    for (const [index, line] of textLines.entries()) {
-        const splitText = splitByCommaPlus(line)
-            .filter((item) => item !== '')
-            .map((item) => {
-                const disabled = item.startsWith(DISABLED_PREFIX)
-                if (disabled) {
-                    item = item.slice(DISABLED_PREFIX.length)
-                }
-                const { content, leftBrackets } = stripBrackets(item.trim())
-                const { content: text, weight } = stripWeight(content)
-                if (leftBrackets.length > 0 && leftBrackets[0] !== '(' && text.includes(',')) {
-                    leftBrackets.unshift('(')
-                }
-                return {
-                    id: crypto.randomUUID(),
-                    text,
-                    leftBrackets,
-                    weight,
-                    existsID: storage.getPromptIDIfExists(text),
-                    disabled,
-                }
-            })
-        results.push(...splitText)
-        if (index !== textLines.length - 1) {
-            results.push(newBREAK())
-        }
-    }
-    if (tailBREAK) {
-        results.push(newBREAK())
-    }
-    return results
-}
-
-function joinPrompts(copy: boolean): string {
-    const prompts = promptList.value.filter((item) => !(copy && item.disabled))
-    const splitByBREAK = prompts.reduce((acc, item) => {
-        if (item.text === BREAK) {
-            acc.push([])
-        } else {
-            if (acc.length === 0) {
-                acc.push([item])
-            } else {
-                acc[acc.length - 1].push(item)
-            }
-        }
-        return acc
-    }, [] as PromptView[][])
-    const joinEveryLine = splitByBREAK.map((line) => {
-        if (line.length === 0) return ''
-        return line
-            .map(
-                (item) =>
-                    (item.disabled ? DISABLED_PREFIX : '') +
-                    joinBrackets(joinWeight(item.text, item.weight), item.leftBrackets)
-            )
-            .join(',')
-    })
-
-    return joinEveryLine.join(` ${BREAK} \n`)
-}
-
-function handleAddBREAK(): void {
-    promptList.value.push(newBREAK())
-    emitUpdateEditor()
-}
-
 // 拖拽tag时显示占位符
-const draggingID = ref('')
+const draggingId = ref('')
 function onDragStart(event: unknown): void {
     const e = event as DraggableEvent & SortableEvent
-    draggingID.value = e.data.id
+    draggingId.value = e.data.id
 }
 function onDragEnd(): void {
-    draggingID.value = ''
+    draggingId.value = ''
 }
 
-async function handleAddExample(text: string): Promise<void> {
-    const example = await storage.addExample({
-        id: crypto.randomUUID(),
-        [isPositiveEditor.value ? 'positivePrompt' : 'negativePrompt']: text,
-    })
-    if (example) {
-        ElMessage.success('示例添加成功')
-    } else {
-        ElMessage.error('添加示例失败')
+// 是否已收藏 prompt tag
+function isPromptTagCollected(item: PromptTag): boolean {
+    return dataStore.prompt.readonly.some((p) => p.text === promptTagToString(item, false, false))
+}
+
+function findPromptId(item: PromptTag): string | Nullish {
+    const text = promptTagToString(item, false, false)
+    return dataStore.prompt.readonly.find((p) => p.text === text)?.id
+}
+
+function getTagType(item: PromptTag): 'primary' | 'info' {
+    if (isPromptTagCollected(item)) {
+        return 'info'
     }
+    return 'primary'
 }
 </script>

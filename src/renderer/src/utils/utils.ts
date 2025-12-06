@@ -128,3 +128,12 @@ export function extractLoraPrompts(text: string): string[] {
     const matches = text.match(/<lora:[^>]+>/g)
     return matches ? matches : []
 }
+
+export function isValidUrl(s: string): boolean {
+    try {
+        new URL(s)
+        return true
+    } catch {
+        return false
+    }
+}

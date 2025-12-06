@@ -1,12 +1,13 @@
 import { Example, NewExample, UpdateExample } from '@shared/models/example'
 import { NewPrompt, Prompt, UpdatePrompt } from '@shared/models/prompt'
-import { Tag } from '@shared/models/tag'
+import { Tag, UpdateTag } from '@shared/models/tag'
 import { Image } from '@shared/models/image'
 import { NewWorkspace, UpdateWorkspace, Workspace } from '@shared/models/workspace'
 import { defineStore } from 'pinia'
 import { computed, readonly, ref } from 'vue'
-import { createError, existsError, notFoundError } from './error'
-import { isNil } from 'lodash'
+import { createError, existsError, invalidParamError, notFoundError } from './error'
+import { cloneDeep, isNil } from 'lodash'
+import log from 'electron-log/renderer'
 
 export const useDataStore = defineStore('data', () => {
     const prompts = ref<Prompt[]>([])
@@ -17,40 +18,42 @@ export const useDataStore = defineStore('data', () => {
 
     const promptTextSet = new Set(prompts.value.map((prompt) => prompt.text))
 
-    {
-        window.api.prompt.notify((_event, newPrompts) => {
-            prompts.value = newPrompts
-            promptTextSet.clear()
-            prompts.value.forEach((prompt) => promptTextSet.add(prompt.text))
-        })
-        window.api.example.notify((_event, newExamples) => {
-            examples.value = newExamples
-        })
-        window.api.tag.notify((_event, newTags) => {
-            tags.value = newTags
-        })
-        window.api.workspace.notify((_event, newWorkspaces) => {
-            workspaces.value = newWorkspaces
-        })
-        window.api.image.notify((_event, newImages) => {
-            images.value = newImages
-        })
-    }
+    // TODO 提供一个接口处理数据和文件的一致性
+    window.api.prompt.onNotify((_event, newPrompts) => {
+        prompts.value = newPrompts
+        promptTextSet.clear()
+        prompts.value.forEach((prompt) => promptTextSet.add(prompt.text))
+    })
+    window.api.example.onNotify((_event, newExamples) => {
+        examples.value = newExamples
+    })
+    window.api.tag.onNotify((_event, newTags) => {
+        tags.value = newTags
+    })
+    window.api.workspace.onNotify((_event, newWorkspaces) => {
+        workspaces.value = newWorkspaces
+    })
+    window.api.image.onNotify((_event, newImages) => {
+        images.value = newImages
+    })
+    log.info(`send data store ready at: ${Date.now()}`)
+    window.api.other.sendDataStoreReady()
 
-    // 定时持久化数据
-    setInterval(
-        () => {
-            window.api.prompt.update(prompts.value)
-            window.api.example.update(examples.value)
-            window.api.tag.update(tags.value)
-            window.api.workspace.update(workspaces.value)
-            window.api.image.update(images.value)
-        },
-        2 * 60 * 1000
-    )
+    // TODO 测试关闭 定时持久化数据
+    // setInterval(
+    //     () => {
+    //         window.api.prompt.update(prompts.value)
+    //         window.api.example.update(examples.value)
+    //         window.api.tag.update(tags.value)
+    //         window.api.workspace.update(workspaces.value)
+    //         window.api.image.update(images.value)
+    //     },
+    //     2 * 60 * 1000
+    // )
 
     const promptView = {
-        readonly: readonly(prompts.value),
+        ref: prompts,
+        readonly: readonly(prompts),
         async create(prompt: NewPrompt): Promise<Prompt> {
             if (promptTextSet.has(prompt.text)) {
                 throw existsError
@@ -77,7 +80,7 @@ export const useDataStore = defineStore('data', () => {
                 }
             }
             prompts.value[index] = { ...prompts.value[index], ...prompt }
-            window.api.prompt.update([prompts.value[index]])
+            window.api.prompt.update([cloneDeep(prompts.value[index])])
             return prompts.value[index]
         },
         async delete(id: string): Promise<boolean> {
@@ -92,7 +95,8 @@ export const useDataStore = defineStore('data', () => {
         },
     }
     const exampleView = {
-        readonly: readonly(examples.value),
+        ref: examples,
+        readonly: readonly(examples),
         idToImages: readonly(
             computed(() => {
                 const map = new Map<string, Image[]>()
@@ -105,6 +109,20 @@ export const useDataStore = defineStore('data', () => {
                         }
                     }
                     map.set(example.id, imgs)
+                }
+                return map
+            })
+        ),
+        idToPrompts: readonly(
+            computed(() => {
+                const map = new Map<string, Prompt[]>()
+                for (const prompt of prompts.value) {
+                    for (const exampleId of prompt.exampleIds) {
+                        const example = examples.value.find((e) => e.id === exampleId)
+                        if (!isNil(example)) {
+                            map.set(exampleId, [...(map.get(exampleId) ?? []), prompt])
+                        }
+                    }
                 }
                 return map
             })
@@ -123,7 +141,7 @@ export const useDataStore = defineStore('data', () => {
                 throw notFoundError
             }
             examples.value[index] = { ...examples.value[index], ...example }
-            window.api.example.update([examples.value[index]])
+            window.api.example.update([cloneDeep(examples.value[index])])
             return examples.value[index]
         },
         async delete(id: string): Promise<boolean> {
@@ -143,9 +161,26 @@ export const useDataStore = defineStore('data', () => {
             window.api.example.delete([id])
             return true
         },
+        async deleteBatch(ids: string[]): Promise<boolean> {
+            const toDelete = examples.value.filter((e) => ids.includes(e.id))
+            if (toDelete.length === 0) {
+                throw notFoundError
+            }
+            for (const prompt of prompts.value) {
+                prompt.exampleIds = prompt.exampleIds.filter(
+                    (e) => !toDelete.some((d) => d.id === e)
+                )
+            }
+            for (const imageId of toDelete.flatMap((e) => e.imageIds)) {
+                images.value = images.value.filter((i) => i.id !== imageId)
+            }
+            window.api.example.delete(toDelete.map((e) => e.id))
+            return true
+        },
     }
     const tagView = {
-        readonly: readonly(tags.value),
+        ref: tags,
+        readonly: readonly(tags),
         async create(tag: string): Promise<Tag> {
             if (tags.value.some((t) => t.text === tag)) {
                 throw existsError
@@ -157,13 +192,16 @@ export const useDataStore = defineStore('data', () => {
             tags.value.push(newTag)
             return newTag
         },
-        async update(tag: string): Promise<Tag> {
-            const index = tags.value.findIndex((t) => t.text === tag)
+        async update(tag: UpdateTag): Promise<Tag> {
+            if (isNil(tag.text)) {
+                throw invalidParamError
+            }
+            const index = tags.value.findIndex((t) => t.id === tag.id)
             if (index === -1) {
                 throw notFoundError
             }
-            tags.value[index] = { ...tags.value[index], text: tag }
-            window.api.tag.update([tags.value[index]])
+            tags.value[index] = { ...tags.value[index], ...tag }
+            window.api.tag.update([cloneDeep(tags.value[index])])
             return tags.value[index]
         },
         async delete(id: string): Promise<boolean> {
@@ -187,7 +225,8 @@ export const useDataStore = defineStore('data', () => {
         },
     }
     const workspaceView = {
-        readonly: readonly(workspaces.value),
+        ref: workspaces,
+        readonly: readonly(workspaces),
         async create(workspace: NewWorkspace): Promise<Workspace> {
             const [newWorkspace] = await window.api.workspace.create([workspace])
             if (isNil(newWorkspace)) {
@@ -202,7 +241,7 @@ export const useDataStore = defineStore('data', () => {
                 throw notFoundError
             }
             workspaces.value[index] = { ...workspaces.value[index], ...workspace }
-            window.api.workspace.update([workspaces.value[index]])
+            window.api.workspace.update([cloneDeep(workspaces.value[index])])
             return workspaces.value[index]
         },
         async delete(id: string): Promise<boolean> {
@@ -216,7 +255,8 @@ export const useDataStore = defineStore('data', () => {
         },
     }
     const imageView = {
-        readonly: readonly(images.value),
+        ref: images,
+        readonly: readonly(images),
         async create(path: string): Promise<Image> {
             const [newImage] = await window.api.image.create([path])
             if (isNil(newImage)) {

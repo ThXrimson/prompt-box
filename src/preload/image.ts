@@ -1,6 +1,7 @@
 import { IpcChannel } from '@shared/ipc-channel'
 import { Image, UpdateImage } from '@shared/models/image'
-import { ipcRenderer, IpcRendererEvent } from 'electron/renderer'
+import { IpcRendererEvent } from 'electron'
+import { ipcRenderer } from 'electron/renderer'
 
 export default {
     create(paths: string[]): Promise<Image[]> {
@@ -15,7 +16,7 @@ export default {
     delete(ids: string[]): Promise<boolean> {
         return ipcRenderer.invoke(IpcChannel.DeleteImages, ids)
     },
-    notify(listener: (event: IpcRendererEvent, images: Image[]) => void) {
+    onNotify(listener: (event: IpcRendererEvent, images: Image[]) => void) {
         ipcRenderer.on(IpcChannel.NotifyImages, listener)
     },
     saveImage(id: string): Promise<boolean> {

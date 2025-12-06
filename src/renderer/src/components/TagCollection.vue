@@ -12,10 +12,10 @@
                 v-model="promptInput"
                 placeholder="添加或筛选"
                 clearable
-                @keyup.enter="handleAddPrompt"
+                @keyup.enter="createAddPrompt"
             >
                 <template #prefix>
-                    <el-button :icon="Plus" link @click="handleAddPrompt" />
+                    <el-button :icon="Plus" link @click="createAddPrompt" />
                 </template>
             </el-input>
         </div>
@@ -30,28 +30,30 @@
                 :key="prompt.id"
                 :ref="promptCards.set"
                 :prompt="prompt"
-                :selected="Boolean(existingPromptIDs?.has(prompt.id))"
+                :selected="Boolean(existingPromptIds?.has(prompt.id))"
                 :prompt-image-file-name="promptImageFileName[prompt.id]"
                 @add-to-workspace="emit('add-to-workspace', $event)"
-                @remove="handleRemovePromptFromTag($event)"
+                @remove="removeThisTagId($event)"
             />
         </el-scrollbar>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
-import type { Tag } from '@shared/types'
-import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/data'
+import { computed, DeepReadonly, nextTick, ref, watch } from 'vue'
+import { UNCATEGORIZED_TAG_ID, type Tag } from '@shared/models/tag'
+import { useDataStore } from '@renderer/stores/data'
 import { pinyinIncludes, pinyinIncludesWithFirstLetter } from '@renderer/utils/pinyin-includes'
 import PromptCard from '@renderer/components/PromptCard.vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElInput } from 'element-plus'
 import { useTemplateRefsList } from '@vueuse/core'
+import { Prompt } from '@shared/models/prompt'
+import { isNil } from 'lodash'
 
 const props = defineProps<{
     tag: Tag
-    existingPromptIDs?: Set<string>
+    existingPromptIds?: Set<string>
 }>()
 
 const emit = defineEmits<{
@@ -60,13 +62,21 @@ const emit = defineEmits<{
 
 const promptCards = useTemplateRefsList<InstanceType<typeof PromptCard>>()
 
-const storage = useStorage()
+const dataStore = useDataStore()
 
 const promptInput = ref<string>('')
 const editPromptDialogVisible = ref(false)
 const editingPromptID = ref<string | null>(null)
 const prompts = computed(() => {
-    return storage.getPromptsByTag(props.tag.id)
+    const prompts = dataStore.prompt.readonly
+    const result = [] as DeepReadonly<Prompt>[]
+    for (const prompt of prompts) {
+        if (!prompt.tagIds.includes(props.tag.id)) {
+            continue
+        }
+        result.push(prompt)
+    }
+    return result
 })
 const promptView = computed(() => {
     const filtered = prompts.value.filter(
@@ -77,7 +87,7 @@ const promptView = computed(() => {
                     pinyinIncludes(prompt.translation, promptInput.value) ||
                     pinyinIncludesWithFirstLetter(prompt.translation, promptInput.value)))
     )
-    const existingPromptIDsSet = props.existingPromptIDs || new Set<string>()
+    const existingPromptIDsSet = props.existingPromptIds || new Set<string>()
 
     return filtered.sort((a, b) => {
         const aExists = existingPromptIDsSet.has(a.id)
@@ -94,17 +104,24 @@ const promptView = computed(() => {
     })
 })
 const promptImageFileName = computed(() => {
-    const promptIDToImageURL = {} as Record<string, string>
+    const promptIdToImageFileName = {} as Record<string, string>
     for (const prompt of promptView.value) {
-        for (const exampleID of prompt.exampleIDs) {
-            const images = storage.getImagesByExampleID(exampleID)
-            if (images.length > 0) {
-                promptIDToImageURL[prompt.id] = images[0].fileName
-                break
+        for (const exampleId of prompt.exampleIds) {
+            const index = dataStore.example.readonly.findIndex((e) => e.id === exampleId)
+            if (index === -1) {
+                continue
+            }
+            const example = dataStore.example.readonly[index]
+            for (const imageId of example.imageIds) {
+                const image = dataStore.image.readonly.find((i) => i.id === imageId)
+                if (image) {
+                    promptIdToImageFileName[prompt.id] = image.fileName
+                    break
+                }
             }
         }
     }
-    return promptIDToImageURL
+    return promptIdToImageFileName
 })
 
 defineExpose({
@@ -123,7 +140,7 @@ defineExpose({
     },
 })
 
-async function handleAddPrompt(): Promise<void> {
+async function createAddPrompt(): Promise<void> {
     promptInput.value = promptInput.value.trim()
     if (promptInput.value === '') {
         return
@@ -131,27 +148,29 @@ async function handleAddPrompt(): Promise<void> {
     if (prompts.value.some((p) => p.text === promptInput.value)) {
         return
     }
-    for (const prompt of storage.prompts.values()) {
-        if (prompt.text === promptInput.value) {
-            const success = await storage.updatePromptTags(prompt.id, [
-                props.tag.id,
-                ...prompt.tagIDs,
-            ])
-            if (success) {
-                ElMessage.success(`提示词已存在，并添加到标签: ${props.tag.text}`)
-            } else {
-                ElMessage.error('添加提示词时更新标签失败')
+    if (props.tag.id !== UNCATEGORIZED_TAG_ID) {
+        for (const prompt of dataStore.prompt.readonly) {
+            if (prompt.text === promptInput.value) {
+                const success = await dataStore.prompt.update({
+                    id: prompt.id,
+                    tagIds: [props.tag.id, ...prompt.tagIds],
+                })
+                if (success) {
+                    ElMessage.success(`提示词已存在，并添加到标签: ${props.tag.text}`)
+                } else {
+                    ElMessage.error('添加提示词时更新标签失败')
+                }
+                return
             }
-            return
         }
     }
     const tags: string[] = []
     if (props.tag.id !== UNCATEGORIZED_TAG_ID) {
         tags.push(props.tag.id)
     }
-    const newPrompt = await storage.addPrompt({
-        text: promptInput.value.trim(),
-        tagIDs: tags,
+    const newPrompt = await dataStore.prompt.create({
+        text: promptInput.value,
+        tagIds: tags,
     })
     if (newPrompt) {
         ElMessage.success(`新增提示词并添加成功: ${newPrompt.text}`)
@@ -168,8 +187,16 @@ watch(
     },
     { immediate: true }
 )
-async function handleRemovePromptFromTag(promptID: string): Promise<void> {
-    const res = await storage.deleteTagIDFromPrompt(props.tag.id, promptID)
+async function removeThisTagId(promptId: string): Promise<void> {
+    const prompt = dataStore.prompt.readonly.find((p) => p.id === promptId)
+    if (isNil(prompt)) {
+        ElMessage.error('提示词不存在')
+        return
+    }
+    const res = await dataStore.prompt.update({
+        id: promptId,
+        tagIds: prompt.tagIds.filter((id) => id !== props.tag.id),
+    })
     if (res) {
         ElMessage.success('提示词移除成功')
     } else {

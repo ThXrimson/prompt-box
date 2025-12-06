@@ -1,5 +1,7 @@
 import { isNil } from 'lodash'
+import { Nullish } from 'utility-types'
 
+export const EOL = '\n'
 export const enum Bracket {
     Square = 'square',
     Round = 'round',
@@ -58,8 +60,14 @@ export const enum PromptTagKind {
     Group = 'group',
     Lora = 'lora',
     Special = 'special',
+    Eol = 'eol',
 }
-export type PromptTag = MonoPromptTag | GroupPromptTag | LoraPromptTag | SpecialPromptTag
+export type PromptTag =
+    | MonoPromptTag
+    | GroupPromptTag
+    | LoraPromptTag
+    | SpecialPromptTag
+    | EolPromptTag
 export interface MonoPromptTag {
     id: string
     text: string
@@ -74,28 +82,21 @@ export interface SpecialPromptTag {
     disabled: boolean
     kind: PromptTagKind.Special
 }
-export function newEolSpecialPromptTag(): SpecialPromptTag {
-    return {
-        id: 'eol' + crypto.randomUUID(),
-        text: '',
-        disabled: false,
-        kind: PromptTagKind.Special,
-    }
+export interface EolPromptTag {
+    id: string
+    disabled: boolean
+    kind: PromptTagKind.Eol
 }
-export const EOL_STRING = '\n'
-export const isEolSpecialPromptTag = (tag: SpecialPromptTag): boolean => tag.id.startsWith('eol')
 export interface GroupPromptTag {
     id: string
+    text: string
     subTags: (LoraPromptTag | MonoPromptTag)[]
-    weight: string
-    brackets: Bracket[]
     disabled: boolean
     kind: PromptTagKind.Group
 }
 export interface LoraPromptTag {
     id: string
     text: string
-    brackets: Bracket[]
     weight: string
     disabled: boolean
     kind: PromptTagKind.Lora
@@ -111,45 +112,74 @@ export function isLoraPromptTag(tag: PromptTag): tag is LoraPromptTag {
     return tag.kind === PromptTagKind.Lora
 }
 export function isLoraString(s: string): boolean {
+    s = s.trim()
     return s.startsWith('<lora:') && s.endsWith('>')
 }
 export function isSpecialPromptTag(tag: PromptTag): tag is SpecialPromptTag {
     return tag.kind === PromptTagKind.Special
 }
+export function isEolPromptTag(tag: PromptTag): tag is EolPromptTag {
+    return tag.kind === PromptTagKind.Eol
+}
 
 function isValidNumber(s: string): boolean {
     return /^-?\d+(\.\d+)?$/.test(s)
 }
-export function promptTagToString(tag: PromptTag): string {
+export function promptTagToString(
+    tag: PromptTag,
+    includeWeight: boolean = true,
+    includeBrackets: boolean = true
+): string {
     if (isMonoPromptTag(tag)) {
-        const prefix = tag.brackets.map((bracket) => openBrackets[bracket]).join('')
-        const suffix = tag.brackets.map((bracket) => closeBrackets[bracket]).join('')
-        const weightStr = isValidNumber(tag.weight) && prefix.length > 0 ? `:${tag.weight}` : ''
+        let prefix = tag.brackets.map((bracket) => openBrackets[bracket]).join('')
+        let suffix = tag.brackets.map((bracket) => closeBrackets[bracket]).join('')
+        let weightStr = isValidNumber(tag.weight) && prefix.length > 0 ? `:${tag.weight}` : ''
+        if (!includeWeight) {
+            weightStr = ''
+        }
+        if (!includeBrackets) {
+            prefix = ''
+            suffix = ''
+        }
         return `${prefix}${tag.text}${weightStr}${suffix}`
     } else if (isGroupPromptTag(tag)) {
-        const prefix = tag.brackets.map((bracket) => openBrackets[bracket]).join('')
-        const suffix = tag.brackets.map((bracket) => closeBrackets[bracket]).join('')
-        const text = tag.subTags.map(promptTagToString).join(', ')
-        const weightStr = isValidNumber(tag.weight) && prefix.length > 0 ? `:${tag.weight}` : ''
-        return `${prefix}${text}${weightStr}${suffix}`
+        const text = tag.subTags
+            .map((sub) => promptTagToString(sub, includeWeight, includeBrackets))
+            .join(', ')
+        return text
     } else if (isLoraPromptTag(tag)) {
-        const prefix = tag.brackets.map((bracket) => openBrackets[bracket]).join('')
-        const suffix = tag.brackets.map((bracket) => closeBrackets[bracket]).join('')
-        const weightStr = isValidNumber(tag.weight) ? `:${tag.weight}` : ''
-        return `${prefix}<${tag.text}${weightStr}>${suffix}`
+        let weightStr = isValidNumber(tag.weight) ? `:${tag.weight}` : ''
+        if (!includeWeight) {
+            weightStr = ''
+        }
+        return `<${tag.text}${weightStr}>`
+    } else if (isEolPromptTag(tag)) {
+        return '\n'
     } else {
         throw new Error('Unknown prompt tag kind')
     }
 }
-export function editorToString(editor: PromptTag[]): string {
+export function editorToString(
+    editor: PromptTag[],
+    filterDisabled: boolean = true,
+    filterLora: boolean = false
+): string {
     const segments = [] as string[]
     for (const tag of editor) {
+        if (tag.disabled && filterDisabled) {
+            continue
+        }
+        if (filterLora && isLoraPromptTag(tag)) {
+            continue
+        }
         if (isSpecialPromptTag(tag)) {
             if (segments.length > 0 && segments[segments.length - 1] === ', ') {
                 segments.pop()
                 segments.push(' ')
             }
             segments.push(tag.text)
+            segments.push('\n')
+        } else if (isEolPromptTag(tag)) {
             segments.push('\n')
         } else {
             segments.push(promptTagToString(tag))
@@ -158,128 +188,118 @@ export function editorToString(editor: PromptTag[]): string {
     }
     return segments.join('')
 }
+export function stringToMonoPromptTag(str: string): MonoPromptTag | Nullish {
+    str = str.trim()
+    // 获取包裹的括号
+    const brackets = [] as Bracket[]
+    let left = 0
+    let right = str.length - 1
+    while (left <= right) {
+        const bracket = openBracketToEnum[str[left] as keyof typeof openBracketToEnum]
+        if (isNil(bracket)) {
+            break
+        }
+        if (str[right] !== closeBrackets[bracket]) {
+            break
+        }
+        brackets.push(bracket)
+        left++
+        right--
+    }
+    // 获取权重
+    let rest = str.slice(left, right + 1)
+    const totalColonIndex = rest.lastIndexOf(':')
+    let totalWeightStr = ''
+    if (totalColonIndex >= 0 && isValidNumber(rest.slice(totalColonIndex + 1))) {
+        totalWeightStr = rest.slice(totalColonIndex + 1)
+        rest = rest.slice(0, totalColonIndex)
+    }
+    return {
+        id: crypto.randomUUID(),
+        text: rest,
+        weight: totalWeightStr,
+        brackets,
+        disabled: false,
+        kind: PromptTagKind.Mono,
+    }
+}
+export function stringToLoraPromptTag(str: string): LoraPromptTag | Nullish {
+    str = str.trim()
+    if (!isLoraString(str)) {
+        return undefined
+    }
+    const loraName = str.slice('<lora:'.length, str.length - 1)
+    const colonIndex = loraName.lastIndexOf(':')
+    let weightStr = ''
+    if (colonIndex >= 0 && isValidNumber(loraName.slice(colonIndex + 1))) {
+        weightStr = loraName.slice(colonIndex + 1)
+    }
+    return {
+        id: crypto.randomUUID(),
+        text: loraName.slice(0, colonIndex),
+        weight: weightStr,
+        disabled: false,
+        kind: PromptTagKind.Lora,
+    }
+}
 export function stringToEditor(str: string, specialWords: string[] = []): PromptTag[] {
     str = str.trim()
-    specialWords.push(EOL_STRING)
-    const specialPattern = new RegExp(
-        specialWords.map((word) => `\\s*\\b${word}\\b\\s*`).join('|'),
-        'g'
-    )
     const segments = [] as string[]
-    let lastIndex = 0
-    for (const match of str.matchAll(specialPattern)) {
-        const prefix = str.slice(lastIndex, match.index).trim()
-        if (prefix.length > 0) {
-            segments.push(prefix)
+    if (specialWords.length > 0) {
+        const specialPattern = new RegExp(
+            specialWords.map((word) => `\\s*\\b${word}\\b\\s*`).join('|'),
+            'g'
+        )
+        let lastIndex = 0
+        for (const match of str.matchAll(specialPattern)) {
+            const prefix = str.slice(lastIndex, match.index).trim()
+            if (prefix.length > 0) {
+                segments.push(prefix)
+            }
+            if (match[0].trim().length > 0) {
+                segments.push(match[0].trim())
+            }
+            lastIndex = match.index + match[0].length
         }
-        if (match[0].trim().length > 0) {
-            segments.push(match[0].trim())
-        } else {
-            segments.push(EOL_STRING)
+        const suffix = str.slice(lastIndex).trim()
+        if (suffix.length > 0) {
+            segments.push(suffix)
         }
-        lastIndex = match.index + match[0].length
-    }
-    const suffix = str.slice(lastIndex).trim()
-    if (suffix.length > 0) {
-        segments.push(suffix)
+    } else {
+        segments.push(str)
     }
     const tags = [] as PromptTag[]
     for (const segment of segments) {
-        if (segment === EOL_STRING) {
-            tags.push(newEolSpecialPromptTag())
-        } else if (specialWords.includes(segment)) {
+        if (specialWords.includes(segment)) {
             tags.push({
                 id: crypto.randomUUID(),
                 text: segment,
                 disabled: false,
                 kind: PromptTagKind.Special,
             })
-        } else {
-            for (const subSegment of splitStringIgnoringBrackets(segment)) {
-                const brackets = [] as Bracket[]
-                let left = 0
-                let right = subSegment.length - 1
-                while (left <= right) {
-                    const bracket =
-                        openBracketToEnum[subSegment[left] as keyof typeof openBracketToEnum]
-                    if (isNil(bracket)) {
-                        break
+            continue
+        }
+        const splitEol = segment.split(new RegExp(`(${EOL})`, 'g'))
+        for (const subSegment of splitEol) {
+            if (subSegment === EOL) {
+                tags.push({
+                    id: crypto.randomUUID(),
+                    disabled: false,
+                    kind: PromptTagKind.Eol,
+                })
+                continue
+            }
+            for (const s of splitStringIgnoringBrackets(subSegment)) {
+                if (isLoraString(s)) {
+                    const tag = stringToLoraPromptTag(s)
+                    if (!isNil(tag)) {
+                        tags.push(tag)
                     }
-                    if (subSegment[right] !== closeBrackets[bracket]) {
-                        break
-                    }
-                    brackets.push(bracket)
-                    left++
-                    right--
-                }
-                let rest = subSegment.slice(left, right + 1)
-                const totalColonIndex = rest.lastIndexOf(':')
-                let totalWeightStr = ''
-                if (totalColonIndex >= 0 && isValidNumber(rest.slice(totalColonIndex + 1))) {
-                    totalWeightStr = rest.slice(totalColonIndex + 1)
-                    rest = rest.slice(0, totalColonIndex)
-                }
-                const subTags = [] as (LoraPromptTag | MonoPromptTag)[]
-                for (let sub of rest.split(',')) {
-                    sub = sub.trim()
-                    if (isLoraString(sub)) {
-                        sub = sub.slice('<lora:'.length, sub.length - 1)
-                        let text = sub
-                        const colonIndex = sub.lastIndexOf(':')
-                        let weightStr = ''
-                        if (colonIndex >= 0 && isValidNumber(sub.slice(colonIndex + 1))) {
-                            weightStr = sub.slice(colonIndex + 1)
-                            text = sub.slice(0, colonIndex)
-                        }
-                        if (text.length > 0) {
-                            subTags.push({
-                                id: crypto.randomUUID(),
-                                text,
-                                weight: weightStr,
-                                disabled: false,
-                                kind: PromptTagKind.Lora,
-                                brackets: [],
-                            })
-                        }
-                        continue
-                    }
-                    let text = sub
-                    const colonIndex = sub.lastIndexOf(':')
-                    let weightStr = ''
-                    if (colonIndex >= 0 && isValidNumber(sub.slice(colonIndex + 1))) {
-                        weightStr = sub.slice(colonIndex + 1)
-                        text = sub.slice(0, colonIndex)
-                    }
-                    if (text.length > 0) {
-                        subTags.push({
-                            id: crypto.randomUUID(),
-                            text,
-                            weight: weightStr,
-                            disabled: false,
-                            kind: PromptTagKind.Mono,
-                            brackets: [],
-                        })
-                    }
-                }
-                if (subTags.length <= 0) {
                     continue
-                } else if (subTags.length === 1) {
-                    subTags[0].brackets = brackets
-                    tags.push(subTags[0])
-                } else {
-                    tags.push({
-                        id: crypto.randomUUID(),
-                        subTags,
-                        weight: totalWeightStr,
-                        disabled: false,
-                        kind: PromptTagKind.Group,
-                        brackets: brackets,
-                    })
-                    subTags.forEach((tag) => {
-                        if (!isLoraPromptTag(tag)) {
-                            tag.weight = ''
-                        }
-                    })
+                }
+                const tag = stringToMonoPromptTag(s)
+                if (!isNil(tag)) {
+                    tags.push(tag)
                 }
             }
         }

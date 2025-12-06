@@ -9,7 +9,7 @@ import { join } from 'path'
 import { getImageDir } from '../utils'
 import fs from 'fs/promises'
 
-export async function initExampleHandlers(mainWindow: BrowserWindow): Promise<void> {
+export async function initExampleHandlers(_mainWindow: BrowserWindow): Promise<void> {
     const exampleService = ExampleLowdbService.getInstance()
     ipcMain.handle(IpcChannel.CreateExamples, (_event, examples: NewExample[]) => {
         return exampleService.create(examples)
@@ -23,7 +23,6 @@ export async function initExampleHandlers(mainWindow: BrowserWindow): Promise<vo
     ipcMain.handle(IpcChannel.DeleteExamples, (_event, ids: string[]) => {
         return deleteExamples(ids)
     })
-    mainWindow.webContents.send(IpcChannel.NotifyExamples, await exampleService.getAll())
 }
 
 /**

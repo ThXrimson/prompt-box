@@ -16,7 +16,7 @@
                     :preview-src-list="images.map((img) => getImageUrl(img.fileName))"
                     :initial-index="index"
                     class="w-30 h-30 object-cover rounded-md border-1 border-gray-300"
-                    fit="scale-down"
+                    fit="cover"
                     loading="lazy"
                     hide-on-click-modal
                 />

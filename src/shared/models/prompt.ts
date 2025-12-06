@@ -6,6 +6,9 @@ export interface Prompt {
     text: string
     translation: string
     description: string
+    source: string
+    isLora: boolean
+    relatedTexts: string[]
     tagIds: string[]
     exampleIds: string[]
     createTime: number
@@ -16,6 +19,9 @@ export interface NewPrompt {
     text: string
     translation?: string
     description?: string
+    source?: string
+    isLora?: boolean
+    relatedTexts?: string[]
     tagIds?: string[]
     exampleIds?: string[]
 }

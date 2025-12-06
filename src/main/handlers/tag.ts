@@ -5,7 +5,7 @@ import { UpdateTag } from '@shared/models/tag'
 import PromptLowdbService from '../services/prompt'
 import { intersection } from 'lodash'
 
-export async function initTagHandlers(mainWindow: BrowserWindow): Promise<void> {
+export async function initTagHandlers(_mainWindow: BrowserWindow): Promise<void> {
     const tagService = TagLowdbService.getInstance()
     ipcMain.handle(IpcChannel.CreateTags, (_event, tags: string[]) => {
         return tagService.create(tags.map((tag) => ({ text: tag })))
@@ -19,7 +19,6 @@ export async function initTagHandlers(mainWindow: BrowserWindow): Promise<void> 
     ipcMain.handle(IpcChannel.DeleteTags, (_event, ids: string[]) => {
         return deleteTags(ids)
     })
-    mainWindow.webContents.send(IpcChannel.NotifyTags, await tagService.getAll())
 }
 async function deleteTags(ids: string[]): Promise<boolean> {
     const tagService = TagLowdbService.getInstance()
