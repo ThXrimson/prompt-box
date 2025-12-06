@@ -122,7 +122,7 @@
                         type="success"
                         :icon="CirclePlusFilled"
                         class="mb-2 self-start!"
-                        @click="handleAddImage"
+                        @click="openCreateImageDialog"
                     >
                         添加示例图片
                     </el-button>
@@ -148,17 +148,38 @@
         v-model="addExampleFromExistingVisible"
         title="从已有示例添加"
         align-center
-        class="w-auto! max-w-240 h-[80vh] flex flex-col"
-        body-class="flex-1 min-h-0 flex gap-2 justify-between"
+        class="w-auto! max-w-[80vw] h-[80vh] flex flex-col"
+        body-class="flex flex-col flex-1 min-h-0"
+        append-to-body
     >
-        <existing-examples :prompt-id="promptId" @add-example="addExample" />
+        <el-scrollbar
+            class="flex-1 min-h-0 border-2 border-gray-200 rounded-md px-1"
+            view-class="columns-4 gap-1"
+        >
+            <template v-for="example in currentExampleCandidates" :key="example.id">
+                <el-image
+                    :src="exampleCandidateCoverUrls.get(example.id)"
+                    fit="contain"
+                    loading="lazy"
+                    class="m-1 rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300"
+                    @click="addExample(example.id)"
+                />
+            </template>
+        </el-scrollbar>
+        <el-pagination
+            v-model:current-page="currentExampleCandidatePage"
+            :page-size="exampleCandidatePageSize"
+            class="flex-0.5 min-h-0 justify-center-safe"
+            layout="prev, pager, next"
+            :total="exampleCandidates.length"
+        />
     </el-dialog>
 
     <!--添加图片对话框-->
     <el-dialog
-        v-model="addImageDialogVisible"
+        v-model="createImageDialogVisible"
         title="添加图片"
-        @keyup.esc.stop.prevent="cancelAddImage"
+        @keyup.esc.stop.prevent="cancelCreateImage"
     >
         <el-text>图片地址（URL或本地文件）</el-text>
         <div class="flex gap-2">
@@ -167,8 +188,8 @@
         </div>
         <template #footer>
             <div>
-                <el-button type="primary" @click="confirmAddImage"> 确定 </el-button>
-                <el-button type="danger" @click="cancelAddImage"> 取消 </el-button>
+                <el-button type="primary" @click="confirmCreateImage"> 确定 </el-button>
+                <el-button type="danger" @click="cancelCreateImage"> 取消 </el-button>
             </div>
         </template>
     </el-dialog>
@@ -185,7 +206,7 @@ import { createError, existsError, notFoundError } from '@renderer/stores/error'
 import { Nullish } from 'utility-types'
 import { Example } from '@shared/models/example'
 import ExampleView from './ExampleView.vue'
-import { isValidUrl } from '@renderer/utils/utils'
+import { getImageUrl, isValidUrl } from '@renderer/utils/utils'
 import { Language } from '@vicons/ionicons5'
 import { ElMessageBox } from 'element-plus'
 
@@ -332,6 +353,30 @@ const examples = computed(() => {
     const exampleIds = dataStore.prompt.readonly[promptIndex].exampleIds
     return examples.filter((e) => exampleIds.includes(e.id))
 })
+const currentExampleCandidatePage = ref(1)
+const exampleCandidatePageSize = 10
+const exampleCandidates = computed(() => {
+    const exampleIdSet = new Set(examples.value.map((e) => e.id))
+    return dataStore.example.readonly.filter(
+        (e) => !exampleIdSet.has(e.id) && e.imageIds.length > 0
+    )
+})
+const currentExampleCandidates = computed(() => {
+    const start = (currentExampleCandidatePage.value - 1) * exampleCandidatePageSize
+    const end = start + exampleCandidatePageSize
+    return exampleCandidates.value.slice(start, end)
+})
+const exampleCandidateCoverUrls = computed(() => {
+    const m = new Map<string, string>()
+    for (const e of exampleCandidates.value) {
+        const imageId = e.imageIds[0]
+        const image = dataStore.image.readonly.find((i) => i.id === imageId)
+        if (!isNil(image)) {
+            m.set(e.id, getImageUrl(image.fileName))
+        }
+    }
+    return m
+})
 
 //#region 更改 Prompt 内容
 
@@ -426,14 +471,14 @@ async function addExample(exampleId: string): Promise<void> {
     ElMessage.success('添加示例成功')
 }
 
-const addImageDialogVisible = ref(false)
+const createImageDialogVisible = ref(false)
 const candidateImage = ref('')
-function handleAddImage(): void {
-    addImageDialogVisible.value = true
+function openCreateImageDialog(): void {
+    createImageDialogVisible.value = true
     candidateImage.value = ''
 }
-function cancelAddImage(): void {
-    addImageDialogVisible.value = false
+function cancelCreateImage(): void {
+    createImageDialogVisible.value = false
     candidateImage.value = ''
 }
 function handlePaste(event: ClipboardEvent): void {
@@ -459,7 +504,7 @@ async function selectImageFile(): Promise<void> {
         candidateImage.value = result
     }
 }
-async function confirmAddImage(): Promise<void> {
+async function confirmCreateImage(): Promise<void> {
     if (candidateImage.value === '') {
         ElMessage.error('请选择图片')
         return
@@ -470,7 +515,7 @@ async function confirmAddImage(): Promise<void> {
         candidateImage.value = ''
         return
     }
-    addImageDialogVisible.value = false
+    createImageDialogVisible.value = false
     try {
         const image = await dataStore.image.create(candidateImage.value)
         await dataStore.example.update({

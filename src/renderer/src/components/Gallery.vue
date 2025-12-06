@@ -1,9 +1,9 @@
 <template>
-    <el-scrollbar class="w-fit flex-1 border-gray-200 border-2 rounded-md">
+    <el-scrollbar class="w-fit border-gray-200 border-2 rounded-md pr-2">
         <vue-draggable
             v-model="images"
             :animation="100"
-            class="grid grid-cols-4 lg:grid-cols-6 p-2 gap-2 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden self-start"
+            class="p-2 gap-2 columns-3"
             @end="handleDragEnd"
         >
             <div
@@ -15,7 +15,7 @@
                     :src="getImageUrl(image.fileName)"
                     :preview-src-list="images.map((img) => getImageUrl(img.fileName))"
                     :initial-index="index"
-                    class="w-30 h-30 object-cover rounded-md border-1 border-gray-300"
+                    class="object-cover rounded-md border-1 border-gray-300"
                     fit="cover"
                     loading="lazy"
                     hide-on-click-modal
@@ -39,35 +39,43 @@
                 v-for="i in loadingPlaceholder"
                 :key="i"
                 v-loading="true"
-                class="w-30! h-30! rounded-md bg-gray-400"
+                class="w-40! h-40! rounded-md bg-gray-400"
             />
             <!-- 添加图片 -->
             <el-button
                 :icon="Plus"
-                class="w-30! h-30! rounded-md"
+                circle
+                type="primary"
+                size="large"
+                class="rounded-md absolute! bottom-2 right-2"
                 @click="handleOpenAddImageDialog"
             />
         </vue-draggable>
-    </el-scrollbar>
-
-    <!-- 添加图片对话框 -->
-    <el-dialog
-        v-model="addImageDialogVisible"
-        title="添加图片"
-        @keyup.esc.stop.prevent="handleCancelAddExampleImage"
-    >
-        <el-text>图片地址（URL或本地文件）</el-text>
-        <div class="flex gap-2">
-            <el-input v-model="candidateImage" @paste="handlePaste" @drop.prevent="handleDrop" />
-            <el-button type="success" @click="handleSelectImageFile"> 选择图片 </el-button>
-        </div>
-        <template #footer>
-            <div>
-                <el-button type="primary" @click="handleConfirmAddExampleImage"> 确定 </el-button>
-                <el-button type="danger" @click="handleCancelAddExampleImage"> 取消 </el-button>
+        <!-- 添加图片对话框 -->
+        <el-dialog
+            v-model="addImageDialogVisible"
+            title="添加图片"
+            @keyup.esc.stop.prevent="handleCancelAddExampleImage"
+        >
+            <el-text>图片地址（URL或本地文件）</el-text>
+            <div class="flex gap-2">
+                <el-input
+                    v-model="candidateImage"
+                    @paste="handlePaste"
+                    @drop.prevent="handleDrop"
+                />
+                <el-button type="success" @click="handleSelectImageFile"> 选择图片 </el-button>
             </div>
-        </template>
-    </el-dialog>
+            <template #footer>
+                <div>
+                    <el-button type="primary" @click="handleConfirmAddExampleImage">
+                        确定
+                    </el-button>
+                    <el-button type="danger" @click="handleCancelAddExampleImage"> 取消 </el-button>
+                </div>
+            </template>
+        </el-dialog>
+    </el-scrollbar>
 </template>
 
 <script setup lang="ts">

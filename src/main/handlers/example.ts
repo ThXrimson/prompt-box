@@ -8,6 +8,7 @@ import ImageLowdbService from '../services/image'
 import { join } from 'path'
 import { getImageDir } from '../utils'
 import fs from 'fs/promises'
+import log from 'electron-log/main'
 
 export async function initExampleHandlers(_mainWindow: BrowserWindow): Promise<void> {
     const exampleService = ExampleLowdbService.getInstance()
@@ -46,8 +47,13 @@ async function deleteExamples(ids: string[]): Promise<boolean> {
     const deleteImageFileNames = images
         .filter((image) => deleteImageIds.includes(image.id))
         .map((image) => image.fileName)
-    for (const fileName of deleteImageFileNames) {
-        await fs.unlink(join(getImageDir(), fileName))
+    try {
+        for (const fileName of deleteImageFileNames) {
+            await fs.unlink(join(getImageDir(), fileName))
+        }
+    } catch (error) {
+        log.warn('Failed to delete image file: %s', error)
     }
+    await imageService.delete(deleteImageIds)
     return exampleService.delete(ids)
 }

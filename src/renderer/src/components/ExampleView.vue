@@ -1,9 +1,23 @@
 <template>
-    <div class="flex gap-2 flex-1 min-w-0">
-        <el-tooltip placement="right" :show-after="500" :hide-after="0">
-            <image-cover :src="coverUrl" @click="showGalleryDialog = true" />
+    <div class="flex gap-2">
+        <el-tooltip
+            placement="right-end"
+            :fallback-placements="['left']"
+            :show-after="500"
+            :hide-after="0"
+            :disabled="hoverDisabled || isNil(coverUrl)"
+            :show-arrow="false"
+        >
+            <ImageCover :src="coverUrl" @click="showGalleryDialog = true" />
             <template #content>
-                <el-image :src="coverUrl" class="max-w-[50vw]" />
+                <el-image
+                    :src="coverUrl"
+                    lazy
+                    fit="contain"
+                    class="popper-image"
+                    @show="hoverDisabled = false"
+                    @error="hoverDisabled = true"
+                />
             </template>
         </el-tooltip>
         <div class="flex-1 min-w-0 flex flex-col gap-1">
@@ -39,17 +53,28 @@
                     </div>
                     <el-select-v2
                         v-if="isNil(promptId)"
-                        :model-value="prompts"
+                        v-model.lazy="prompts"
                         value-key="id"
                         multiple
                         filterable
-                        default-first-option
-                        :reserve-keyword="false"
                         placeholder="此处更改示例所属提示词"
                         :options="promptOptions"
+                        :reserve-keyword="false"
                         class="flex flex-1 min-w-0"
-                        @blur="changeExamplePrompt"
-                    />
+                    >
+                        <template #tag>
+                            <template v-for="prompt in prompts" :key="prompt.id">
+                                <el-tag
+                                    type="info"
+                                    closable
+                                    disable-transitions
+                                    @close="prompts = prompts.filter((p) => p.id !== prompt.id)"
+                                >
+                                    {{ prompt.text }}
+                                </el-tag>
+                            </template>
+                        </template>
+                    </el-select-v2>
                 </div>
                 <template v-for="tab in tabKinds" :key="tab">
                     <el-input
@@ -70,7 +95,7 @@
             v-lazy-show="showGalleryDialog"
             title="编辑图片"
             align-center
-            class="w-auto! h-[80vh] flex flex-col"
+            class="w-[80vw]! h-[80vh] flex flex-col"
             body-class="flex-1 min-h-0 flex gap-2 justify-between"
             @keyup.esc.stop.prevent="showGalleryDialog = false"
         >
@@ -83,13 +108,13 @@
 <script setup lang="ts">
 import { useDataStore } from '@renderer/stores/data'
 import { getImageUrl } from '@renderer/utils/utils'
-import { isNil } from 'lodash'
+import { difference, isNil } from 'lodash'
 import { computed, ref } from 'vue'
 import { CopyDocument, Delete, Remove } from '@element-plus/icons-vue'
-import { existsError, notFoundError } from '@renderer/stores/error'
+import { notFoundError } from '@renderer/stores/error'
 import log from 'electron-log/renderer'
-import { watchArray } from '@vueuse/core'
 import ImageCover from './ImageCover.vue'
+import { UpdatePrompt } from '@shared/models/prompt'
 
 const props = defineProps<{
     exampleId: string
@@ -132,6 +157,7 @@ const currentTabText = computed({
 })
 
 const showGalleryDialog = ref(false)
+const hoverDisabled = ref(false)
 const coverUrl = computed(() => {
     if (example.value?.imageIds.length === 0) {
         return undefined
@@ -166,28 +192,61 @@ async function deleteExample(): Promise<void> {
     }
 }
 
-let updatingPrompts = false // 是否是该组件触发的更新
 interface ExamplePrompt {
     id: string
     text: string
 }
-const prompts = ref<ExamplePrompt[]>([])
-watchArray(
-    () => {
-        return (dataStore.example.idToPrompts.get(props.exampleId) ?? []).map((item) => ({
-            id: item.id,
-            text: item.text,
-        }))
+const prompts = computed({
+    get() {
+        return dataStore.prompt.readonly
+            .filter((p) => p.exampleIds.includes(props.exampleId))
+            .map((item) => ({
+                id: item.id,
+                text: item.text,
+            }))
     },
-    (newVal) => {
-        if (updatingPrompts) {
-            return
+    async set(newVal: ExamplePrompt[]) {
+        try {
+            const candidates = [] as UpdatePrompt[]
+            const toDelete = difference(prompts.value, newVal, newVal)
+            const toAdd = difference(newVal, prompts.value)
+            for (const p of toDelete) {
+                const prompt = dataStore.prompt.readonly.find((p_) => p_.id === p.id)
+                if (isNil(prompt)) {
+                    ElMessage.error(`提示词不存在`)
+                    return
+                }
+                candidates.push({
+                    id: p.id,
+                    exampleIds: prompt.exampleIds.filter((id) => id !== props.exampleId),
+                })
+            }
+            for (const p of toAdd) {
+                const prompt = dataStore.prompt.readonly.find((p_) => p_.id === p.id)
+                if (isNil(prompt)) {
+                    ElMessage.error(`提示词不存在`)
+                    return
+                }
+                if (prompt.exampleIds.includes(props.exampleId)) {
+                    continue
+                }
+                candidates.push({
+                    id: p.id,
+                    exampleIds: [...prompt.exampleIds, props.exampleId],
+                })
+            }
+            await dataStore.prompt.updateMany(candidates)
+            ElMessage.success('更新示例提示词成功')
+        } catch (err) {
+            if (err === notFoundError) {
+                ElMessage.error(`提示词不存在`)
+            } else {
+                ElMessage.error('更新示例提示词失败')
+                log.error(`更新示例提示词失败: exampleId=${props.exampleId}, error=${err}`)
+            }
         }
-        prompts.value = newVal
-        updatingPrompts = false
     },
-    { immediate: true }
-)
+})
 const promptOptions = computed(() => {
     return dataStore.prompt.readonly.map((p) => {
         return {
@@ -199,36 +258,6 @@ const promptOptions = computed(() => {
         }
     })
 })
-async function changeExamplePrompt(): Promise<void> {
-    try {
-        updatingPrompts = true
-        const absentPrompts = [] as string[]
-        for (const item of prompts.value) {
-            const prompt = dataStore.prompt.readonly.find((p) => p.id === item.id)
-            if (isNil(prompt)) {
-                absentPrompts.push(item.text)
-                continue
-            }
-            if (prompt.exampleIds.some((id) => id === props.exampleId)) {
-                continue
-            }
-            await dataStore.prompt.update({
-                id: prompt.id,
-                exampleIds: [...prompt.exampleIds, props.exampleId],
-            })
-        }
-        ElMessage.success('更新示例提示词成功')
-    } catch (err) {
-        if (err === notFoundError) {
-            ElMessage.error(`提示词不存在`)
-        } else if (err === existsError) {
-            ElMessage.error(`示例已存在`)
-        } else {
-            ElMessage.error('更新示例提示词失败')
-            log.error(`更新示例提示词失败: exampleId=${props.exampleId}, error=${err}`)
-        }
-    }
-}
 async function removeExample(promptId: string, exampleId: string): Promise<void> {
     try {
         const prompt = dataStore.prompt.readonly.find((p) => p.id === promptId)
@@ -253,4 +282,9 @@ async function removeExample(promptId: string, exampleId: string): Promise<void>
     }
 }
 </script>
-<style scoped></style>
+<style scoped>
+.popper-image :deep(img) {
+    max-width: 50vw;
+    max-height: 50vh;
+}
+</style>

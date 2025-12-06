@@ -3,7 +3,7 @@ import ImageLowdbService from '../services/image'
 import { IpcChannel } from '@shared/ipc-channel'
 import { Image, UpdateImage } from '@shared/models/image'
 import ExampleLowdbService from '../services/example'
-import { getImageAsArrayBuffer, getImageDir } from '../utils'
+import { getImageAsArrayBuffer, getImageDir, UrlKind, whichUrl } from '../utils'
 import { join } from 'path'
 import fileType from 'file-type'
 import fs from 'fs/promises'
@@ -36,42 +36,48 @@ async function createImages(paths: string[]): Promise<Image[]> {
     for (const path of paths) {
         let imageFileName = ''
         let fileCreated = false
-        try {
-            const fileStat = await fs.stat(path)
-            if (fileStat.isFile()) {
-                const t = await fileType.fileTypeFromFile(path)
-                if (!isNil(t) && t.mime.startsWith('image/')) {
-                    imageFileName = `${crypto.randomUUID()}.${t.ext}`
-                    await fs.copyFile(path, join(getImageDir(), imageFileName))
-                    fileCreated = true
-                    fileNames.push(imageFileName)
+        switch (whichUrl(path)) {
+            case UrlKind.Http:
+                try {
+                    const data = await getImageAsArrayBuffer(path)
+                    const t = await fileType.fileTypeFromBuffer(data)
+                    if (t && t.mime.startsWith('image/')) {
+                        imageFileName = `${crypto.randomUUID()}.${t.ext}`
+                        await fs.writeFile(join(getImageDir(), imageFileName), Buffer.from(data))
+                        fileCreated = true
+                        fileNames.push(imageFileName)
+                    }
+                } catch (error) {
+                    log.error('Failed to add image (%s) from URL:', path, error)
+                    if (fileCreated) {
+                        // Clean up the file if it was created but not valid
+                        await fs.unlink(join(getImageDir(), imageFileName))
+                    }
                 }
-            }
-        } catch (error) {
-            if (!(error as Error).message.startsWith('ENOENT:')) {
-                log.info('Failed to add image (%s) from file: %s', path, error)
-                if (fileCreated) {
-                    // Clean up the file if it was created but not valid
-                    await fs.unlink(join(getImageDir(), imageFileName))
+                break
+            case UrlKind.File:
+                try {
+                    const fileStat = await fs.stat(path)
+                    if (fileStat.isFile()) {
+                        const t = await fileType.fileTypeFromFile(path)
+                        if (!isNil(t) && t.mime.startsWith('image/')) {
+                            imageFileName = `${crypto.randomUUID()}.${t.ext}`
+                            await fs.copyFile(path, join(getImageDir(), imageFileName))
+                            fileCreated = true
+                            fileNames.push(imageFileName)
+                        }
+                    }
+                } catch (error) {
+                    log.error('Failed to add image (%s) from file: %s', path, error)
+                    if (fileCreated) {
+                        // Clean up the file if it was created but not valid
+                        await fs.unlink(join(getImageDir(), imageFileName))
+                    }
                 }
-            }
-        }
-        try {
-            const imageUrl = new URL(path)
-            const data = await getImageAsArrayBuffer(imageUrl.toString())
-            const t = await fileType.fileTypeFromBuffer(data)
-            if (t && t.mime.startsWith('image/')) {
-                imageFileName = `${crypto.randomUUID()}.${t.ext}`
-                await fs.writeFile(join(getImageDir(), imageFileName), Buffer.from(data))
-                fileCreated = true
-                fileNames.push(imageFileName)
-            }
-        } catch (error) {
-            log.info('Failed to add image (%s) from URL:', path, error)
-            if (fileCreated) {
-                // Clean up the file if it was created but not valid
-                await fs.unlink(join(getImageDir(), imageFileName))
-            }
+                break
+            case UrlKind.Unknown:
+                log.warn('Unknown URL kind for path: %s', path)
+                continue
         }
     }
     const imageService = ImageLowdbService.getInstance()

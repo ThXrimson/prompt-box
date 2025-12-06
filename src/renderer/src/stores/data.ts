@@ -83,6 +83,19 @@ export const useDataStore = defineStore('data', () => {
             window.api.prompt.update([cloneDeep(prompts.value[index])])
             return prompts.value[index]
         },
+        async updateMany(updatePrompts: UpdatePrompt[]): Promise<Prompt[]> {
+            const toUpdate = updatePrompts.filter((up) => prompts.value.some((p) => p.id === up.id))
+            if (toUpdate.length === 0) {
+                throw notFoundError
+            }
+            for (const [index, p] of prompts.value.entries()) {
+                const up = toUpdate.find((u) => u.id === p.id)
+                if (!isNil(up)) {
+                    prompts.value[index] = { ...prompts.value[index], ...up }
+                }
+            }
+            return window.api.prompt.update(cloneDeep(toUpdate))
+        },
         async delete(id: string): Promise<boolean> {
             const target = prompts.value.find((p) => p.id === id)
             if (isNil(target)) {
@@ -109,20 +122,6 @@ export const useDataStore = defineStore('data', () => {
                         }
                     }
                     map.set(example.id, imgs)
-                }
-                return map
-            })
-        ),
-        idToPrompts: readonly(
-            computed(() => {
-                const map = new Map<string, Prompt[]>()
-                for (const prompt of prompts.value) {
-                    for (const exampleId of prompt.exampleIds) {
-                        const example = examples.value.find((e) => e.id === exampleId)
-                        if (!isNil(example)) {
-                            map.set(exampleId, [...(map.get(exampleId) ?? []), prompt])
-                        }
-                    }
                 }
                 return map
             })
@@ -161,7 +160,7 @@ export const useDataStore = defineStore('data', () => {
             window.api.example.delete([id])
             return true
         },
-        async deleteBatch(ids: string[]): Promise<boolean> {
+        async deleteMany(ids: string[]): Promise<boolean> {
             const toDelete = examples.value.filter((e) => ids.includes(e.id))
             if (toDelete.length === 0) {
                 throw notFoundError

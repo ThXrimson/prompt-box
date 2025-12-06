@@ -65,3 +65,20 @@ export function getImageAsArrayBuffer(url: string): Promise<ArrayBuffer> {
         request.end()
     })
 }
+
+export const enum UrlKind {
+    Http = 'http',
+    File = 'file',
+    Unknown = 'unknown',
+}
+export function whichUrl(url: string): UrlKind {
+    try {
+        const u = new URL(url)
+        if (u.protocol.startsWith('http')) {
+            return UrlKind.Http
+        }
+        return UrlKind.File
+    } catch {
+        return UrlKind.Unknown
+    }
+}

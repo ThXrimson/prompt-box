@@ -1,6 +1,6 @@
 <template>
     <div class="my-2 mx-2 flex-1 min-h-0 min-w-0 flex flex-col">
-        <div class="image flex flex-col flex-1 min-h-0">
+        <div class="flex flex-col flex-1 min-h-0">
             <div>
                 <el-button
                     type="success"
@@ -23,17 +23,39 @@
 
             <el-scrollbar
                 v-if="examples.length > 0"
-                class="flex flex-col gap-2 flex-1 min-h-0 border-2 border-gray-200 rounded-md px-1"
-                @end-reached="loadExamples"
+                class="flex-1 min-h-0 border-2 border-gray-200 rounded-md px-1"
+                view-class="columns-4 gap-1"
             >
-                <div
-                    v-for="example in examples.slice(0, exampleLimit)"
-                    :key="example.id"
-                    class="flex justify-between gap-2 my-1.5"
-                >
-                    <ExampleView :example-id="example.id" />
-                </div>
+                <template v-for="example in currentExamples" :key="example.id">
+                    <el-image
+                        v-if="!isNil(exampleIdToCoverUrl.get(example.id))"
+                        :src="exampleIdToCoverUrl.get(example.id)!"
+                        class="m-1 rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300"
+                        fit="contain"
+                        loading="lazy"
+                        @click="currentExampleId = example.id"
+                    />
+                    <div
+                        v-else
+                        class="m-1 h-40 flex justify-center items-center bg-gray-300 text-gray-400 rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300"
+                        @click="currentExampleId = example.id"
+                    >
+                        Empty
+                    </div>
+                </template>
             </el-scrollbar>
+            <el-pagination
+                v-model:current-page="currentPage"
+                :page-size="pageSize"
+                class="flex-0.25 min-h-0 justify-center-safe"
+                layout="prev, pager, next"
+                :total="examples.length"
+            />
+            <ExampleView
+                v-if="currentExampleId"
+                :example-id="currentExampleId"
+                class="flex-0.5 min-h-0 justify-center-safe"
+            />
         </div>
     </div>
 </template>
@@ -45,12 +67,42 @@ import { CirclePlusFilled, DeleteFilled } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import ExampleView from '@renderer/components/ExampleView.vue'
 import { createError, notFoundError } from '@renderer/stores/error'
+import { Nullish } from 'utility-types'
+import { isNil } from 'lodash'
+import { getImageUrl } from '@renderer/utils/utils'
 
 const dataStore = useDataStore()
 
 const examples = computed(() => {
     return dataStore.example.readonly.toSorted((a, b) => b.updateTime - a.updateTime)
 })
+const currentPage = ref(1)
+const pageSize = 10
+const currentExamples = computed(() => {
+    const start = (currentPage.value - 1) * pageSize
+    const end = start + pageSize
+    return examples.value.slice(start, end)
+})
+
+const exampleIdToCoverUrl = computed(() => {
+    const m = new Map<string, string | Nullish>()
+    for (const example of examples.value) {
+        if (example.imageIds.length === 0) {
+            m.set(example.id, undefined)
+            continue
+        }
+        const coverImageId = example.imageIds[0]
+        const image = dataStore.image.readonly.find((i) => i.id === coverImageId)
+        if (isNil(image)) {
+            m.set(example.id, undefined)
+            continue
+        }
+        m.set(example.id, getImageUrl(image.fileName))
+    }
+    return m
+})
+
+const currentExampleId = ref<string | Nullish>(null)
 
 async function createExample(): Promise<void> {
     try {
@@ -85,7 +137,7 @@ async function deleteEmptyExamples(): Promise<void> {
             cancelButtonText: '取消',
             type: 'warning',
         })
-        await dataStore.example.deleteBatch(emptyExamples.map((e) => e.id))
+        await dataStore.example.deleteMany(emptyExamples.map((e) => e.id))
         ElMessage.success(`已删除 ${emptyExamples.length} 个空示例`)
     } catch (error) {
         if (error === 'cancel') {
@@ -96,10 +148,5 @@ async function deleteEmptyExamples(): Promise<void> {
             ElMessage.error(`删除空示例失败：${error}`)
         }
     }
-}
-
-const exampleLimit = ref(10)
-function loadExamples(): void {
-    exampleLimit.value = Math.min(examples.value.length, exampleLimit.value + 10)
 }
 </script>
