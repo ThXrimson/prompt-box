@@ -1,11 +1,6 @@
 <template>
     <el-scrollbar class="border-2 rounded-md border-gray-200">
-        <vue-draggable
-            :model-value="tagIds"
-            :animation="50"
-            class="flex flex-col gap-1 p-2 pr-2.5"
-            @update:model-value="emit('update:tagIDs', $event)"
-        >
+        <vue-draggable v-model="tagIds" :animation="50" class="flex flex-col gap-1 p-2 pr-2.5">
             <div
                 v-for="tagId in tagIds"
                 :ref="tagIdRefs.set"
@@ -13,8 +8,8 @@
                 :tag-id="tagId"
                 class="flex flex-1 cursor-pointer rounded-md p-2 justify-between items-center-safe transition-colors"
                 :class="{
-                    'bg-teal-400 hover:bg-teal-600': selectedID !== tagId,
-                    'bg-sky-400 hover:bg-sky-600': selectedID === tagId,
+                    'bg-teal-400 hover:bg-teal-600': selectedId !== tagId,
+                    'bg-sky-400 hover:bg-sky-600': selectedId === tagId,
                 }"
                 @click="emit('select', tagId)"
             >
@@ -38,16 +33,17 @@ import { VueDraggable } from 'vue-draggable-plus'
 import { useDataStore } from '@renderer/stores/data'
 import { Close } from '@element-plus/icons-vue'
 import { useTemplateRefsList } from '@vueuse/core'
+import { UNCATEGORIZED_TAG_ID } from '@shared/models/tag'
 
 defineProps<{
-    tagIds: string[]
-    selectedID: string
+    selectedId: string
 }>()
 
+const tagIds = defineModel<string[]>('tag-ids', { required: true })
+
 const emit = defineEmits<{
-    (e: 'update:tagIDs', tagIDs: string[]): void
-    (e: 'closeTag', tagID: string): void
-    (e: 'select', tagID: string): void
+    (e: 'closeTag', tagId: string): void
+    (e: 'select', tagId: string): void
 }>()
 
 const tagIdRefs = useTemplateRefsList()
@@ -69,7 +65,10 @@ defineExpose({
 
 const dataStore = useDataStore()
 
-function getTagText(tagID: string): string {
-    return dataStore.tag.readonly.find((t) => t.id === tagID)?.text ?? 'undefined'
+function getTagText(tagId: string): string {
+    if (tagId === UNCATEGORIZED_TAG_ID) {
+        return '未分类'
+    }
+    return dataStore.tag.readonly.find((t) => t.id === tagId)?.text ?? 'undefined'
 }
 </script>

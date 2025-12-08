@@ -38,6 +38,7 @@
         "pinyin-pro": "^3.27.0",
         "tailwindcss": "^4.1.10",
         "vue-draggable-plus": "^0.6.0",
+        "vue-highlight-words": "^3.0.1",
         "vue-router": "^4.5.1"
     },
     "devDependencies": {

@@ -5,42 +5,34 @@
                 type="success"
                 :icon="CirclePlusFilled"
                 class="self-start!"
-                @click="handleAddWorkspace"
+                @click="createWorkspace(newWorkspaceName)"
             >
                 添加工作区
             </el-button>
             <el-input
-                v-model="workspaceName"
+                v-model="newWorkspaceName"
                 clearable
                 placeholder="请输入工作区名称"
                 class="h-full! [&_.el-input\_\_inner]:h-full!"
-                @keydown.prevent.enter="handleAddWorkspace"
+                @keydown.prevent.enter="createWorkspace(newWorkspaceName)"
             />
         </div>
-        <el-scrollbar class="flex-1 min-h-0" view-class="flex flex-col gap-2">
+        <el-scrollbar class="flex-1 min-h-0" view-class="flex flex-wrap gap-2">
             <div
                 v-for="workspace in workspaces"
                 :key="workspace.id"
-                class="flex justify-between items-center gap-2 p-2 border-b border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors duration-200 rounded-md"
-                @click="handleRouteToWorkspace(workspace.id)"
+                class="flex justify-between items-center gap-2 p-2 border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors duration-200 rounded-md"
+                @click="routeToWorkspace(workspace.id)"
             >
                 <div class="flex flex-col gap-2">
                     <el-text class="text-lg! font-bold! self-start!">
                         {{ workspace.name || '未命名' }}
                     </el-text>
-                    <el-text class="text-sm! italic! self-start!"> POSITIVE </el-text>
-                    <el-text class="text-gray-500! text-xs! self-start!">
-                        {{ workspace.positiveEditor }}
-                    </el-text>
-                    <el-text class="text-sm! italic! self-start!"> NEGATIVE </el-text>
-                    <el-text class="text-gray-500! text-xs! self-start!">
-                        {{ workspace.negativeEditor }}
-                    </el-text>
                 </div>
                 <el-popconfirm
                     title="确定删除此工作区吗？"
                     :hide-after="0"
-                    @confirm="handleDeleteWorkspace(workspace.id)"
+                    @confirm="deleteWorkspace(workspace.id)"
                 >
                     <template #reference>
                         <div
@@ -57,28 +49,30 @@
 </template>
 
 <script setup lang="ts">
-import { useStorage } from '@renderer/stores/data'
+import { useDataStore } from '@renderer/stores/data'
 import { computed, ref } from 'vue'
 import { Delete } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { CirclePlusFilled } from '@element-plus/icons-vue'
+import { notFoundError } from '@renderer/stores/error'
+import log from 'electron-log/renderer'
 
-const storage = useStorage()
+const dataStore = useDataStore()
 
 const router = useRouter()
 
-const workspaceName = ref('')
+const newWorkspaceName = ref('')
 
 const workspaces = computed(() =>
-    Array.from(storage.workspaces.values()).sort((a, b) => b.updateTime - a.updateTime)
+    dataStore.workspace.readonly.toSorted((a, b) => b.updateTime - a.updateTime)
 )
 
-function handleRouteToWorkspace(workspaceID: string): void {
-    router.push({ path: `/workspace/${workspaceID}` })
+function routeToWorkspace(workspaceId: string): void {
+    router.push({ path: `/workspace/${workspaceId}` })
 }
 
-async function handleAddWorkspace(): Promise<void> {
-    const newWorkspace = await storage.addWorkspace({ name: workspaceName.value })
+async function createWorkspace(name: string): Promise<void> {
+    const newWorkspace = await dataStore.workspace.create({ name })
     if (newWorkspace) {
         await router.push({ path: `/workspace/${newWorkspace.id}` })
     } else {
@@ -86,12 +80,21 @@ async function handleAddWorkspace(): Promise<void> {
     }
 }
 
-async function handleDeleteWorkspace(workspaceID: string): Promise<void> {
-    const success = await storage.deleteWorkspace(workspaceID)
-    if (success) {
-        ElMessage.success('工作区已删除')
-    } else {
-        ElMessage.error('删除工作区失败')
+async function deleteWorkspace(workspaceId: string): Promise<void> {
+    try {
+        const success = await dataStore.workspace.delete(workspaceId)
+        if (success) {
+            ElMessage.success('工作区已删除')
+        } else {
+            ElMessage.error('删除工作区失败')
+        }
+    } catch (err) {
+        if (err === notFoundError) {
+            ElMessage.error('工作区不存在')
+        } else {
+            log.error('删除工作区失败', err)
+            ElMessage.error('删除工作区失败')
+        }
     }
 }
 </script>

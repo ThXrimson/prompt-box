@@ -1,14 +1,14 @@
 <template>
     <el-scrollbar class="flex flex-col gap-2 flex-1 min-h-0 pr-3">
         <div>
+            <el-rate v-model="promptRate" />
+        </div>
+        <div>
             <el-text class="edit-header">提示词</el-text>
-            <el-button
-                :icon="CopyDocument"
-                link
-                @click="copyPromptText(promptText, promptIsLora)"
-            />
-            <el-switch
-                v-model="promptIsLora"
+            <el-button :icon="CopyDocument" link @click="copyPromptText(promptText, promptKind)" />
+            <el-segmented
+                v-model="promptKind"
+                :options="promptKindOptions"
                 size="small"
                 inline-prompt
                 active-text="LORA"
@@ -101,11 +101,11 @@
         <div class="image flex flex-col flex-1 min-h-0">
             <el-text class="edit-header self-start!">示例</el-text>
             <div class="flex-1 min-h-0 flex flex-col">
-                <div>
+                <div class="flex flex-wrap gap-2 mb-2">
                     <el-button
                         type="success"
                         :icon="CirclePlusFilled"
-                        class="mb-2 self-start!"
+                        class="ml-0! self-start!"
                         @click="createAddExample"
                     >
                         添加示例
@@ -113,7 +113,7 @@
                     <el-button
                         type="success"
                         :icon="CirclePlusFilled"
-                        class="mb-2 self-start!"
+                        class="ml-0! self-start!"
                         @click="handleOpenAddExampleFromExistingDialog"
                     >
                         从已有示例添加
@@ -121,7 +121,7 @@
                     <el-button
                         type="success"
                         :icon="CirclePlusFilled"
-                        class="mb-2 self-start!"
+                        class="ml-0! self-start!"
                         @click="openCreateImageDialog"
                     >
                         添加示例图片
@@ -209,6 +209,7 @@ import ExampleView from './ExampleView.vue'
 import { getImageUrl, isValidUrl } from '@renderer/utils/utils'
 import { Language } from '@vicons/ionicons5'
 import { ElMessageBox } from 'element-plus'
+import { PromptKind } from '@shared/models/prompt'
 
 const props = defineProps<{
     promptId: string
@@ -226,23 +227,37 @@ const prompt = computed(() => {
 const dataStore = useDataStore()
 
 // 编辑 Prompt 相关数据
-function copyPromptText(text: string, isLora: boolean): void {
-    if (isLora) {
+function copyPromptText(text: string, kind: PromptKind): void {
+    if (kind === PromptKind.Lora) {
         text = `<lora:${text}>`
     }
     copyText(text)
 }
-const promptIsLora = computed({
+const promptKind = computed({
     get() {
-        return prompt.value?.isLora ?? false
+        return prompt.value?.kind ?? PromptKind.Normal
     },
-    set(newVal: boolean) {
+    set(newVal: PromptKind) {
         dataStore.prompt.update({
             id: props.promptId,
-            isLora: newVal,
+            kind: newVal,
         })
     },
 })
+const promptKindOptions = [
+    {
+        label: '普通',
+        value: PromptKind.Normal,
+    },
+    {
+        label: 'LORA',
+        value: PromptKind.Lora,
+    },
+    {
+        label: '特殊',
+        value: PromptKind.Special,
+    },
+]
 const promptText = computed({
     get() {
         return prompt.value?.text ?? ''
@@ -376,6 +391,17 @@ const exampleCandidateCoverUrls = computed(() => {
         }
     }
     return m
+})
+const promptRate = computed({
+    get() {
+        return prompt.value?.rate ?? 0
+    },
+    set(newVal: number) {
+        dataStore.prompt.update({
+            id: props.promptId,
+            rate: newVal,
+        })
+    },
 })
 
 //#region 更改 Prompt 内容

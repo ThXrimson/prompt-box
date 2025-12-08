@@ -2,7 +2,7 @@
     <div v-if="false" class="flex justify-start h-full w-full gap-1">
         <el-menu :default-active="activeMenu" collapse @select="handleMenuSelect">
             <el-menu-item index="/prompt-collection">
-                <el-icon><prompt-icon /></el-icon>
+                <el-icon><Language /></el-icon>
                 <template #title> 提示词库 </template>
             </el-menu-item>
             <el-menu-item index="/workspaces">
@@ -19,17 +19,17 @@
         </div>
     </div>
     <div class="flex justify-start h-full w-full gap-1">
-        <PromptCollection />
+        <Workspace workspace-id="96616511-90e0-4f59-beef-9b6dd7926639" />
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { Document as DocumentIcon } from '@element-plus/icons-vue'
-import PromptIcon from '@renderer/icons/Prompt.vue'
 import WorkspaceIcon from '@renderer/icons/Workspace.vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
-import PromptCollection from './views/PromptCollection.vue'
+import Workspace from './views/Workspace.vue'
+import { Language } from '@vicons/ionicons5'
 
 const route = useRoute()
 

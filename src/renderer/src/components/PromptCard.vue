@@ -1,102 +1,75 @@
 <template>
-    <div>
-        <el-tooltip
-            placement="bottom-start"
-            trigger="hover"
-            :show-after="0"
-            :hide-after="0"
-            :disabled="!Boolean(promptImageFileName)"
-            :enterable="false"
+    <div @contextmenu="openImage">
+        <Teleport to="body">
+            <el-image
+                v-if="!isNil(promptImageFileName)"
+                ref="image"
+                :src="getImageUrl(promptImageFileName)"
+                :preview-src-list="[getImageUrl(promptImageFileName)]"
+                hide-on-click-modal
+                loading="lazy"
+                class="[&_.el-image\_\_preview]:hidden"
+            />
+        </Teleport>
+        <div
+            ref="card"
+            class="max-w-100 flex gap-1 justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300"
+            :class="{
+                'bg-orange-400 hover:bg-orange-500': selected,
+                'bg-teal-400 hover:bg-teal-500': !selected,
+            }"
         >
             <div
-                ref="card"
-                class="max-w-100 flex gap-1 justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300"
-                :class="{
-                    'bg-orange-400 hover:bg-orange-500': selected,
-                    'bg-teal-400 hover:bg-teal-500': !selected,
-                }"
+                class="flex flex-col gap-0.5 cursor-pointer items-start flex-1 min-w-0"
+                @click="emit('select', prompt.id)"
             >
-                <div
-                    class="flex flex-col gap-0.5 cursor-pointer items-start flex-1 min-w-0"
-                    @click="handleCopyPrompt(prompt.text)"
-                >
-                    <el-text truncated class="text-white! font-bold self-auto!">
-                        {{ prompt.text }}
-                    </el-text>
-                    <el-text truncated class="text-teal-100! font-light text-xs! self-auto!">
-                        {{ prompt.translation === '' ? prompt.text : prompt.translation }}
-                    </el-text>
-                </div>
-                <div class="flex items-center gap-1">
-                    <el-tooltip content="添加到编辑栏" placement="top" :hide-after="0">
-                        <el-icon
-                            class="text-white! hover:text-gray-700! cursor-pointer"
-                            @click="emit('add-to-workspace', prompt.text)"
-                        >
-                            <CirclePlus />
-                        </el-icon>
-                    </el-tooltip>
-                    <el-tooltip content="编辑" placement="top" :hide-after="0">
-                        <el-icon
-                            class="text-white! hover:text-gray-700! cursor-pointer"
-                            @click="isPromptEditorVisible = true"
-                        >
-                            <Edit />
-                        </el-icon>
-                    </el-tooltip>
-                    <el-popconfirm
-                        title="确定从标签中移除提示词？"
-                        :hide-after="0"
-                        @confirm="emit('remove', prompt.id)"
-                    >
-                        <template #reference>
-                            <el-icon class="text-white! hover:text-gray-700! cursor-pointer">
-                                <Delete />
-                            </el-icon>
-                        </template>
-                    </el-popconfirm>
-                </div>
+                <el-text truncated class="text-white! font-bold self-auto!">
+                    {{ prompt.text }}
+                </el-text>
+                <el-text truncated class="text-teal-100! font-light text-xs! self-auto!">
+                    {{ prompt.translation === '' ? prompt.text : prompt.translation }}
+                </el-text>
             </div>
-            <template #content>
-                <div v-if="promptImageFileName">
-                    <el-image
-                        :src="getImageUrl(promptImageFileName)"
-                        class="w-60 object-cover rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300 self-center-safe"
-                        fit="scale-down"
-                        loading="lazy"
-                    />
-                </div>
-            </template>
-        </el-tooltip>
-
-        <!--编辑提示词对话框-->
-        <el-dialog
-            v-model="isPromptEditorVisible"
-            title="编辑提示词"
-            append-to-body
-            class="h-[90vh] mt-[5vh]! mb-0! flex flex-col"
-            body-class="flex-1 min-h-0 border-1 rounded-md border-neutral-200 p-2"
-            @keyup.esc.stop.prevent="isPromptEditorVisible = false"
-        >
-            <el-scrollbar>
-                <PromptDetail :prompt-id="prompt.id" />
-            </el-scrollbar>
-            <template #footer>
-                <el-button type="danger" class="w-full" @click="deletePrompt(prompt.id)">
-                    删除
-                </el-button>
-            </template>
-        </el-dialog>
+            <div class="flex items-center gap-1">
+                <el-tooltip content="添加到编辑栏" placement="top" :hide-after="0">
+                    <el-icon
+                        class="text-white! hover:text-gray-700! cursor-pointer"
+                        @click="emit('addToWorkspace', cloneDeep(prompt) as Prompt)"
+                    >
+                        <AddCircleOutline />
+                    </el-icon>
+                </el-tooltip>
+                <el-tooltip content="复制到剪贴板" placement="top" :hide-after="0">
+                    <el-icon
+                        class="text-white! hover:text-gray-700! cursor-pointer"
+                        @click="copyText(prompt.text)"
+                    >
+                        <CopyOutline />
+                    </el-icon>
+                </el-tooltip>
+                <el-popconfirm
+                    v-if="prompt.tagIds.length > 0"
+                    title="确定从标签中移除提示词？"
+                    :hide-after="0"
+                    @confirm="emit('remove', prompt.id)"
+                >
+                    <template #reference>
+                        <el-icon class="text-white! hover:text-gray-700! cursor-pointer">
+                            <RemoveCircleOutline />
+                        </el-icon>
+                    </template>
+                </el-popconfirm>
+            </div>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { getImageUrl } from '@renderer/utils/utils'
-import { CirclePlus, Delete, Edit } from '@element-plus/icons-vue'
 import type { Prompt } from '@shared/models/prompt'
-import { DeepReadonly, ref, useTemplateRef } from 'vue'
-import { useDataStore } from '@renderer/stores/data'
-import { ElMessageBox } from 'element-plus'
+import { DeepReadonly, useTemplateRef } from 'vue'
+import { AddCircleOutline, CopyOutline, RemoveCircleOutline } from '@vicons/ionicons5'
+import { cloneDeep, isNil } from 'lodash'
 
 const props = defineProps<{
     prompt: DeepReadonly<Prompt>
@@ -105,8 +78,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-    (e: 'add-to-workspace', promptText: string): void
-    (e: 'remove', promptID: string): void
+    addToWorkspace: [prompt: Prompt]
+    remove: [promptId: string]
+    select: [promptId: string]
 }>()
 
 const cardRef = useTemplateRef('card')
@@ -120,11 +94,7 @@ defineExpose({
     promptText: props.prompt.text,
 })
 
-const dataStore = useDataStore()
-
-const isPromptEditorVisible = ref(false)
-
-function handleCopyPrompt(text: string): void {
+function copyText(text: string): void {
     window.api.other.copyToClipboard(text).then((res) => {
         if (res) {
             ElMessage.success('已复制到剪贴板')
@@ -134,24 +104,10 @@ function handleCopyPrompt(text: string): void {
     })
 }
 
-async function deletePrompt(id: string): Promise<void> {
-    try {
-        await ElMessageBox.confirm('确定删除此提示词？', '删除提示词', {
-            confirmButtonText: '删除',
-            cancelButtonText: '取消',
-            type: 'warning',
-        })
-        const res = await dataStore.prompt.delete(id)
-        if (res) {
-            ElMessage.success('成功删除提示词')
-            isPromptEditorVisible.value = false
-        } else {
-            ElMessage.error('删除提示词失败')
-        }
-    } catch (error) {
-        if (error !== 'cancel') {
-            ElMessage.error('删除提示词失败')
-        }
+const imageRef = useTemplateRef('image')
+function openImage(): void {
+    if (!isNil(props.promptImageFileName)) {
+        imageRef.value?.showPreview()
     }
 }
 </script>

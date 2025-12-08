@@ -2,7 +2,7 @@ import { join } from 'path'
 import { getDataDir } from '../utils'
 import { PromptService } from './interfaces/prompt'
 import { JSONFilePreset } from 'lowdb/node'
-import { NewPrompt, Prompt, UpdatePrompt } from '@shared/models/prompt'
+import { NewPrompt, Prompt, PromptKind, UpdatePrompt } from '@shared/models/prompt'
 import { isNil } from 'lodash'
 import fs from 'fs/promises'
 import path from 'path'
@@ -44,10 +44,11 @@ export default class PromptLowdbService implements PromptService {
                 translation: prompt.translation || '',
                 description: prompt.description || '',
                 source: prompt.source || '',
-                isLora: prompt.isLora || false,
+                kind: prompt.kind || PromptKind.Normal,
                 relatedTexts: prompt.relatedTexts || [],
                 tagIds: prompt.tagIds || [],
                 exampleIds: prompt.exampleIds || [],
+                rate: prompt.rate || 0,
                 createTime: Date.now(),
                 updateTime: Date.now(),
             }

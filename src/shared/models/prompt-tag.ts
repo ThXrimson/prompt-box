@@ -1,5 +1,5 @@
 import { isNil } from 'lodash'
-import { Nullish } from 'utility-types'
+import { DeepReadonly, Nullish } from 'utility-types'
 
 export const EOL = '\n'
 export const enum Bracket {
@@ -87,6 +87,13 @@ export interface EolPromptTag {
     disabled: boolean
     kind: PromptTagKind.Eol
 }
+export function newEolPromptTag(): EolPromptTag {
+    return {
+        id: crypto.randomUUID(),
+        disabled: false,
+        kind: PromptTagKind.Eol,
+    }
+}
 export interface GroupPromptTag {
     id: string
     text: string
@@ -102,23 +109,23 @@ export interface LoraPromptTag {
     kind: PromptTagKind.Lora
 }
 
-export function isMonoPromptTag(tag: PromptTag): tag is MonoPromptTag {
+export function isMonoPromptTag(tag: DeepReadonly<PromptTag>): tag is MonoPromptTag {
     return tag.kind === PromptTagKind.Mono
 }
-export function isGroupPromptTag(tag: PromptTag): tag is GroupPromptTag {
+export function isGroupPromptTag(tag: DeepReadonly<PromptTag>): tag is GroupPromptTag {
     return tag.kind === PromptTagKind.Group
 }
-export function isLoraPromptTag(tag: PromptTag): tag is LoraPromptTag {
+export function isLoraPromptTag(tag: DeepReadonly<PromptTag>): tag is LoraPromptTag {
     return tag.kind === PromptTagKind.Lora
 }
 export function isLoraString(s: string): boolean {
     s = s.trim()
     return s.startsWith('<lora:') && s.endsWith('>')
 }
-export function isSpecialPromptTag(tag: PromptTag): tag is SpecialPromptTag {
+export function isSpecialPromptTag(tag: DeepReadonly<PromptTag>): tag is SpecialPromptTag {
     return tag.kind === PromptTagKind.Special
 }
-export function isEolPromptTag(tag: PromptTag): tag is EolPromptTag {
+export function isEolPromptTag(tag: DeepReadonly<PromptTag>): tag is EolPromptTag {
     return tag.kind === PromptTagKind.Eol
 }
 
@@ -152,24 +159,26 @@ export function promptTagToString(
         if (!includeWeight) {
             weightStr = ''
         }
-        return `<${tag.text}${weightStr}>`
+        return `<lora:${tag.text}${weightStr}>`
     } else if (isEolPromptTag(tag)) {
         return '\n'
+    } else if (isSpecialPromptTag(tag)) {
+        return tag.text
     } else {
         throw new Error('Unknown prompt tag kind')
     }
 }
 export function editorToString(
     editor: PromptTag[],
-    filterDisabled: boolean = true,
-    filterLora: boolean = false
+    removeDisabled: boolean = true,
+    removeLora: boolean = false
 ): string {
     const segments = [] as string[]
     for (const tag of editor) {
-        if (tag.disabled && filterDisabled) {
+        if (tag.disabled && removeDisabled) {
             continue
         }
-        if (filterLora && isLoraPromptTag(tag)) {
+        if (removeLora && isLoraPromptTag(tag)) {
             continue
         }
         if (isSpecialPromptTag(tag)) {
@@ -186,9 +195,12 @@ export function editorToString(
             segments.push(', ')
         }
     }
+    if (segments.length > 0 && segments[segments.length - 1] === ', ') {
+        segments.pop()
+    }
     return segments.join('')
 }
-export function stringToMonoPromptTag(str: string): MonoPromptTag | Nullish {
+export function stringToMonoPromptTag(str: string): MonoPromptTag {
     str = str.trim()
     // 获取包裹的括号
     const brackets = [] as Bracket[]
@@ -242,6 +254,14 @@ export function stringToLoraPromptTag(str: string): LoraPromptTag | Nullish {
         kind: PromptTagKind.Lora,
     }
 }
+export function stringToSpecialPromptTag(str: string): SpecialPromptTag {
+    return {
+        id: crypto.randomUUID(),
+        text: str,
+        disabled: false,
+        kind: PromptTagKind.Special,
+    }
+}
 export function stringToEditor(str: string, specialWords: string[] = []): PromptTag[] {
     str = str.trim()
     const segments = [] as string[]
@@ -270,6 +290,9 @@ export function stringToEditor(str: string, specialWords: string[] = []): Prompt
     }
     const tags = [] as PromptTag[]
     for (const segment of segments) {
+        if (segment.length <= 0) {
+            continue
+        }
         if (specialWords.includes(segment)) {
             tags.push({
                 id: crypto.randomUUID(),

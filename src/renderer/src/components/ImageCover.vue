@@ -2,6 +2,8 @@
     <el-image
         v-if="!isNil(src)"
         :src="src"
+        :preview-src-list="[src]"
+        hide-on-click-modal
         class="w-40 h-40 object-cover rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300"
         fit="cover"
         loading="lazy"

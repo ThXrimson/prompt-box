@@ -1,25 +1,6 @@
 <template>
     <div class="flex gap-2">
-        <el-tooltip
-            placement="right-end"
-            :fallback-placements="['left']"
-            :show-after="500"
-            :hide-after="0"
-            :disabled="hoverDisabled || isNil(coverUrl)"
-            :show-arrow="false"
-        >
-            <ImageCover :src="coverUrl" @click="showGalleryDialog = true" />
-            <template #content>
-                <el-image
-                    :src="coverUrl"
-                    lazy
-                    fit="contain"
-                    class="popper-image"
-                    @show="hoverDisabled = false"
-                    @error="hoverDisabled = true"
-                />
-            </template>
-        </el-tooltip>
+        <ImageCover :src="coverUrl" @contextmenu="showGalleryDialog = true" />
         <div class="flex-1 min-w-0 flex flex-col gap-1">
             <div class="flex flex-col gap-1 flex-1 min-h-0">
                 <div class="flex justify-between gap-1">
@@ -157,7 +138,6 @@ const currentTabText = computed({
 })
 
 const showGalleryDialog = ref(false)
-const hoverDisabled = ref(false)
 const coverUrl = computed(() => {
     if (example.value?.imageIds.length === 0) {
         return undefined
