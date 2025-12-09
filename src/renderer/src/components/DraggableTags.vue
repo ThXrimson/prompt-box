@@ -436,7 +436,16 @@ function clearPromptTagBrackets(promptTag: PromptTag): void {
     nextTick(() => debouncedCommit())
 }
 async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
-    const translation = await window.api.other.translateByDeepLX(promptTag.text)
+    let translation = ''
+    if (isLoraPromptTag(promptTag) || isMonoPromptTag(promptTag)) {
+        const prompt = dataStore.prompt.readonly.find((p) => p.text === promptTag.text)
+        if (!isNil(prompt)) {
+            translation = prompt.translation
+        }
+    }
+    if (translation.length <= 0) {
+        translation = await window.api.other.translateByDeepLX(promptTag.text)
+    }
     const editorClone = clone(editor.value)
     outer: for (const [index, tag] of editorClone.entries()) {
         if (tag.id === promptTag.id && isMonoPromptTag(tag)) {
@@ -468,6 +477,8 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
         class="flex flex-wrap p-2"
         easing="ease-in-out"
         handle=".drag-handle"
+        drag-class="opacity-0"
+        ghost-class="ghost-class"
         @update="nextTick(() => debouncedCommit())"
     >
         <div v-for="item in flatEditor" :key="item.promptTag.id + item.kind">
@@ -475,6 +486,8 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
                 trigger="hover"
                 size="small"
                 placement="top"
+                :show-timeout="0"
+                :hide-timeout="50"
                 :hide-on-click="false"
                 class="mx-0.5"
                 :disabled="isEolPromptTag(item.promptTag) || isSpecialPromptTag(item.promptTag)"
@@ -484,7 +497,7 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
                     effect="dark"
                     size="small"
                     disable-transitions
-                    class="cursor-pointer border! border-transparent hover:border-blue-500! transition-all duration-200"
+                    class="cursor-pointer"
                     :class="{
                         'line-through': item.promptTag.disabled,
                         'font-bold': true,
@@ -624,6 +637,7 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
                     ref="promptTagInput"
                     v-model="editingPromptTagInput"
                     placeholder="编辑提示词"
+                    autocorrect="off"
                     @keyup.enter="confirmEditPrompt"
                 />
             </div>
@@ -643,7 +657,12 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
         flex: 1;
         justify-content: center;
         height: 1.5rem;
-        border: #eee 1px solid;
+        border: 1px solid #eee;
+    }
+}
+.ghost-class {
+    & :deep(.el-tag) {
+        box-shadow: 0px 0px 8px 0px #666;
     }
 }
 </style>

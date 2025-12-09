@@ -1,7 +1,7 @@
-appId: com.thxrimson.prompt_box
+appId: com.thxrimson.prompt-box
 productName: Prompt Box
 directories:
-    buildResources: build
+    buildResources: build/icons
 files:
     - '!**/.vscode/*'
     - '!src/*'

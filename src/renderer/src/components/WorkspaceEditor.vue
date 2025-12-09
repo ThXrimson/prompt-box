@@ -153,6 +153,7 @@
                     v-model="searchText"
                     placeholder="搜索或添加"
                     clearable
+                    autocorrect="off"
                     @keyup.enter="createPromptTag(searchText)"
                 >
                     <template #prefix>
@@ -187,7 +188,7 @@ import { CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
 import { computed, onMounted, ref, useTemplateRef } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
 import EnterIcon from '@renderer/icons/Enter.vue'
-import { AutocompleteFetchSuggestionsCallback, ElInput, ElMessage } from 'element-plus'
+import { ElInput, ElMessage } from 'element-plus'
 import { clone, isNil } from 'lodash'
 import {
     editorToString,
@@ -208,13 +209,11 @@ import {
     ArrowUndoOutline,
     ArrowRedoOutline,
 } from '@vicons/ionicons5'
-import { matchTextPlus } from '@renderer/utils/pinyin-includes'
 
 const props = defineProps<{
     workspaceId: string
 }>()
 // TODO 处理 workspaceId 不合法的情况
-// TODO 搜索框搜索候选
 
 const emit = defineEmits<{
     selectPrompt: [promptId: string]

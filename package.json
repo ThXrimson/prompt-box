@@ -1,6 +1,6 @@
 {
     "name": "prompt-box",
-    "version": "1.0.2",
+    "version": "2.0.0",
     "description": "Prompt Box",
     "main": "./out/main/index.js",
     "author": "ThXrimson",
@@ -20,14 +20,13 @@
         "build:win": "yarn run build && electron-builder --win",
         "build:mac": "yarn run build && electron-builder --mac",
         "build:linux": "yarn run build && electron-builder --linux",
-        "electron:generate-icons": "electron-icon-builder --input=./resources/icon.png --output=build --flatten"
+        "icon-build": "electron-icon-builder --input=resources/icon.png --output=build"
     },
     "dependencies": {
         "@electron-toolkit/preload": "^3.0.1",
         "@electron-toolkit/utils": "^4.0.0",
         "@tailwindcss/vite": "^4.1.10",
         "@vueuse/core": "^13.4.0",
-        "@vueuse/integrations": "^13.4.0",
         "dayjs": "^1.11.13",
         "decimal.js": "^10.6.0",
         "electron-log": "^5.4.1",

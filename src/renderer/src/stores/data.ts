@@ -40,16 +40,16 @@ export const useDataStore = defineStore('data', () => {
     window.api.other.sendDataStoreReady()
 
     // TODO 测试关闭 定时持久化数据
-    // setInterval(
-    //     () => {
-    //         window.api.prompt.update(prompts.value)
-    //         window.api.example.update(examples.value)
-    //         window.api.tag.update(tags.value)
-    //         window.api.workspace.update(workspaces.value)
-    //         window.api.image.update(images.value)
-    //     },
-    //     2 * 60 * 1000
-    // )
+    setInterval(
+        () => {
+            window.api.prompt.update(prompts.value)
+            window.api.example.update(examples.value)
+            window.api.tag.update(tags.value)
+            window.api.workspace.update(workspaces.value)
+            window.api.image.update(images.value)
+        },
+        2 * 60 * 1000
+    )
 
     const promptView = {
         ref: prompts,

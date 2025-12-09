@@ -13,12 +13,23 @@
         </Teleport>
         <div
             ref="card"
-            class="max-w-100 flex gap-1 justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300"
+            class="max-w-100 flex gap-1 justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300 relative"
             :class="{
                 'bg-orange-400 hover:bg-orange-500': selected,
                 'bg-teal-400 hover:bg-teal-500': !selected,
             }"
         >
+            <div class="absolute! top-[1px] right-[2px] flex gap-1 text-teal-800!">
+                <span
+                    v-if="props.prompt.kind === PromptKind.Lora"
+                    class="text-[9px] italic leading-[1.2]"
+                >
+                    LORA
+                </span>
+                <el-icon v-if="!isNil(props.promptImageFileName)" size="small">
+                    <ImageOutline />
+                </el-icon>
+            </div>
             <div
                 class="flex flex-col gap-0.5 cursor-pointer items-start flex-1 min-w-0"
                 @click="emit('select', prompt.id)"
@@ -66,10 +77,11 @@
 
 <script setup lang="ts">
 import { getImageUrl } from '@renderer/utils/utils'
-import type { Prompt } from '@shared/models/prompt'
+import { PromptKind, type Prompt } from '@shared/models/prompt'
 import { DeepReadonly, useTemplateRef } from 'vue'
 import { AddCircleOutline, CopyOutline, RemoveCircleOutline } from '@vicons/ionicons5'
 import { cloneDeep, isNil } from 'lodash'
+import { ImageOutline } from '@vicons/ionicons5'
 
 const props = defineProps<{
     prompt: DeepReadonly<Prompt>
