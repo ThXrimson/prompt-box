@@ -31,6 +31,7 @@
                 >
                     <div class="h-full">
                         <DraggableTags
+                            ref="draggableTagsRef"
                             v-model="currentEditor"
                             :search-text="searchText"
                             @select-prompt="(promptId: string) => emit('selectPrompt', promptId)"
@@ -60,6 +61,32 @@
                         :hide-after="0"
                     >
                         <el-button :icon="Star" class="m-0!" />
+                    </el-tooltip>
+                    <el-tooltip
+                        content="撤回"
+                        :enterable="false"
+                        placement="top-end"
+                        :hide-after="0"
+                    >
+                        <el-button
+                            :icon="ArrowUndoOutline"
+                            class="m-0!"
+                            :disabled="!draggableTagsRef?.canUndo"
+                            @click="draggableTagsRef?.undo()"
+                        />
+                    </el-tooltip>
+                    <el-tooltip
+                        content="重做"
+                        :enterable="false"
+                        placement="top-end"
+                        :hide-after="0"
+                    >
+                        <el-button
+                            :icon="ArrowRedoOutline"
+                            class="m-0!"
+                            :disabled="!draggableTagsRef?.canRedo"
+                            @click="draggableTagsRef?.redo()"
+                        />
                     </el-tooltip>
                     <el-tooltip
                         :content="!editMode ? '编辑模式' : '显示模式'"
@@ -160,7 +187,7 @@ import { CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
 import { computed, onMounted, ref, useTemplateRef } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
 import EnterIcon from '@renderer/icons/Enter.vue'
-import { ElInput, ElMessage } from 'element-plus'
+import { AutocompleteFetchSuggestionsCallback, ElInput, ElMessage } from 'element-plus'
 import { clone, isNil } from 'lodash'
 import {
     editorToString,
@@ -174,19 +201,28 @@ import {
 } from '@shared/models/prompt-tag'
 import { Prompt, PromptKind } from '@shared/models/prompt'
 import DraggableTags from '@renderer/components/DraggableTags.vue'
-import { Information, CaretUp, CaretDown } from '@vicons/ionicons5'
+import {
+    Information,
+    CaretUp,
+    CaretDown,
+    ArrowUndoOutline,
+    ArrowRedoOutline,
+} from '@vicons/ionicons5'
+import { matchTextPlus } from '@renderer/utils/pinyin-includes'
 
 const props = defineProps<{
     workspaceId: string
 }>()
 // TODO 处理 workspaceId 不合法的情况
-// TODO 添加提示
+// TODO 搜索框搜索候选
 
 const emit = defineEmits<{
     selectPrompt: [promptId: string]
 }>()
 
 const dataStore = useDataStore()
+
+const draggableTagsRef = useTemplateRef('draggableTagsRef')
 
 // 切换正向、负向编辑器
 const isPositiveEditor = ref(true)
@@ -313,6 +349,7 @@ defineExpose({
             currentEditor.value = editorClone
         } else {
             const tag = stringToMonoPromptTag(prompt.text)
+            tag.translation = prompt.translation
             const editorClone = clone(currentEditor.value)
             editorClone.push(tag)
             currentEditor.value = editorClone
@@ -372,10 +409,5 @@ async function copySearchText(): Promise<void> {
     } else {
         ElMessage.warning('复制失败，请重试')
     }
-}
-
-async function translate(text: string): Promise<string> {
-    const translation = await window.api.other.translateByDeepLX(text)
-    return translation
 }
 </script>

@@ -1,25 +1,22 @@
 <template>
-    <div v-if="false" class="flex justify-start h-full w-full gap-1">
+    <div class="flex justify-start h-full w-full gap-1">
         <el-menu :default-active="activeMenu" collapse @select="handleMenuSelect">
             <el-menu-item index="/prompt-collection">
                 <el-icon><Language /></el-icon>
                 <template #title> 提示词库 </template>
             </el-menu-item>
             <el-menu-item index="/workspaces">
-                <el-icon><workspace-icon /></el-icon>
+                <el-icon><WorkspaceIcon /></el-icon>
                 <template #title> 工作区 </template>
             </el-menu-item>
             <el-menu-item index="/examples">
-                <el-icon><document-icon /></el-icon>
+                <el-icon><DocumentIcon /></el-icon>
                 <template #title> 示例 </template>
             </el-menu-item>
         </el-menu>
         <div class="flex flex-col flex-1 min-w-0 self-stretch my-1 mr-1">
             <router-view />
         </div>
-    </div>
-    <div class="flex justify-start h-full w-full gap-1">
-        <Workspace workspace-id="96616511-90e0-4f59-beef-9b6dd7926639" />
     </div>
 </template>
 
@@ -28,7 +25,6 @@ import { ref, watch } from 'vue'
 import { Document as DocumentIcon } from '@element-plus/icons-vue'
 import WorkspaceIcon from '@renderer/icons/Workspace.vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
-import Workspace from './views/Workspace.vue'
 import { Language } from '@vicons/ionicons5'
 
 const route = useRoute()

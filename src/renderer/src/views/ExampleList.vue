@@ -44,13 +44,25 @@
                     </div>
                 </template>
             </el-scrollbar>
-            <el-pagination
-                v-model:current-page="currentPage"
-                :page-size="pageSize"
-                class="flex-0.25 min-h-0 justify-center-safe"
-                layout="prev, pager, next"
-                :total="examples.length"
-            />
+            <div class="flex justify-center-safe items-center-safe">
+                <el-tooltip content="左键封面打开预览；右键封面打开画廊" placement="top">
+                    <el-button circle :icon="Information" size="small" />
+                </el-tooltip>
+                <el-button
+                    :disabled="isNil(currentExampleId) && isNil(lastExampleId)"
+                    circle
+                    :icon="isNil(currentExampleId) ? CaretUp : CaretDown"
+                    size="small"
+                    @click="switchExamplePanel"
+                />
+                <el-pagination
+                    v-model:current-page="currentPage"
+                    :page-size="pageSize"
+                    class="flex-0.25 min-h-0 justify-center-safe"
+                    layout="prev, pager, next"
+                    :total="examples.length"
+                />
+            </div>
             <ExampleView
                 v-if="currentExampleId"
                 :example-id="currentExampleId"
@@ -70,6 +82,7 @@ import { createError, notFoundError } from '@renderer/stores/error'
 import { Nullish } from 'utility-types'
 import { isNil } from 'lodash'
 import { getImageUrl } from '@renderer/utils/utils'
+import { CaretUp, CaretDown, Information } from '@vicons/ionicons5'
 
 const dataStore = useDataStore()
 
@@ -102,7 +115,17 @@ const exampleIdToCoverUrl = computed(() => {
     return m
 })
 
+let lastExampleId = ref<string | Nullish>(null)
 const currentExampleId = ref<string | Nullish>(null)
+function switchExamplePanel(): void {
+    if (isNil(currentExampleId.value)) {
+        currentExampleId.value = lastExampleId.value
+        lastExampleId.value = null
+    } else {
+        lastExampleId.value = currentExampleId.value
+        currentExampleId.value = null
+    }
+}
 
 async function createExample(): Promise<void> {
     try {

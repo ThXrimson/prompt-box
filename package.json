@@ -29,6 +29,7 @@
         "@vueuse/core": "^13.4.0",
         "@vueuse/integrations": "^13.4.0",
         "dayjs": "^1.11.13",
+        "decimal.js": "^10.6.0",
         "electron-log": "^5.4.1",
         "element-plus": "2.11.3",
         "file-type": "^21.0.0",

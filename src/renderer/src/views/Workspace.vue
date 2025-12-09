@@ -118,7 +118,7 @@
                 :tag="selectedTag"
                 :used-prompt-ids="usedPromptIds"
                 class="flex-1 min-w-0"
-                @add-to-workspace="editor?.addPromptTag($event)"
+                @add-to-workspace="(prompt) => editor?.addPromptTag(prompt)"
             />
         </div>
         <!-- 工作区编辑器 -->

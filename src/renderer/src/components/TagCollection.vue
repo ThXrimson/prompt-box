@@ -7,6 +7,9 @@
         <div class="h-full flex-2 flex flex-col [&>*]:mr-2 gap-1.5">
             <div class="header flex justify-between gap-0.5">
                 <el-text class="font-bold">{{ tag.text }}</el-text>
+                <el-tooltip placement="left" content="左键打开示例；右键打开图片">
+                    <el-button circle size="small" :icon="Information" />
+                </el-tooltip>
             </div>
 
             <div class="add-prompt-wrapper">
@@ -68,7 +71,7 @@ import { useTemplateRefsList } from '@vueuse/core'
 import { Prompt } from '@shared/models/prompt'
 import { isNil } from 'lodash'
 import { Nullish } from 'utility-types'
-import { CaretForward } from '@vicons/ionicons5'
+import { CaretForward, Information } from '@vicons/ionicons5'
 
 const props = withDefaults(
     defineProps<{

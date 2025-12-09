@@ -10,6 +10,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     ConfirmInput: typeof import('./src/components/ConfirmInput.vue')['default']
     DraggableTags: typeof import('./src/components/DraggableTags.vue')['default']
+    ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElDialog: typeof import('element-plus/es')['ElDialog']

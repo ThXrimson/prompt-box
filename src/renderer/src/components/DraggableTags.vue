@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import {
+    addBrackets,
+    addWeight,
+    Bracket,
+    clearBrackets,
+    clearWeight,
     GroupPromptTag,
     isEolPromptTag,
     isGroupPromptTag,
@@ -14,10 +19,11 @@ import {
     promptTagToString,
     stringToLoraPromptTag,
     stringToMonoPromptTag,
+    SubTagPromptTag,
 } from '@shared/models/prompt-tag'
-import { clone, isNil } from 'lodash'
+import { clone, cloneDeep, debounce, isNil } from 'lodash'
 import { Nullish } from 'utility-types'
-import { computed, ref, useTemplateRef } from 'vue'
+import { computed, nextTick, ref, useTemplateRef } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
 import { ElInput } from 'element-plus'
 import { useHandleClickGesture } from '@renderer/hooks/useHandleClickGesture'
@@ -26,7 +32,9 @@ import { PromptKind } from '@shared/models/prompt'
 import { createError, existsError } from '@renderer/stores/error'
 import Highlighter from 'vue-highlight-words'
 import { VueDraggable } from 'vue-draggable-plus'
-// TODO 添加对标签增减括号，增减权重的按钮
+import { ChevronUp, Refresh, ChevronDown } from '@vicons/ionicons5'
+import { useManualRefHistory } from '@vueuse/core'
+// TODO 长按
 const enum Kind {
     Default = 'default',
     BorderStart = 'border-start',
@@ -50,6 +58,12 @@ const emit = defineEmits<{
 const dataStore = useDataStore()
 const editor = defineModel<PromptTag[]>({ required: true })
 const collapsed = ref<string[]>([])
+const { commit, canUndo, undo, canRedo, redo } = useManualRefHistory(editor, {
+    clone: cloneDeep,
+    capacity: 10,
+})
+const debouncedCommit = debounce(commit, 500)
+defineExpose({ canUndo, undo, canRedo, redo })
 const flatEditor = computed({
     get() {
         return editor.value.flatMap((item): Wrapper[] => {
@@ -130,7 +144,7 @@ function selectPrompt(item: PromptTag): void {
 }
 
 const promptTagInput = useTemplateRef<InstanceType<typeof ElInput>>('promptTagInput')
-function openEditDialog(): void {
+function onOpenEditDialog(): void {
     promptTagInput.value?.focus()
 }
 // 是否正在编辑提示词
@@ -142,17 +156,26 @@ function editPromptTag(item: PromptTag): void {
     editingPromptTagId.value = item.id
     editingPromptTagInput.value = promptTagToString(item)
 }
-const handleClickGesture = useHandleClickGesture()
+const handleClickGesture = useHandleClickGesture(200)
 function handleLeftClickPromptTag(item: Wrapper): void {
     handleClickGesture(
         () => {
             if (isEolPromptTag(item.promptTag)) {
                 return
             }
+            if (isGroupPromptTag(item.promptTag)) {
+                switchCollapse(item.promptTag)
+                return
+            }
             editPromptTag(item.promptTag)
         },
         () => {
             item.promptTag.disabled = !item.promptTag.disabled
+            if (isGroupPromptTag(item.promptTag)) {
+                for (const subTag of item.promptTag.subTags) {
+                    subTag.disabled = item.promptTag.disabled
+                }
+            }
         }
     )
 }
@@ -177,11 +200,22 @@ function confirmEditPrompt(): void {
 }
 function removePromptTag(id: string): void {
     const editorClone = clone(editor.value)
-    const index = editorClone.findIndex((tag) => tag.id === id)
-    if (index !== -1) {
-        editorClone.splice(index, 1)
-        editor.value = editorClone
+    outer: for (const [index, tag] of editorClone.entries()) {
+        if (tag.id === id) {
+            editorClone.splice(index, 1)
+            break outer
+        }
+        if (isGroupPromptTag(tag)) {
+            for (const [index, subTag] of tag.subTags.entries()) {
+                if (subTag.id === id) {
+                    tag.subTags.splice(index, 1)
+                    break outer
+                }
+            }
+        }
     }
+    editor.value = editorClone
+    nextTick(() => debouncedCommit())
 }
 function isPromptTagCollected(promptTag: PromptTag): boolean {
     if (!isLoraPromptTag(promptTag) && !isMonoPromptTag(promptTag)) {
@@ -224,15 +258,16 @@ async function createPrompt(promptTag: PromptTag): Promise<void> {
     }
 }
 function getTagColor(item: Wrapper): string {
-    if (item.kind === Kind.BorderStart || item.kind === Kind.BorderEnd) {
-        return '#DD4F4F'
-    }
-    if (item.kind === Kind.Group) {
-        return 'red'
-    }
     const promptTag = item.promptTag
     if (promptTag.disabled) {
         return 'gray'
+    }
+    if (
+        item.kind === Kind.BorderStart ||
+        item.kind === Kind.BorderEnd ||
+        item.kind === Kind.Group
+    ) {
+        return 'white'
     }
     if (isEolPromptTag(promptTag)) {
         return 'black'
@@ -255,6 +290,11 @@ function copyText(text: string): void {
     })
 }
 function canCreateGroup(promptTag: PromptTag): promptTag is LoraPromptTag | MonoPromptTag {
+    for (const pt of editor.value) {
+        if (isGroupPromptTag(pt) && pt.subTags.map((t) => t.id).includes(promptTag.id)) {
+            return false
+        }
+    }
     return isLoraPromptTag(promptTag) || isMonoPromptTag(promptTag)
 }
 function createGroup(promptTag: PromptTag): void {
@@ -275,6 +315,7 @@ function createGroup(promptTag: PromptTag): void {
     const editorClone = clone(editor.value)
     editorClone.splice(index, 1, groupPromptTag)
     editor.value = editorClone
+    nextTick(() => debouncedCommit())
 }
 function disgroup(promptTag: PromptTag): void {
     if (!isGroupPromptTag(promptTag)) {
@@ -291,6 +332,7 @@ function disgroup(promptTag: PromptTag): void {
     const editorClone = clone(editor.value)
     editorClone.splice(index, 1, ...subTags)
     editor.value = editorClone
+    nextTick(() => debouncedCommit())
 }
 function switchCollapse(promptTag: PromptTag): void {
     if (!isGroupPromptTag(promptTag)) {
@@ -302,6 +344,122 @@ function switchCollapse(promptTag: PromptTag): void {
         collapsed.value.push(promptTag.id)
     }
 }
+function canAddWeight(promptTag: PromptTag): boolean {
+    return !isEolPromptTag(promptTag) && !isSpecialPromptTag(promptTag)
+}
+function addPromptTagWeight(promptTag: PromptTag, delta: number = 0.1): void {
+    if (!canAddWeight(promptTag)) {
+        return
+    }
+    const editorClone = clone(editor.value)
+    outer: for (const [index, tag] of editorClone.entries()) {
+        if (tag.id === promptTag.id) {
+            editorClone[index] = addWeight(tag, delta)
+            break
+        }
+        if (isGroupPromptTag(tag)) {
+            for (const [i, subTag] of tag.subTags.entries()) {
+                if (subTag.id === promptTag.id) {
+                    tag.subTags[i] = addWeight(subTag, delta) as SubTagPromptTag
+                    break outer
+                }
+            }
+        }
+    }
+    editor.value = editorClone
+    nextTick(() => debouncedCommit())
+}
+function clearPromptTagWeight(promptTag: PromptTag): void {
+    if (!canAddWeight(promptTag)) {
+        return
+    }
+    const editorClone = clone(editor.value)
+    outer: for (const [index, tag] of editorClone.entries()) {
+        if (tag.id === promptTag.id) {
+            editorClone[index] = clearWeight(tag)
+            break
+        }
+        if (isGroupPromptTag(tag)) {
+            for (const [i, subTag] of tag.subTags.entries()) {
+                if (subTag.id === promptTag.id) {
+                    tag.subTags[i] = clearWeight(subTag) as SubTagPromptTag
+                    break outer
+                }
+            }
+        }
+    }
+    editor.value = editorClone
+    nextTick(() => debouncedCommit())
+}
+function addPromptTagBrackets(promptTag: PromptTag, ...brackets: Bracket[]): void {
+    if (!isMonoPromptTag(promptTag) || brackets.length === 0) {
+        return
+    }
+    const editorClone = clone(editor.value)
+    outer: for (const [index, tag] of editorClone.entries()) {
+        if (tag.id === promptTag.id) {
+            editorClone[index] = addBrackets(tag, ...brackets)
+            break
+        }
+        if (isGroupPromptTag(tag)) {
+            for (const [i, subTag] of tag.subTags.entries()) {
+                if (subTag.id === promptTag.id) {
+                    tag.subTags[i] = addBrackets(subTag, ...brackets) as SubTagPromptTag
+                    break outer
+                }
+            }
+        }
+    }
+    editor.value = editorClone
+    nextTick(() => debouncedCommit())
+}
+function clearPromptTagBrackets(promptTag: PromptTag): void {
+    if (!isMonoPromptTag(promptTag)) {
+        return
+    }
+    const editorClone = clone(editor.value)
+    outer: for (const [index, tag] of editorClone.entries()) {
+        if (tag.id === promptTag.id) {
+            editorClone[index] = clearBrackets(tag)
+            break
+        }
+        if (isGroupPromptTag(tag)) {
+            for (const [i, subTag] of tag.subTags.entries()) {
+                if (subTag.id === promptTag.id) {
+                    tag.subTags[i] = clearBrackets(subTag) as SubTagPromptTag
+                    break outer
+                }
+            }
+        }
+    }
+    editor.value = editorClone
+    nextTick(() => debouncedCommit())
+}
+async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
+    const translation = await window.api.other.translateByDeepLX(promptTag.text)
+    const editorClone = clone(editor.value)
+    outer: for (const [index, tag] of editorClone.entries()) {
+        if (tag.id === promptTag.id && isMonoPromptTag(tag)) {
+            editorClone[index] = {
+                ...tag,
+                translation,
+            }
+            break
+        }
+        if (isGroupPromptTag(tag)) {
+            for (const [i, subTag] of tag.subTags.entries()) {
+                if (subTag.id === promptTag.id && isMonoPromptTag(subTag)) {
+                    tag.subTags[i] = {
+                        ...subTag,
+                        translation,
+                    }
+                    break outer
+                }
+            }
+        }
+    }
+    editor.value = editorClone
+}
 </script>
 <template>
     <vue-draggable
@@ -310,6 +468,7 @@ function switchCollapse(promptTag: PromptTag): void {
         class="flex flex-wrap p-2"
         easing="ease-in-out"
         handle=".drag-handle"
+        @update="nextTick(() => debouncedCommit())"
     >
         <div v-for="item in flatEditor" :key="item.promptTag.id + item.kind">
             <el-dropdown
@@ -338,57 +497,116 @@ function switchCollapse(promptTag: PromptTag): void {
                     @close="removePromptTag(item.promptTag.id)"
                 >
                     <span v-if="isEolPromptTag(item.promptTag)">EOL</span>
+                    <span v-else-if="item.kind === Kind.BorderStart" class="text-teal-800!">
+                        ▶
+                    </span>
+                    <span v-else-if="item.kind === Kind.BorderEnd" class="text-teal-800!">
+                        ◀
+                    </span>
                     <Highlighter
                         v-else
                         :search-words="[searchText]"
                         :auto-escape="true"
                         :text-to-highlight="
-                            item.kind === Kind.Default
+                            (item.kind === Kind.Group ? '◀\t' : '') +
+                            (item.kind === Kind.Default
                                 ? promptTagToString(item.promptTag)
-                                : item.promptTag.text
+                                : item.promptTag.text) +
+                            (item.kind === Kind.Group ? '\t▶' : '')
                         "
+                        class="flex-1 block"
+                        :class="{
+                            'text-teal-800!': item.kind === Kind.Group,
+                        }"
                     />
                 </el-tag>
 
                 <template #dropdown>
                     <el-dropdown-menu
-                        class="flex! flex-row! p-0!"
+                        class="flex flex-col p-0! overflow-hidden"
                         :item-classes="['px-2', 'py-1', 'whitespace-nowrap']"
                     >
-                        <el-dropdown-item
-                            v-if="canCreateGroup(item.promptTag)"
-                            @click="createGroup(item.promptTag)"
-                        >
-                            建组
-                        </el-dropdown-item>
-                        <el-dropdown-item
-                            v-if="
-                                item.kind === Kind.Group ||
-                                item.kind === Kind.BorderStart ||
-                                item.kind === Kind.BorderEnd
-                            "
-                            @click="disgroup(item.promptTag)"
-                        >
-                            解组
-                        </el-dropdown-item>
-                        <el-dropdown-item
-                            v-if="item.kind !== Kind.Default"
-                            @click="switchCollapse(item.promptTag)"
-                        >
-                            {{ collapsed.includes(item.promptTag.id) ? '展开' : '收起' }}
-                        </el-dropdown-item>
-                        <el-dropdown-item
-                            v-if="validPromptTagToCreate(item.promptTag)"
-                            @click="createPrompt(item.promptTag)"
-                        >
-                            收藏
-                        </el-dropdown-item>
-                        <el-dropdown-item
-                            v-if="isPromptTagCollected(item.promptTag)"
-                            @click="selectPrompt(item.promptTag)"
-                        >
-                            详情
-                        </el-dropdown-item>
+                        <div class="dropdown-menu-group">
+                            <el-dropdown-item
+                                v-if="canCreateGroup(item.promptTag)"
+                                @click="createGroup(item.promptTag)"
+                            >
+                                建组
+                            </el-dropdown-item>
+                            <el-dropdown-item
+                                v-if="
+                                    item.kind === Kind.Group ||
+                                    item.kind === Kind.BorderStart ||
+                                    item.kind === Kind.BorderEnd
+                                "
+                                @click="disgroup(item.promptTag)"
+                            >
+                                解组
+                            </el-dropdown-item>
+                            <el-dropdown-item
+                                v-if="validPromptTagToCreate(item.promptTag)"
+                                @click="createPrompt(item.promptTag)"
+                            >
+                                收藏
+                            </el-dropdown-item>
+                            <el-dropdown-item
+                                v-if="isPromptTagCollected(item.promptTag)"
+                                @click="selectPrompt(item.promptTag)"
+                            >
+                                详情
+                            </el-dropdown-item>
+                        </div>
+                        <div class="dropdown-menu-group">
+                            <el-dropdown-item
+                                v-if="canAddWeight(item.promptTag)"
+                                @click="addPromptTagWeight(item.promptTag, 0.05)"
+                            >
+                                <el-icon class="mr-0!" size="large"><ChevronUp /></el-icon>
+                            </el-dropdown-item>
+                            <el-dropdown-item
+                                v-if="canAddWeight(item.promptTag)"
+                                @click="clearPromptTagWeight(item.promptTag)"
+                            >
+                                <el-icon class="mr-0!" size="large"><Refresh /></el-icon>
+                            </el-dropdown-item>
+                            <el-dropdown-item
+                                v-if="canAddWeight(item.promptTag)"
+                                @click="addPromptTagWeight(item.promptTag, -0.05)"
+                            >
+                                <el-icon class="mr-0!" size="large"><ChevronDown /></el-icon>
+                            </el-dropdown-item>
+                        </div>
+                        <div class="dropdown-menu-group">
+                            <el-dropdown-item
+                                v-if="isMonoPromptTag(item.promptTag)"
+                                @click="addPromptTagBrackets(item.promptTag, Bracket.Round)"
+                            >
+                                <span class="text-lg text-bold">()</span>
+                            </el-dropdown-item>
+                            <el-dropdown-item
+                                v-if="isMonoPromptTag(item.promptTag)"
+                                @click="clearPromptTagBrackets(item.promptTag)"
+                            >
+                                <el-icon class="mr-0!" size="large"><Refresh /></el-icon>
+                            </el-dropdown-item>
+                            <el-dropdown-item
+                                v-if="isMonoPromptTag(item.promptTag)"
+                                @click="addPromptTagBrackets(item.promptTag, Bracket.Square)"
+                            >
+                                <span class="text-lg text-bold">[]</span>
+                            </el-dropdown-item>
+                        </div>
+                        <div v-if="isMonoPromptTag(item.promptTag)" class="dropdown-menu-group">
+                            <el-dropdown-item
+                                v-if="!item.promptTag.translation"
+                                @click="translatePromptTag(item.promptTag)"
+                            >
+                                翻译
+                            </el-dropdown-item>
+                            <div v-else class="flex-1 text-center italic">
+                                {{ item.promptTag.translation }}
+                            </div>
+                        </div>
                     </el-dropdown-menu>
                 </template>
             </el-dropdown>
@@ -399,8 +617,7 @@ function switchCollapse(promptTag: PromptTag): void {
             title="编辑提示词文本"
             append-to-body
             @keyup.esc.stop.prevent="isEditingPromptTag = false"
-            @opened="promptTagInput?.focus()"
-            @open.once="openEditDialog"
+            @opened="onOpenEditDialog"
         >
             <div class="flex flex-col gap-2">
                 <el-input
@@ -417,3 +634,16 @@ function switchCollapse(promptTag: PromptTag): void {
         </el-dialog>
     </vue-draggable>
 </template>
+<style scoped>
+.dropdown-menu-group {
+    display: flex;
+    width: 100%;
+    padding: 0;
+    & > :deep(.el-dropdown-menu__item) {
+        flex: 1;
+        justify-content: center;
+        height: 1.5rem;
+        border: #eee 1px solid;
+    }
+}
+</style>

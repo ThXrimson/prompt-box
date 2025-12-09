@@ -1,6 +1,16 @@
 import { isNil } from 'lodash'
 import { DeepReadonly, Nullish } from 'utility-types'
+import { Decimal } from 'decimal.js'
 
+export const DEFAULT_WEIGHT = '1'
+export function weightIsDefault(weight: string): boolean {
+    try {
+        const w = new Decimal(weight)
+        return w.equals(DEFAULT_WEIGHT)
+    } catch {
+        return false
+    }
+}
 export const EOL = '\n'
 export const enum Bracket {
     Square = 'square',
@@ -68,9 +78,13 @@ export type PromptTag =
     | LoraPromptTag
     | SpecialPromptTag
     | EolPromptTag
+export type WeightedPromptTag = PromptTag & { weight: string }
+export type BracketedPromptTag = PromptTag & { brackets: Bracket[] }
+export type SubTagPromptTag = MonoPromptTag | LoraPromptTag
 export interface MonoPromptTag {
     id: string
     text: string
+    translation: string
     weight: string
     brackets: Bracket[]
     disabled: boolean
@@ -130,20 +144,34 @@ export function isEolPromptTag(tag: DeepReadonly<PromptTag>): tag is EolPromptTa
 }
 
 function isValidNumber(s: string): boolean {
-    return /^-?\d+(\.\d+)?$/.test(s)
+    try {
+        new Decimal(s)
+        return true
+    } catch {
+        return false
+    }
 }
 export function promptTagToString(
     tag: PromptTag,
     includeWeight: boolean = true,
+    hideWeightIfDefault: boolean = true,
     includeBrackets: boolean = true
 ): string {
+    const modifyWeight = (weight: string): string => {
+        if (
+            !isValidNumber(weight) ||
+            (hideWeightIfDefault && weightIsDefault(weight)) ||
+            !includeWeight
+        ) {
+            return ''
+        }
+        return weight
+    }
     if (isMonoPromptTag(tag)) {
         let prefix = tag.brackets.map((bracket) => openBrackets[bracket]).join('')
         let suffix = tag.brackets.map((bracket) => closeBrackets[bracket]).join('')
-        let weightStr = isValidNumber(tag.weight) && prefix.length > 0 ? `:${tag.weight}` : ''
-        if (!includeWeight) {
-            weightStr = ''
-        }
+        const weight = modifyWeight(tag.weight)
+        const weightStr = prefix.length > 0 && isValidNumber(weight) ? `:${weight}` : ''
         if (!includeBrackets) {
             prefix = ''
             suffix = ''
@@ -155,10 +183,8 @@ export function promptTagToString(
             .join(', ')
         return text
     } else if (isLoraPromptTag(tag)) {
-        let weightStr = isValidNumber(tag.weight) ? `:${tag.weight}` : ''
-        if (!includeWeight) {
-            weightStr = ''
-        }
+        const weight = modifyWeight(tag.weight)
+        const weightStr = weight.length > 0 ? `:${weight}` : ''
         return `<lora:${tag.text}${weightStr}>`
     } else if (isEolPromptTag(tag)) {
         return '\n'
@@ -229,6 +255,7 @@ export function stringToMonoPromptTag(str: string): MonoPromptTag {
     return {
         id: crypto.randomUUID(),
         text: rest,
+        translation: '',
         weight: totalWeightStr,
         brackets,
         disabled: false,
@@ -243,12 +270,14 @@ export function stringToLoraPromptTag(str: string): LoraPromptTag | Nullish {
     const loraName = str.slice('<lora:'.length, str.length - 1)
     const colonIndex = loraName.lastIndexOf(':')
     let weightStr = ''
+    let text = loraName
     if (colonIndex >= 0 && isValidNumber(loraName.slice(colonIndex + 1))) {
         weightStr = loraName.slice(colonIndex + 1)
+        text = loraName.slice(0, colonIndex)
     }
     return {
         id: crypto.randomUUID(),
-        text: loraName.slice(0, colonIndex),
+        text,
         weight: weightStr,
         disabled: false,
         kind: PromptTagKind.Lora,
@@ -328,4 +357,83 @@ export function stringToEditor(str: string, specialWords: string[] = []): Prompt
         }
     }
     return tags
+}
+
+export function addWeightString(weight: string, delta: number = 0.1): string {
+    let num = new Decimal(1)
+    try {
+        num = new Decimal(weight)
+    } catch {
+        // ignore
+    }
+    return num
+        .plus(delta)
+        .toFixed(2)
+        .replace(/\.?0+$/, '')
+}
+
+export function addWeight(promptTag: PromptTag, delta: number = 0.1): PromptTag {
+    if (isSpecialPromptTag(promptTag) || isEolPromptTag(promptTag)) {
+        return promptTag
+    }
+    if (isMonoPromptTag(promptTag) || isLoraPromptTag(promptTag)) {
+        const newWeight = addWeightString(promptTag.weight, delta)
+        const newTag = { ...promptTag, weight: newWeight }
+        if (isMonoPromptTag(promptTag) && promptTag.brackets.length === 0) {
+            ;(newTag as MonoPromptTag).brackets = [Bracket.Round]
+        }
+        return newTag
+    }
+    for (const [index, sub] of promptTag.subTags.entries()) {
+        const newSub = addWeight(sub, delta)
+        if (!isMonoPromptTag(newSub) && !isLoraPromptTag(newSub)) {
+            continue
+        }
+        promptTag.subTags[index] = newSub
+    }
+    return {
+        ...promptTag,
+        subTags: promptTag.subTags,
+    }
+}
+
+export function clearWeight(promptTag: PromptTag): PromptTag {
+    const newTag = {
+        ...promptTag,
+        weight: '',
+        brackets: [],
+    }
+    if (isGroupPromptTag(promptTag)) {
+        ;(newTag as GroupPromptTag).subTags = promptTag.subTags.map(
+            (sub) => clearWeight(sub) as SubTagPromptTag
+        )
+    }
+    return newTag
+}
+
+export function addBrackets(promptTag: PromptTag, ...brackets: Bracket[]): PromptTag {
+    if (isGroupPromptTag(promptTag)) {
+        return {
+            ...promptTag,
+            subTags: promptTag.subTags.map((sub) =>
+                addBrackets(sub, ...brackets)
+            ) as SubTagPromptTag[],
+        }
+    }
+    if (!isMonoPromptTag(promptTag)) {
+        return promptTag
+    }
+    return { ...promptTag, brackets: [...brackets, ...promptTag.brackets] }
+}
+
+export function clearBrackets(promptTag: PromptTag): PromptTag {
+    if (isMonoPromptTag(promptTag)) {
+        return { ...promptTag, brackets: [], weight: '' }
+    } else if (isGroupPromptTag(promptTag)) {
+        return {
+            ...promptTag,
+            subTags: promptTag.subTags.map(clearBrackets) as SubTagPromptTag[],
+        }
+    }
+    return promptTag
 }
