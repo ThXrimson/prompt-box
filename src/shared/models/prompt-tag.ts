@@ -155,8 +155,12 @@ export function promptTagToString(
     tag: PromptTag,
     includeWeight: boolean = true,
     hideWeightIfDefault: boolean = true,
-    includeBrackets: boolean = true
+    includeBrackets: boolean = true,
+    ignoreDisabled: boolean = false
 ): string {
+    if (ignoreDisabled && tag.disabled) {
+        return ''
+    }
     const modifyWeight = (weight: string): string => {
         if (
             !isValidNumber(weight) ||
@@ -179,7 +183,16 @@ export function promptTagToString(
         return `${prefix}${tag.text}${weightStr}${suffix}`
     } else if (isGroupPromptTag(tag)) {
         const text = tag.subTags
-            .map((sub) => promptTagToString(sub, includeWeight, includeBrackets))
+            .map((sub) =>
+                promptTagToString(
+                    sub,
+                    includeWeight,
+                    hideWeightIfDefault,
+                    includeBrackets,
+                    ignoreDisabled
+                )
+            )
+            .filter((s) => s.length > 0)
             .join(', ')
         return text
     } else if (isLoraPromptTag(tag)) {
@@ -217,8 +230,11 @@ export function editorToString(
         } else if (isEolPromptTag(tag)) {
             segments.push('\n')
         } else {
-            segments.push(promptTagToString(tag))
-            segments.push(', ')
+            const s = promptTagToString(tag, true, true, true, removeDisabled)
+            if (s.length > 0) {
+                segments.push(s)
+                segments.push(', ')
+            }
         }
     }
     if (segments.length > 0 && segments[segments.length - 1] === ', ') {
