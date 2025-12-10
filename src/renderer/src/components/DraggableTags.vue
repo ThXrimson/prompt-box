@@ -196,8 +196,7 @@ function confirmEditPrompt(): void {
                 const newTag = cloneDeep(tag)
                 newTag.text = editingPromptTagInput.value
                 editorClone[i] = newTag
-            }
-            if (isLoraString(editingPromptTagInput.value)) {
+            } else if (isLoraString(editingPromptTagInput.value)) {
                 const t = stringToLoraPromptTag(editingPromptTagInput.value)
                 if (!isNil(t)) {
                     editorClone[i] = t
