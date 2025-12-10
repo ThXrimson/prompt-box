@@ -4,7 +4,7 @@ import { Tag, UpdateTag } from '@shared/models/tag'
 import { Image } from '@shared/models/image'
 import { NewWorkspace, UpdateWorkspace, Workspace } from '@shared/models/workspace'
 import { defineStore } from 'pinia'
-import { computed, readonly, ref } from 'vue'
+import { computed, onMounted, readonly, ref } from 'vue'
 import { createError, existsError, invalidParamError, notFoundError } from './error'
 import { cloneDeep, isNil } from 'lodash'
 import log from 'electron-log/renderer'
@@ -36,17 +36,19 @@ export const useDataStore = defineStore('data', () => {
     window.api.image.onNotify((_event, newImages) => {
         images.value = newImages
     })
-    log.info(`send data store ready at: ${Date.now()}`)
-    window.api.other.sendDataStoreReady()
+    onMounted(() => {
+        log.info(`send data store ready at: ${Date.now()}`)
+        window.api.other.sendDataStoreReady()
+    })
 
     // TODO 测试关闭 定时持久化数据
     setInterval(
         () => {
-            window.api.prompt.update(prompts.value)
-            window.api.example.update(examples.value)
-            window.api.tag.update(tags.value)
-            window.api.workspace.update(workspaces.value)
-            window.api.image.update(images.value)
+            window.api.prompt.update(cloneDeep(prompts.value))
+            window.api.example.update(cloneDeep(examples.value))
+            window.api.tag.update(cloneDeep(tags.value))
+            window.api.workspace.update(cloneDeep(workspaces.value))
+            window.api.image.update(cloneDeep(images.value))
         },
         2 * 60 * 1000
     )

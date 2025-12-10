@@ -154,7 +154,11 @@ const editingPromptTagInput = ref('')
 function editPromptTag(item: PromptTag): void {
     isEditingPromptTag.value = true
     editingPromptTagId.value = item.id
-    editingPromptTagInput.value = promptTagToString(item)
+    if (isGroupPromptTag(item)) {
+        editingPromptTagInput.value = item.text
+    } else {
+        editingPromptTagInput.value = promptTagToString(item, true, true, true)
+    }
 }
 const handleClickGesture = useHandleClickGesture(200)
 function handleLeftClickPromptTag(item: Wrapper): void {
@@ -181,22 +185,54 @@ function handleLeftClickPromptTag(item: Wrapper): void {
 }
 function confirmEditPrompt(): void {
     isEditingPromptTag.value = false
-    const index = editor.value.findIndex((tag) => tag.id === editingPromptTagId.value)
-    if (index === -1) {
-        return
-    }
-    let promptTag: PromptTag | Nullish
-    if (isLoraString(editingPromptTagInput.value)) {
-        promptTag = stringToLoraPromptTag(editingPromptTagInput.value)
-    } else {
-        promptTag = stringToMonoPromptTag(editingPromptTagInput.value)
-    }
-    if (isNil(promptTag)) {
+    if (isNil(editingPromptTagId.value)) {
         return
     }
     const editorClone = clone(editor.value)
-    editorClone[index] = promptTag
+    outer: for (const [i, tag] of editorClone.entries()) {
+        if (tag.id === editingPromptTagId.value) {
+            if (isGroupPromptTag(tag)) {
+                tag.text = editingPromptTagInput.value
+                break
+            }
+            if (isLoraString(editingPromptTagInput.value)) {
+                const t = stringToLoraPromptTag(editingPromptTagInput.value)
+                if (!isNil(t)) {
+                    editorClone[i] = t
+                    break
+                }
+            } else {
+                const t = stringToMonoPromptTag(editingPromptTagInput.value)
+                if (!isNil(t)) {
+                    editorClone[i] = t
+                    break
+                }
+            }
+            break
+        }
+        if (isGroupPromptTag(tag)) {
+            for (const [j, subTag] of tag.subTags.entries()) {
+                if (subTag.id === editingPromptTagId.value) {
+                    if (isLoraString(editingPromptTagInput.value)) {
+                        const t = stringToLoraPromptTag(editingPromptTagInput.value)
+                        if (!isNil(t)) {
+                            tag.subTags[j] = t
+                            break outer
+                        }
+                    } else {
+                        const t = stringToMonoPromptTag(editingPromptTagInput.value)
+                        if (!isNil(t)) {
+                            tag.subTags[j] = t
+                            break outer
+                        }
+                    }
+                    break outer
+                }
+            }
+        }
+    }
     editor.value = editorClone
+    nextTick(() => debouncedCommit())
 }
 function removePromptTag(id: string): void {
     const editorClone = clone(editor.value)
@@ -474,22 +510,32 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
     <vue-draggable
         v-model="flatEditor"
         :animation="50"
-        class="flex flex-wrap p-2"
+        class="flex flex-wrap p-2 gap-x-1"
         easing="ease-in-out"
         handle=".drag-handle"
         drag-class="opacity-0"
         ghost-class="ghost-class"
         @update="nextTick(() => debouncedCommit())"
     >
-        <div v-for="item in flatEditor" :key="item.promptTag.id + item.kind">
+        <div v-for="item in flatEditor" :key="item.promptTag.id + item.kind" class="my-[-0.5px]">
             <el-dropdown
                 trigger="hover"
                 size="small"
                 placement="top"
-                :show-timeout="0"
+                :show-arrow="false"
+                :popper-options="{
+                    modifiers: [
+                        {
+                            name: 'offset',
+                            options: {
+                                offset: [0, 0],
+                            },
+                        },
+                    ],
+                }"
+                :show-timeout="50"
                 :hide-timeout="50"
                 :hide-on-click="false"
-                class="mx-0.5"
                 :disabled="isEolPromptTag(item.promptTag) || isSpecialPromptTag(item.promptTag)"
             >
                 <el-tag
@@ -527,7 +573,7 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
                                 : item.promptTag.text) +
                             (item.kind === Kind.Group ? '\t▶' : '')
                         "
-                        class="flex-1 block"
+                        class="flex-1 block font-[500]"
                         :class="{
                             'text-teal-800!': item.kind === Kind.Group,
                         }"
@@ -555,6 +601,16 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
                                 @click="disgroup(item.promptTag)"
                             >
                                 解组
+                            </el-dropdown-item>
+                            <el-dropdown-item
+                                v-if="
+                                    item.kind === Kind.Group ||
+                                    item.kind === Kind.BorderStart ||
+                                    item.kind === Kind.BorderEnd
+                                "
+                                @click="editPromptTag(item.promptTag)"
+                            >
+                                命名
                             </el-dropdown-item>
                             <el-dropdown-item
                                 v-if="validPromptTagToCreate(item.promptTag)"
