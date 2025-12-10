@@ -116,7 +116,7 @@
                         active-text="去掉LORA"
                         inactive-text="保留LORA"
                         style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-                        class="[&_.is-text]:font-mono"
+                        class="[&_.is-text]:font-sans [&_.is-text]:italic"
                     />
                     <!-- TODO 暂时隐藏 -->
                     <el-tooltip
@@ -134,7 +134,7 @@
                         placement="top-end"
                         :hide-after="0"
                     >
-                        <el-button class="m-0!" @click="addEolPromptTag">EOL</el-button>
+                        <el-button class="m-0! italic" @click="addEolPromptTag">EOL</el-button>
                     </el-tooltip>
 
                     <!-- 切换正向、负向编辑器 -->
@@ -144,9 +144,34 @@
                         active-text="POSITIVE"
                         inactive-text="NEGATIVE"
                         style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-                        class="[&_.is-text]:font-mono"
+                        class="[&_.is-text]:font-mono [&_.is-text]:italic"
                         @update:model-value="switchEditor($event as boolean)"
                     />
+
+                    <el-tooltip
+                        content="展开所有"
+                        :enterable="false"
+                        placement="top-end"
+                        :hide-after="0"
+                    >
+                        <el-button
+                            :icon="Expand"
+                            class="m-0!"
+                            @click="draggableTagsRef?.uncollapseAll()"
+                        />
+                    </el-tooltip>
+                    <el-tooltip
+                        content="折叠所有"
+                        :enterable="false"
+                        placement="top-end"
+                        :hide-after="0"
+                    >
+                        <el-button
+                            :icon="Contract"
+                            class="m-0!"
+                            @click="draggableTagsRef?.collapseAll()"
+                        />
+                    </el-tooltip>
                 </div>
                 <el-input
                     v-model="searchText"
@@ -201,6 +226,8 @@ import {
     CaretDown,
     ArrowUndoOutline,
     ArrowRedoOutline,
+    Expand,
+    Contract,
 } from '@vicons/ionicons5'
 
 const props = defineProps<{

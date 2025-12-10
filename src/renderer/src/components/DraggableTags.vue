@@ -59,12 +59,25 @@ const emit = defineEmits<{
 const dataStore = useDataStore()
 const editor = defineModel<PromptTag[]>({ required: true })
 const collapsed = ref<string[]>([])
+function collapseAll(): void {
+    const res = [] as string[]
+    for (const item of editor.value) {
+        if (isGroupPromptTag(item)) {
+            res.push(item.id)
+        }
+    }
+    collapsed.value = res
+}
+function uncollapseAll(): void {
+    collapsed.value = []
+}
+const disableDropdown = ref(false)
 const { commit, canUndo, undo, canRedo, redo } = useManualRefHistory(editor, {
     clone: cloneDeep,
     capacity: 10,
 })
 const debouncedCommit = debounce(commit, 500)
-defineExpose({ canUndo, undo, canRedo, redo })
+defineExpose({ canUndo, undo, canRedo, redo, collapseAll, uncollapseAll })
 const flatEditor = computed({
     get() {
         return editor.value.flatMap((item): Wrapper[] => {
@@ -539,6 +552,8 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
         drag-class="opacity-0"
         ghost-class="ghost-class"
         @update="nextTick(() => debouncedCommit())"
+        @choose="disableDropdown = true"
+        @unchoose="disableDropdown = false"
     >
         <TransitionGroup name="tag-list">
             <div
@@ -564,7 +579,11 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
                     :show-timeout="300"
                     :hide-timeout="50"
                     :hide-on-click="false"
-                    :disabled="isEolPromptTag(item.promptTag) || isSpecialPromptTag(item.promptTag)"
+                    :disabled="
+                        disableDropdown ||
+                        isEolPromptTag(item.promptTag) ||
+                        isSpecialPromptTag(item.promptTag)
+                    "
                 >
                     <el-tag
                         :color="getTagColor(item)"
