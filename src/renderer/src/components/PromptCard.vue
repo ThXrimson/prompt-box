@@ -13,13 +13,13 @@
         </Teleport>
         <div
             ref="card"
-            class="max-w-100 flex gap-1 justify-between border-1 border-gray-200 rounded-sm p-1.5 transition-all duration-300 relative"
+            class="max-w-100 flex gap-1 justify-between border border-gray-200 rounded-sm p-1.5 transition-all duration-300 relative"
             :class="{
                 'bg-orange-400 hover:bg-orange-500': selected,
                 'bg-teal-400 hover:bg-teal-500': !selected,
             }"
         >
-            <div class="absolute! top-[1px] right-[2px] flex gap-1 text-teal-800!">
+            <div class="absolute! top-px right-[2px] flex gap-1 text-teal-800!">
                 <span
                     v-if="props.prompt.kind === PromptKind.Lora"
                     class="text-[9px] italic leading-[1.2]"

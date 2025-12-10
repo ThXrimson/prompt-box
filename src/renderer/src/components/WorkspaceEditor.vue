@@ -355,7 +355,7 @@ function quickHide(): void {
 defineExpose({
     addPromptTag: (prompt: Prompt) => {
         if (prompt.kind === PromptKind.Lora) {
-            const tag = stringToLoraPromptTag(prompt.text)
+            const tag = stringToLoraPromptTag(`<lora:${prompt.text}>`)
             if (!isNil(tag)) {
                 const editorClone = clone(currentEditor.value)
                 editorClone.push(tag)
