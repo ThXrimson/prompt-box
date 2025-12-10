@@ -34,7 +34,6 @@ import Highlighter from 'vue-highlight-words'
 import { VueDraggable } from 'vue-draggable-plus'
 import { ChevronUp, Refresh, ChevronDown } from '@vicons/ionicons5'
 import { useManualRefHistory } from '@vueuse/core'
-import { cloneModify } from '@renderer/utils/utils'
 // TODO 长按
 const enum Kind {
     Default = 'default',
@@ -188,40 +187,14 @@ function handleLeftClickPromptTag(item: Wrapper): void {
             editPromptTag(item.promptTag)
         },
         () => {
-            const disabled = !item.promptTag.disabled
-            const newTag = clone(item.promptTag)
-            newTag.disabled = disabled
+            const newTag = cloneDeep(item.promptTag)
+            newTag.disabled = !newTag.disabled
             if (isGroupPromptTag(newTag)) {
-                const newSubTags = cloneModify(newTag.subTags, (arr) => {
-                    for (const [i, sub] of arr.entries()) {
-                        arr[i] = { ...sub, disabled }
-                    }
-                })
-                newTag.subTags = newSubTags
-            }
-            editor.value = cloneModify(editor.value, (arr) => {
-                for (const [i, tag] of arr.entries()) {
-                    if (tag.id === newTag.id) {
-                        arr[i] = newTag
-                        return
-                    }
-                    if (isGroupPromptTag(tag)) {
-                        for (const [j, sub] of tag.subTags.entries()) {
-                            if (sub.id === newTag.id) {
-                                arr[i] = cloneModify(
-                                    tag,
-                                    (t) =>
-                                        (t.subTags = cloneModify(
-                                            tag.subTags,
-                                            (s) => (s[j] = newTag as MonoPromptTag | LoraPromptTag)
-                                        ))
-                                )
-                                return
-                            }
-                        }
-                    }
+                for (const sub of newTag.subTags) {
+                    sub.disabled = newTag.disabled
                 }
-            })
+            }
+            findPromptTagAndReplace(newTag)
         }
     )
 }
@@ -305,7 +278,7 @@ function isPromptTagCollected(promptTag: PromptTag): boolean {
     if (!isLoraPromptTag(promptTag) && !isMonoPromptTag(promptTag)) {
         return false
     }
-    return dataStore.prompt.readonly.some((p) => p.text === promptTag.text)
+    return dataStore.prompt.textSet.has(promptTag.text)
 }
 function validPromptTagToCollect(promptTag: PromptTag): promptTag is LoraPromptTag | MonoPromptTag {
     return isLoraPromptTag(promptTag) || isMonoPromptTag(promptTag)
@@ -434,104 +407,35 @@ function addPromptTagWeight(promptTag: PromptTag, delta: number = 0.1): void {
     if (!canAddWeight(promptTag)) {
         return
     }
-    const editorClone = clone(editor.value)
-    outer: for (const [i, tag] of editorClone.entries()) {
-        if (tag.id === promptTag.id) {
-            editorClone[i] = addWeight(tag, delta)
-            break
-        }
-        if (isGroupPromptTag(tag)) {
-            for (const [j, subTag] of tag.subTags.entries()) {
-                if (subTag.id === promptTag.id) {
-                    const newTag = clone(tag)
-                    const newSubTags = clone(tag.subTags)
-                    newSubTags[j] = addWeight(subTag, delta) as SubTagPromptTag
-                    newTag.subTags = newSubTags
-                    editorClone[i] = newTag
-                    break outer
-                }
-            }
-        }
-    }
-    editor.value = editorClone
+    const newTag = addWeight(promptTag, delta)
+    findPromptTagAndReplace(newTag)
     nextTick(() => debouncedCommit())
 }
 function clearPromptTagWeight(promptTag: PromptTag): void {
     if (!canAddWeight(promptTag)) {
         return
     }
-    const editorClone = clone(editor.value)
-    outer: for (const [i, tag] of editorClone.entries()) {
-        if (tag.id === promptTag.id) {
-            editorClone[i] = clearWeight(tag)
-            break
-        }
-        if (isGroupPromptTag(tag)) {
-            for (const [j, subTag] of tag.subTags.entries()) {
-                if (subTag.id === promptTag.id) {
-                    const newTag = clone(tag)
-                    const newSubTags = clone(tag.subTags)
-                    newSubTags[j] = clearWeight(subTag) as SubTagPromptTag
-                    newTag.subTags = newSubTags
-                    editorClone[i] = newTag
-                    break outer
-                }
-            }
-        }
-    }
-    editor.value = editorClone
+    const newTag = clearWeight(promptTag)
+    findPromptTagAndReplace(newTag)
     nextTick(() => debouncedCommit())
 }
 function addPromptTagBrackets(promptTag: PromptTag, ...brackets: Bracket[]): void {
     if (!isMonoPromptTag(promptTag) || brackets.length === 0) {
         return
     }
-    const editorClone = clone(editor.value)
-    outer: for (const [i, tag] of editorClone.entries()) {
-        if (tag.id === promptTag.id) {
-            editorClone[i] = addBrackets(tag, ...brackets)
-            break
-        }
-        if (isGroupPromptTag(tag)) {
-            for (const [j, subTag] of tag.subTags.entries()) {
-                if (subTag.id === promptTag.id) {
-                    const newTag = clone(tag)
-                    const newSubTags = clone(tag.subTags)
-                    newSubTags[j] = addBrackets(subTag, ...brackets) as SubTagPromptTag
-                    newTag.subTags = newSubTags
-                    editorClone[i] = newTag
-                    break outer
-                }
-            }
-        }
+    const newTag = addBrackets(promptTag, ...brackets)
+    if (newTag === promptTag) {
+        return
     }
-    editor.value = editorClone
+    findPromptTagAndReplace(newTag)
     nextTick(() => debouncedCommit())
 }
 function clearPromptTagBrackets(promptTag: PromptTag): void {
     if (!isMonoPromptTag(promptTag)) {
         return
     }
-    const editorClone = clone(editor.value)
-    outer: for (const [i, tag] of editorClone.entries()) {
-        if (tag.id === promptTag.id) {
-            editorClone[i] = clearBrackets(tag)
-            break
-        }
-        if (isGroupPromptTag(tag)) {
-            for (const [j, subTag] of tag.subTags.entries()) {
-                if (subTag.id === promptTag.id) {
-                    const newSubTags = cloneModify(
-                        tag.subTags,
-                        (arr) => (arr[j] = clearBrackets(subTag) as SubTagPromptTag)
-                    )
-                    editorClone[i] = cloneModify(tag, (t) => (t.subTags = newSubTags))
-                    break outer
-                }
-            }
-        }
-    }
-    editor.value = editorClone
+    const newTag = clearBrackets(promptTag)
+    findPromptTagAndReplace(newTag)
     nextTick(() => debouncedCommit())
 }
 async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
@@ -545,23 +449,28 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
     if (translation.length <= 0) {
         translation = await window.api.other.translateByDeepLX(promptTag.text)
     }
+    const newTag = {
+        ...promptTag,
+        translation,
+    }
+    findPromptTagAndReplace(newTag)
+}
+function findPromptTagAndReplace(newTag: PromptTag): void {
     const editorClone = clone(editor.value)
-    outer: for (const [index, tag] of editorClone.entries()) {
-        if (tag.id === promptTag.id && isMonoPromptTag(tag)) {
-            editorClone[index] = {
-                ...tag,
-                translation,
-            }
+    outer: for (const [i, tag] of editorClone.entries()) {
+        if (tag.id === newTag.id) {
+            editorClone[i] = newTag
             break
         }
         if (isGroupPromptTag(tag)) {
-            for (const [i, subTag] of tag.subTags.entries()) {
-                if (subTag.id === promptTag.id && isMonoPromptTag(subTag)) {
-                    const newSubTags = cloneModify(
-                        tag.subTags,
-                        (arr) => (arr[i] = { ...subTag, translation })
-                    )
-                    editorClone[index] = cloneModify(tag, (t) => (t.subTags = newSubTags))
+            for (const [j, sub] of tag.subTags.entries()) {
+                if (sub.id === newTag.id) {
+                    const newSubs = clone(tag.subTags)
+                    newSubs[j] = newTag as SubTagPromptTag
+                    editorClone[i] = {
+                        ...tag,
+                        subTags: newSubs,
+                    }
                     break outer
                 }
             }
@@ -580,8 +489,8 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
         drag-class="opacity-0"
         ghost-class="ghost-class"
         @update="nextTick(() => debouncedCommit())"
-        @choose="disableDropdown = true"
-        @unchoose="disableDropdown = false"
+        @start="disableDropdown = true"
+        @end="disableDropdown = false"
     >
         <TransitionGroup name="tag-list">
             <div
@@ -629,10 +538,12 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
                         @click.left="handleLeftClickPromptTag(item)"
                         @click.right="copyText(promptTagToString(item.promptTag))"
                         @mousedown.middle.prevent.stop="removePromptTag(item.promptTag.id)"
-                        @close="removePromptTag(item.promptTag.id)"
                     >
                         <span v-if="isEolPromptTag(item.promptTag)">EOL</span>
-                        <span v-else-if="item.kind === Kind.BorderStart" class="text-teal-800!">
+                        <span
+                            v-else-if="item.kind === Kind.BorderStart"
+                            :class="{ 'text-teal-800!': !item.promptTag.disabled }"
+                        >
                             ▶ {{ item.promptTag.text }}
                         </span>
                         <span
@@ -657,7 +568,6 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
                             }"
                         />
                     </el-tag>
-
                     <template #dropdown>
                         <el-dropdown-menu
                             class="flex flex-col p-0! overflow-hidden"

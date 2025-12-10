@@ -56,6 +56,7 @@ export const useDataStore = defineStore('data', () => {
     const promptView = {
         ref: prompts,
         readonly: readonly(prompts),
+        textSet: readonly(promptTextSet),
         async create(prompt: NewPrompt): Promise<Prompt> {
             if (promptTextSet.has(prompt.text)) {
                 throw existsError
