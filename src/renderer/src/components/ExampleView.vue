@@ -65,6 +65,7 @@
                         :rows="5"
                         resize="none"
                         placeholder="请输入示例文本"
+                        spellcheck="false"
                         class="flex-1 min-h-0 mt-2"
                     />
                 </template>

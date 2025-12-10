@@ -13,6 +13,7 @@
                 v-model="newWorkspaceName"
                 clearable
                 placeholder="请输入工作区名称"
+                spellcheck="false"
                 class="h-full! [&_.el-input\_\_inner]:h-full!"
                 @keydown.prevent.enter="createWorkspace(newWorkspaceName)"
             />

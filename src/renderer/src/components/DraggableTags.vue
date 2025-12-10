@@ -17,8 +17,8 @@ import {
     PromptTag,
     PromptTagKind,
     promptTagToString,
+    stringToEditor,
     stringToLoraPromptTag,
-    stringToMonoPromptTag,
     SubTagPromptTag,
 } from '@shared/models/prompt-tag'
 import { clone, cloneDeep, debounce, isNil } from 'lodash'
@@ -34,6 +34,7 @@ import Highlighter from 'vue-highlight-words'
 import { VueDraggable } from 'vue-draggable-plus'
 import { ChevronUp, Refresh, ChevronDown } from '@vicons/ionicons5'
 import { useManualRefHistory } from '@vueuse/core'
+import { cloneModify } from '@renderer/utils/utils'
 // TODO 长按
 const enum Kind {
     Default = 'default',
@@ -192,21 +193,18 @@ function confirmEditPrompt(): void {
     outer: for (const [i, tag] of editorClone.entries()) {
         if (tag.id === editingPromptTagId.value) {
             if (isGroupPromptTag(tag)) {
-                tag.text = editingPromptTagInput.value
-                break
+                const newTag = cloneDeep(tag)
+                newTag.text = editingPromptTagInput.value
+                editorClone[i] = newTag
             }
             if (isLoraString(editingPromptTagInput.value)) {
                 const t = stringToLoraPromptTag(editingPromptTagInput.value)
                 if (!isNil(t)) {
                     editorClone[i] = t
-                    break
                 }
             } else {
-                const t = stringToMonoPromptTag(editingPromptTagInput.value)
-                if (!isNil(t)) {
-                    editorClone[i] = t
-                    break
-                }
+                const tags = stringToEditor(editingPromptTagInput.value)
+                editorClone.splice(i, 1, ...tags)
             }
             break
         }
@@ -216,15 +214,21 @@ function confirmEditPrompt(): void {
                     if (isLoraString(editingPromptTagInput.value)) {
                         const t = stringToLoraPromptTag(editingPromptTagInput.value)
                         if (!isNil(t)) {
-                            tag.subTags[j] = t
-                            break outer
+                            const newTag = clone(tag)
+                            const newSubTags = clone(tag.subTags)
+                            newSubTags[j] = t
+                            newTag.subTags = newSubTags
+                            editorClone[i] = newTag
                         }
                     } else {
-                        const t = stringToMonoPromptTag(editingPromptTagInput.value)
-                        if (!isNil(t)) {
-                            tag.subTags[j] = t
-                            break outer
-                        }
+                        const tags = stringToEditor(editingPromptTagInput.value).filter(
+                            (t) => isMonoPromptTag(t) || isLoraPromptTag(t)
+                        )
+                        const newTag = clone(tag)
+                        const newSubTags = clone(tag.subTags)
+                        newSubTags.splice(j, 1, ...tags)
+                        newTag.subTags = newSubTags
+                        editorClone[i] = newTag
                     }
                     break outer
                 }
@@ -236,15 +240,19 @@ function confirmEditPrompt(): void {
 }
 function removePromptTag(id: string): void {
     const editorClone = clone(editor.value)
-    outer: for (const [index, tag] of editorClone.entries()) {
+    outer: for (const [i, tag] of editorClone.entries()) {
         if (tag.id === id) {
-            editorClone.splice(index, 1)
-            break outer
+            editorClone.splice(i, 1)
+            break
         }
         if (isGroupPromptTag(tag)) {
-            for (const [index, subTag] of tag.subTags.entries()) {
+            for (const [j, subTag] of tag.subTags.entries()) {
                 if (subTag.id === id) {
-                    tag.subTags.splice(index, 1)
+                    const newTag = clone(tag)
+                    const newSubTags = clone(tag.subTags)
+                    newSubTags.splice(j, 1)
+                    newTag.subTags = newSubTags
+                    editorClone[i] = newTag
                     break outer
                 }
             }
@@ -298,12 +306,11 @@ function getTagColor(item: Wrapper): string {
     if (promptTag.disabled) {
         return 'gray'
     }
-    if (
-        item.kind === Kind.BorderStart ||
-        item.kind === Kind.BorderEnd ||
-        item.kind === Kind.Group
-    ) {
+    if (item.kind === Kind.BorderStart || item.kind === Kind.Group) {
         return 'white'
+    }
+    if (item.kind === Kind.BorderEnd) {
+        return 'black'
     }
     if (isEolPromptTag(promptTag)) {
         return 'black'
@@ -388,15 +395,19 @@ function addPromptTagWeight(promptTag: PromptTag, delta: number = 0.1): void {
         return
     }
     const editorClone = clone(editor.value)
-    outer: for (const [index, tag] of editorClone.entries()) {
+    outer: for (const [i, tag] of editorClone.entries()) {
         if (tag.id === promptTag.id) {
-            editorClone[index] = addWeight(tag, delta)
+            editorClone[i] = addWeight(tag, delta)
             break
         }
         if (isGroupPromptTag(tag)) {
-            for (const [i, subTag] of tag.subTags.entries()) {
+            for (const [j, subTag] of tag.subTags.entries()) {
                 if (subTag.id === promptTag.id) {
-                    tag.subTags[i] = addWeight(subTag, delta) as SubTagPromptTag
+                    const newTag = clone(tag)
+                    const newSubTags = clone(tag.subTags)
+                    newSubTags[j] = addWeight(subTag, delta) as SubTagPromptTag
+                    newTag.subTags = newSubTags
+                    editorClone[i] = newTag
                     break outer
                 }
             }
@@ -410,15 +421,19 @@ function clearPromptTagWeight(promptTag: PromptTag): void {
         return
     }
     const editorClone = clone(editor.value)
-    outer: for (const [index, tag] of editorClone.entries()) {
+    outer: for (const [i, tag] of editorClone.entries()) {
         if (tag.id === promptTag.id) {
-            editorClone[index] = clearWeight(tag)
+            editorClone[i] = clearWeight(tag)
             break
         }
         if (isGroupPromptTag(tag)) {
-            for (const [i, subTag] of tag.subTags.entries()) {
+            for (const [j, subTag] of tag.subTags.entries()) {
                 if (subTag.id === promptTag.id) {
-                    tag.subTags[i] = clearWeight(subTag) as SubTagPromptTag
+                    const newTag = clone(tag)
+                    const newSubTags = clone(tag.subTags)
+                    newSubTags[j] = clearWeight(subTag) as SubTagPromptTag
+                    newTag.subTags = newSubTags
+                    editorClone[i] = newTag
                     break outer
                 }
             }
@@ -432,15 +447,19 @@ function addPromptTagBrackets(promptTag: PromptTag, ...brackets: Bracket[]): voi
         return
     }
     const editorClone = clone(editor.value)
-    outer: for (const [index, tag] of editorClone.entries()) {
+    outer: for (const [i, tag] of editorClone.entries()) {
         if (tag.id === promptTag.id) {
-            editorClone[index] = addBrackets(tag, ...brackets)
+            editorClone[i] = addBrackets(tag, ...brackets)
             break
         }
         if (isGroupPromptTag(tag)) {
-            for (const [i, subTag] of tag.subTags.entries()) {
+            for (const [j, subTag] of tag.subTags.entries()) {
                 if (subTag.id === promptTag.id) {
-                    tag.subTags[i] = addBrackets(subTag, ...brackets) as SubTagPromptTag
+                    const newTag = clone(tag)
+                    const newSubTags = clone(tag.subTags)
+                    newSubTags[j] = addBrackets(subTag, ...brackets) as SubTagPromptTag
+                    newTag.subTags = newSubTags
+                    editorClone[i] = newTag
                     break outer
                 }
             }
@@ -454,15 +473,19 @@ function clearPromptTagBrackets(promptTag: PromptTag): void {
         return
     }
     const editorClone = clone(editor.value)
-    outer: for (const [index, tag] of editorClone.entries()) {
+    outer: for (const [i, tag] of editorClone.entries()) {
         if (tag.id === promptTag.id) {
-            editorClone[index] = clearBrackets(tag)
+            editorClone[i] = clearBrackets(tag)
             break
         }
         if (isGroupPromptTag(tag)) {
-            for (const [i, subTag] of tag.subTags.entries()) {
+            for (const [j, subTag] of tag.subTags.entries()) {
                 if (subTag.id === promptTag.id) {
-                    tag.subTags[i] = clearBrackets(subTag) as SubTagPromptTag
+                    const newSubTags = cloneModify(
+                        tag.subTags,
+                        (arr) => (arr[j] = clearBrackets(subTag) as SubTagPromptTag)
+                    )
+                    editorClone[i] = cloneModify(tag, (t) => (t.subTags = newSubTags))
                     break outer
                 }
             }
@@ -494,10 +517,11 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
         if (isGroupPromptTag(tag)) {
             for (const [i, subTag] of tag.subTags.entries()) {
                 if (subTag.id === promptTag.id && isMonoPromptTag(subTag)) {
-                    tag.subTags[i] = {
-                        ...subTag,
-                        translation,
-                    }
+                    const newSubTags = cloneModify(
+                        tag.subTags,
+                        (arr) => (arr[i] = { ...subTag, translation })
+                    )
+                    editorClone[index] = cloneModify(tag, (t) => (t.subTags = newSubTags))
                     break outer
                 }
             }
@@ -517,170 +541,178 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
         ghost-class="ghost-class"
         @update="nextTick(() => debouncedCommit())"
     >
-        <div v-for="item in flatEditor" :key="item.promptTag.id + item.kind" class="my-[-0.5px]">
-            <el-dropdown
-                trigger="hover"
-                size="small"
-                placement="top"
-                :show-arrow="false"
-                :popper-options="{
-                    modifiers: [
-                        {
-                            name: 'offset',
-                            options: {
-                                offset: [0, 0],
-                            },
-                        },
-                    ],
-                }"
-                :show-timeout="50"
-                :hide-timeout="50"
-                :hide-on-click="false"
-                :disabled="isEolPromptTag(item.promptTag) || isSpecialPromptTag(item.promptTag)"
+        <TransitionGroup name="tag-list">
+            <div
+                v-for="item in flatEditor"
+                :key="item.promptTag.id + item.kind"
+                class="my-[-0.5px]"
             >
-                <el-tag
-                    :color="getTagColor(item)"
-                    effect="dark"
+                <el-dropdown
+                    trigger="hover"
                     size="small"
-                    disable-transitions
-                    class="cursor-pointer"
-                    :class="{
-                        'line-through': item.promptTag.disabled,
-                        'font-bold': true,
-                        'drag-handle':
-                            !(item.kind === Kind.BorderStart) && !(item.kind === Kind.BorderEnd),
+                    placement="top"
+                    :show-arrow="false"
+                    :popper-options="{
+                        modifiers: [
+                            {
+                                name: 'offset',
+                                options: {
+                                    offset: [0, 0],
+                                },
+                            },
+                        ],
                     }"
-                    @click.left="handleLeftClickPromptTag(item)"
-                    @click.right="copyText(promptTagToString(item.promptTag))"
-                    @mousedown.middle.prevent.stop="removePromptTag(item.promptTag.id)"
-                    @close="removePromptTag(item.promptTag.id)"
+                    :show-timeout="300"
+                    :hide-timeout="50"
+                    :hide-on-click="false"
+                    :disabled="isEolPromptTag(item.promptTag) || isSpecialPromptTag(item.promptTag)"
                 >
-                    <span v-if="isEolPromptTag(item.promptTag)">EOL</span>
-                    <span v-else-if="item.kind === Kind.BorderStart" class="text-teal-800!">
-                        ▶
-                    </span>
-                    <span v-else-if="item.kind === Kind.BorderEnd" class="text-teal-800!">
-                        ◀
-                    </span>
-                    <Highlighter
-                        v-else
-                        :search-words="[searchText]"
-                        :auto-escape="true"
-                        :text-to-highlight="
-                            (item.kind === Kind.Group ? '◀\t' : '') +
-                            (item.kind === Kind.Default
-                                ? promptTagToString(item.promptTag)
-                                : item.promptTag.text) +
-                            (item.kind === Kind.Group ? '\t▶' : '')
-                        "
-                        class="flex-1 block font-[500]"
+                    <el-tag
+                        :color="getTagColor(item)"
+                        effect="dark"
+                        size="small"
+                        disable-transitions
+                        class="cursor-pointer"
                         :class="{
-                            'text-teal-800!': item.kind === Kind.Group,
+                            'line-through': item.promptTag.disabled,
+                            'font-bold': true,
+                            'drag-handle':
+                                !(item.kind === Kind.BorderStart) &&
+                                !(item.kind === Kind.BorderEnd),
                         }"
-                    />
-                </el-tag>
-
-                <template #dropdown>
-                    <el-dropdown-menu
-                        class="flex flex-col p-0! overflow-hidden"
-                        :item-classes="['px-2', 'py-1', 'whitespace-nowrap']"
+                        @click.left="handleLeftClickPromptTag(item)"
+                        @click.right="copyText(promptTagToString(item.promptTag))"
+                        @mousedown.middle.prevent.stop="removePromptTag(item.promptTag.id)"
+                        @close="removePromptTag(item.promptTag.id)"
                     >
-                        <div class="dropdown-menu-group">
-                            <el-dropdown-item
-                                v-if="canCreateGroup(item.promptTag)"
-                                @click="createGroup(item.promptTag)"
-                            >
-                                建组
-                            </el-dropdown-item>
-                            <el-dropdown-item
-                                v-if="
-                                    item.kind === Kind.Group ||
-                                    item.kind === Kind.BorderStart ||
-                                    item.kind === Kind.BorderEnd
-                                "
-                                @click="disgroup(item.promptTag)"
-                            >
-                                解组
-                            </el-dropdown-item>
-                            <el-dropdown-item
-                                v-if="
-                                    item.kind === Kind.Group ||
-                                    item.kind === Kind.BorderStart ||
-                                    item.kind === Kind.BorderEnd
-                                "
-                                @click="editPromptTag(item.promptTag)"
-                            >
-                                命名
-                            </el-dropdown-item>
-                            <el-dropdown-item
-                                v-if="validPromptTagToCreate(item.promptTag)"
-                                @click="createPrompt(item.promptTag)"
-                            >
-                                收藏
-                            </el-dropdown-item>
-                            <el-dropdown-item
-                                v-if="isPromptTagCollected(item.promptTag)"
-                                @click="selectPrompt(item.promptTag)"
-                            >
-                                详情
-                            </el-dropdown-item>
-                        </div>
-                        <div class="dropdown-menu-group">
-                            <el-dropdown-item
-                                v-if="canAddWeight(item.promptTag)"
-                                @click="addPromptTagWeight(item.promptTag, 0.05)"
-                            >
-                                <el-icon class="mr-0!" size="large"><ChevronUp /></el-icon>
-                            </el-dropdown-item>
-                            <el-dropdown-item
-                                v-if="canAddWeight(item.promptTag)"
-                                @click="clearPromptTagWeight(item.promptTag)"
-                            >
-                                <el-icon class="mr-0!" size="large"><Refresh /></el-icon>
-                            </el-dropdown-item>
-                            <el-dropdown-item
-                                v-if="canAddWeight(item.promptTag)"
-                                @click="addPromptTagWeight(item.promptTag, -0.05)"
-                            >
-                                <el-icon class="mr-0!" size="large"><ChevronDown /></el-icon>
-                            </el-dropdown-item>
-                        </div>
-                        <div class="dropdown-menu-group">
-                            <el-dropdown-item
-                                v-if="isMonoPromptTag(item.promptTag)"
-                                @click="addPromptTagBrackets(item.promptTag, Bracket.Round)"
-                            >
-                                <span class="text-lg text-bold">()</span>
-                            </el-dropdown-item>
-                            <el-dropdown-item
-                                v-if="isMonoPromptTag(item.promptTag)"
-                                @click="clearPromptTagBrackets(item.promptTag)"
-                            >
-                                <el-icon class="mr-0!" size="large"><Refresh /></el-icon>
-                            </el-dropdown-item>
-                            <el-dropdown-item
-                                v-if="isMonoPromptTag(item.promptTag)"
-                                @click="addPromptTagBrackets(item.promptTag, Bracket.Square)"
-                            >
-                                <span class="text-lg text-bold">[]</span>
-                            </el-dropdown-item>
-                        </div>
-                        <div v-if="isMonoPromptTag(item.promptTag)" class="dropdown-menu-group">
-                            <el-dropdown-item
-                                v-if="!item.promptTag.translation"
-                                @click="translatePromptTag(item.promptTag)"
-                            >
-                                翻译
-                            </el-dropdown-item>
-                            <div v-else class="flex-1 text-center italic">
-                                {{ item.promptTag.translation }}
+                        <span v-if="isEolPromptTag(item.promptTag)">EOL</span>
+                        <span v-else-if="item.kind === Kind.BorderStart" class="text-teal-800!">
+                            ▶ {{ item.promptTag.text }}
+                        </span>
+                        <span
+                            v-else-if="item.kind === Kind.BorderEnd"
+                            class="text-gray-100! font-light"
+                        >
+                            ◀ {{ item.promptTag.text }}
+                        </span>
+                        <Highlighter
+                            v-else
+                            :search-words="[searchText]"
+                            :auto-escape="true"
+                            :text-to-highlight="
+                                (item.kind === Kind.Group ? '⣿\t' : '') +
+                                (item.kind === Kind.Default
+                                    ? promptTagToString(item.promptTag)
+                                    : item.promptTag.text)
+                            "
+                            class="flex-1 block font-[500]"
+                            :class="{
+                                'text-teal-800!': item.kind === Kind.Group,
+                            }"
+                        />
+                    </el-tag>
+
+                    <template #dropdown>
+                        <el-dropdown-menu
+                            class="flex flex-col p-0! overflow-hidden"
+                            :item-classes="['px-2', 'py-1', 'whitespace-nowrap']"
+                        >
+                            <div class="dropdown-menu-group">
+                                <el-dropdown-item
+                                    v-if="canCreateGroup(item.promptTag)"
+                                    @click="createGroup(item.promptTag)"
+                                >
+                                    建组
+                                </el-dropdown-item>
+                                <el-dropdown-item
+                                    v-if="
+                                        item.kind === Kind.Group ||
+                                        item.kind === Kind.BorderStart ||
+                                        item.kind === Kind.BorderEnd
+                                    "
+                                    @click="disgroup(item.promptTag)"
+                                >
+                                    解组
+                                </el-dropdown-item>
+                                <el-dropdown-item
+                                    v-if="
+                                        item.kind === Kind.Group ||
+                                        item.kind === Kind.BorderStart ||
+                                        item.kind === Kind.BorderEnd
+                                    "
+                                    @click="editPromptTag(item.promptTag)"
+                                >
+                                    命名
+                                </el-dropdown-item>
+                                <el-dropdown-item
+                                    v-if="validPromptTagToCreate(item.promptTag)"
+                                    @click="createPrompt(item.promptTag)"
+                                >
+                                    收藏
+                                </el-dropdown-item>
+                                <el-dropdown-item
+                                    v-if="isPromptTagCollected(item.promptTag)"
+                                    @click="selectPrompt(item.promptTag)"
+                                >
+                                    详情
+                                </el-dropdown-item>
                             </div>
-                        </div>
-                    </el-dropdown-menu>
-                </template>
-            </el-dropdown>
-        </div>
-        <!-- TODO 当输入逗号分割字符串时，创建 group 标签 -->
+                            <div class="dropdown-menu-group">
+                                <el-dropdown-item
+                                    v-if="canAddWeight(item.promptTag)"
+                                    @click="addPromptTagWeight(item.promptTag, 0.05)"
+                                >
+                                    <el-icon class="mr-0!" size="large"><ChevronUp /></el-icon>
+                                </el-dropdown-item>
+                                <el-dropdown-item
+                                    v-if="canAddWeight(item.promptTag)"
+                                    @click="clearPromptTagWeight(item.promptTag)"
+                                >
+                                    <el-icon class="mr-0!" size="large"><Refresh /></el-icon>
+                                </el-dropdown-item>
+                                <el-dropdown-item
+                                    v-if="canAddWeight(item.promptTag)"
+                                    @click="addPromptTagWeight(item.promptTag, -0.05)"
+                                >
+                                    <el-icon class="mr-0!" size="large"><ChevronDown /></el-icon>
+                                </el-dropdown-item>
+                            </div>
+                            <div class="dropdown-menu-group">
+                                <el-dropdown-item
+                                    v-if="isMonoPromptTag(item.promptTag)"
+                                    @click="addPromptTagBrackets(item.promptTag, Bracket.Round)"
+                                >
+                                    <span class="text-lg text-bold">()</span>
+                                </el-dropdown-item>
+                                <el-dropdown-item
+                                    v-if="isMonoPromptTag(item.promptTag)"
+                                    @click="clearPromptTagBrackets(item.promptTag)"
+                                >
+                                    <el-icon class="mr-0!" size="large"><Refresh /></el-icon>
+                                </el-dropdown-item>
+                                <el-dropdown-item
+                                    v-if="isMonoPromptTag(item.promptTag)"
+                                    @click="addPromptTagBrackets(item.promptTag, Bracket.Square)"
+                                >
+                                    <span class="text-lg text-bold">[]</span>
+                                </el-dropdown-item>
+                            </div>
+                            <div v-if="isMonoPromptTag(item.promptTag)" class="dropdown-menu-group">
+                                <el-dropdown-item
+                                    v-if="!item.promptTag.translation"
+                                    @click="translatePromptTag(item.promptTag)"
+                                >
+                                    翻译
+                                </el-dropdown-item>
+                                <div v-else class="flex-1 text-center italic">
+                                    {{ item.promptTag.translation }}
+                                </div>
+                            </div>
+                        </el-dropdown-menu>
+                    </template>
+                </el-dropdown>
+            </div>
+        </TransitionGroup>
         <el-dialog
             v-model="isEditingPromptTag"
             title="编辑提示词文本"
@@ -693,7 +725,7 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
                     ref="promptTagInput"
                     v-model="editingPromptTagInput"
                     placeholder="编辑提示词"
-                    autocorrect="off"
+                    spellcheck="false"
                     @keyup.enter="confirmEditPrompt"
                 />
             </div>
@@ -720,5 +752,19 @@ async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
     & :deep(.el-tag) {
         box-shadow: 0px 0px 8px 0px #666;
     }
+}
+.tag-list-enter-active,
+.tag-list-leave-active {
+    transition: all 50ms ease-in-out;
+}
+.tag-list-enter-from {
+    opacity: 0;
+    max-width: 0;
+    margin: 0;
+}
+.tag-list-leave-to {
+    opacity: 0;
+    max-width: 0;
+    margin: 0 0 0 -4px;
 }
 </style>

@@ -14,7 +14,7 @@
                 active-text="LORA"
                 inactive-text="普通"
             />
-            <el-input v-model.lazy="promptText" placeholder="请输入提示词" />
+            <el-input v-model.lazy="promptText" spellcheck="false" placeholder="请输入提示词" />
         </div>
         <div>
             <div class="flex gap-1">
@@ -29,7 +29,11 @@
                     @click="copyText(promptTranslation)"
                 />
             </div>
-            <el-input v-model.lazy="promptTranslation" placeholder="请输入翻译" />
+            <el-input
+                v-model.lazy="promptTranslation"
+                spellcheck="false"
+                placeholder="请输入翻译"
+            />
         </div>
         <div>
             <el-text class="edit-header">标签</el-text>
@@ -50,7 +54,11 @@
         <div>
             <el-text class="edit-header">描述</el-text>
             <el-button :icon="CopyDocument" link @click="copyText(promptDescription)" />
-            <el-input v-model.lazy="promptDescription" placeholder="请输入描述" />
+            <el-input
+                v-model.lazy="promptDescription"
+                spellcheck="false"
+                placeholder="请输入描述"
+            />
         </div>
         <div>
             <!-- <el-text class="edit-header">来源</el-text> -->
@@ -63,7 +71,12 @@
                 来源
             </el-link>
             <el-button :icon="CopyDocument" link @click="copyText(promptSource)" />
-            <el-input v-model.lazy="promptSource" type="url" placeholder="请输入来源">
+            <el-input
+                v-model.lazy="promptSource"
+                spellcheck="false"
+                type="url"
+                placeholder="请输入来源"
+            >
                 <template #suffix>
                     <el-icon
                         v-show="!promptSourceValid"

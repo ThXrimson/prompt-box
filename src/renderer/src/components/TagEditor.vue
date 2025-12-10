@@ -9,6 +9,7 @@
                         <el-input
                             v-if="editingTag[scope.row.id]"
                             v-model="editingTagText[scope.row.id]"
+                            spellcheck="false"
                         />
                         <el-text v-else>{{ scope.row.text }}</el-text>
                     </template>

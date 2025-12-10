@@ -47,7 +47,7 @@
                     :reserve-keyword="false"
                 />
 
-                <el-input v-model="searchPromptInput" placeholder="搜索提示词">
+                <el-input v-model="searchPromptInput" spellcheck="false" placeholder="搜索提示词">
                     <template #prefix>
                         <el-icon class="cursor-pointer">
                             <Search />
@@ -75,6 +75,7 @@
                     v-else
                     ref="promptInput"
                     v-model="newPromptText"
+                    spellcheck="false"
                     @keyup.enter="confirmCreatePrompt"
                     @keyup.esc="cancelCreatePrompt"
                 >

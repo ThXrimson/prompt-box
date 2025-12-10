@@ -148,22 +148,16 @@
                         @update:model-value="switchEditor($event as boolean)"
                     />
                 </div>
-                <!-- TODO 当输入逗号分割字符串时，创建 group 标签 -->
                 <el-input
                     v-model="searchText"
                     placeholder="搜索或添加"
                     clearable
-                    autocorrect="off"
+                    spellcheck="false"
                     @keyup.enter="createPromptTag(searchText)"
                 >
                     <template #prefix>
                         <el-icon class="cursor-pointer" @click.stop="copySearchText">
                             <copy-document />
-                        </el-icon>
-                    </template>
-                    <template #suffix>
-                        <el-icon class="cursor-pointer" @click.stop="createPromptTag(searchText)">
-                            <enter-icon />
                         </el-icon>
                     </template>
                 </el-input>
@@ -187,7 +181,6 @@
 import { CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
 import { computed, onMounted, ref, useTemplateRef } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
-import EnterIcon from '@renderer/icons/Enter.vue'
 import { ElInput, ElMessage } from 'element-plus'
 import { clone, isNil } from 'lodash'
 import {
@@ -374,9 +367,9 @@ function createPromptTag(text: string): void {
         editorClone.push(tag)
         currentEditor.value = editorClone
     } else {
-        const tag = stringToMonoPromptTag(text)
+        const tags = stringToEditor(text)
         const editorClone = clone(currentEditor.value)
-        editorClone.push(tag)
+        editorClone.push(...tags)
         currentEditor.value = editorClone
     }
 }

@@ -1,10 +1,10 @@
 <template>
     <div
         ref="tag-card"
-        class="tag-collection flex h-full [&>*]:mr-2 border-2 border-gray-200 rounded-lg p-2 pr-0 bg-white"
+        class="tag-collection flex h-full *:mr-2 border-2 border-gray-200 rounded-lg p-2 pr-0 bg-white"
         @click="handleClickBackground"
     >
-        <div class="h-full flex-2 flex flex-col [&>*]:mr-2 gap-1.5">
+        <div class="h-full flex-2 flex flex-col *:mr-2 gap-1.5">
             <div class="header flex justify-between gap-0.5">
                 <el-text class="font-bold">{{ tag.text }}</el-text>
                 <el-tooltip placement="left" content="左键打开示例；右键打开图片">
@@ -17,6 +17,7 @@
                     v-model="promptInput"
                     placeholder="添加或筛选"
                     clearable
+                    spellcheck="false"
                     @keyup.enter="createAddPrompt"
                 >
                     <template #prefix>

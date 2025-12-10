@@ -15,6 +15,7 @@
                         v-model="tempWorkspaceText"
                         placeholder="请输入工作区名称"
                         clearable
+                        spellcheck="false"
                         @keyup.enter="confirmEditWorkspaceName(tempWorkspaceText)"
                         @keyup.esc.stop.prevent="showWorkspaceNameDialog = false"
                     />

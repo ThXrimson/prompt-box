@@ -61,6 +61,7 @@
             <div class="flex gap-2">
                 <el-input
                     v-model="candidateImage"
+                    spellcheck="false"
                     @paste="handlePaste"
                     @drop.prevent="handleDrop"
                 />
