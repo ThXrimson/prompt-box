@@ -188,12 +188,40 @@ function handleLeftClickPromptTag(item: Wrapper): void {
             editPromptTag(item.promptTag)
         },
         () => {
-            item.promptTag.disabled = !item.promptTag.disabled
-            if (isGroupPromptTag(item.promptTag)) {
-                for (const subTag of item.promptTag.subTags) {
-                    subTag.disabled = item.promptTag.disabled
-                }
+            const disabled = !item.promptTag.disabled
+            const newTag = clone(item.promptTag)
+            newTag.disabled = disabled
+            if (isGroupPromptTag(newTag)) {
+                const newSubTags = cloneModify(newTag.subTags, (arr) => {
+                    for (const [i, sub] of arr.entries()) {
+                        arr[i] = { ...sub, disabled }
+                    }
+                })
+                newTag.subTags = newSubTags
             }
+            editor.value = cloneModify(editor.value, (arr) => {
+                for (const [i, tag] of arr.entries()) {
+                    if (tag.id === newTag.id) {
+                        arr[i] = newTag
+                        return
+                    }
+                    if (isGroupPromptTag(tag)) {
+                        for (const [j, sub] of tag.subTags.entries()) {
+                            if (sub.id === newTag.id) {
+                                arr[i] = cloneModify(
+                                    tag,
+                                    (t) =>
+                                        (t.subTags = cloneModify(
+                                            tag.subTags,
+                                            (s) => (s[j] = newTag as MonoPromptTag | LoraPromptTag)
+                                        ))
+                                )
+                                return
+                            }
+                        }
+                    }
+                }
+            })
         }
     )
 }
