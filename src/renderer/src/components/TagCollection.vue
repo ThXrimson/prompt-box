@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, DeepReadonly, nextTick, ref, watch } from 'vue'
+import { computed, DeepReadonly, ref, watch } from 'vue'
 import { UNCATEGORIZED_TAG_ID, type Tag } from '@shared/models/tag'
 import { useDataStore } from '@renderer/stores/data'
 import { matchTextPlus } from '@renderer/utils/pinyin-includes'
@@ -160,10 +160,9 @@ const promptImageFileName = computed(() => {
 })
 
 defineExpose({
-    scrollPromptIntoView: async (prompt: string) => {
+    scrollPromptIntoView: (text: string) => {
         promptInput.value = ''
-        await nextTick()
-        const promptElement = promptCards.value?.find((p) => p.promptText === prompt)
+        const promptElement = promptCards.value?.find((p) => p.promptText === text)
         if (promptElement) {
             promptElement.$el.scrollIntoView({
                 behavior: 'smooth',

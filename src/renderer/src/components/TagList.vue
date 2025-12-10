@@ -49,9 +49,9 @@ const emit = defineEmits<{
 const tagIdRefs = useTemplateRefsList()
 
 defineExpose({
-    scrollTagIntoView(tagID: string): void {
+    scrollTagIntoView(tagId: string): void {
         for (const ref of tagIdRefs.value) {
-            if (ref.getAttribute('tag-id') === tagID) {
+            if (ref.getAttribute('tag-id') === tagId) {
                 ref.scrollIntoView({
                     behavior: 'smooth',
                     block: 'center',

@@ -235,14 +235,35 @@ async function confirmEditWorkspaceName(name: string): Promise<void> {
 }
 
 const tagCollection = useTemplateRef('tag-collection')
-async function findPromptAndScroll(prompt: string): Promise<void> {
+async function findPromptAndScroll(text: string): Promise<void> {
     for (const tag of workspaceTags.value) {
         const prompts = dataStore.prompt.readonly.filter((p) => p.tagIds.includes(tag.id))
-        const index = prompts.findIndex((p) => p.text === prompt)
+        const index = prompts.findIndex((p) => p.text === text)
         if (index !== -1) {
             selectedTagId.value = tag.id
-            await nextTick()
-            tagCollection.value?.scrollPromptIntoView(prompt)
+            nextTick(() => {
+                tagListRef.value?.scrollTagIntoView(tag.id)
+                tagCollection.value?.scrollPromptIntoView(text)
+            })
+            return
+        }
+    }
+    for (const tag of dataStore.tag.readonly) {
+        if (workspaceTagIds.value.includes(tag.id)) {
+            continue
+        }
+        const prompts = dataStore.prompt.readonly.filter((p) => p.tagIds.includes(tag.id))
+        const index = prompts.findIndex((p) => p.text === text)
+        if (!isNil(workspace.value) && index !== -1) {
+            dataStore.workspace.update({
+                id: workspace.value.id,
+                tagIds: [...workspaceTagIds.value, tag.id],
+            })
+            selectedTagId.value = tag.id
+            nextTick(() => {
+                tagListRef.value?.scrollTagIntoView(tag.id)
+                tagCollection.value?.scrollPromptIntoView(text)
+            })
             return
         }
     }
@@ -252,23 +273,22 @@ const searchPromptInput = ref('')
 const searchPromptOptions = computed(() => {
     const options: { text: string; translation: string }[] = []
     const seen = new Set<string>()
-    for (const tag of workspaceTags.value) {
-        const prompts = dataStore.prompt.readonly.filter((p) => p.tagIds.includes(tag.id))
-        for (const prompt of prompts) {
-            if (seen.has(prompt.text + prompt.translation)) continue
-            seen.add(prompt.text + prompt.translation)
-            options.push({
-                text: prompt.text,
-                translation: prompt.translation || '',
-            })
-        }
-    }
-    return options.filter((item) => {
-        return (
-            matchTextPlus(item.text, searchPromptInput.value) ||
-            matchTextPlus(item.translation, searchPromptInput.value)
+    for (const prompt of dataStore.prompt.readonly) {
+        if (seen.has(prompt.text + prompt.translation)) continue
+        if (
+            !(
+                matchTextPlus(prompt.text, searchPromptInput.value) ||
+                matchTextPlus(prompt.translation, searchPromptInput.value)
+            )
         )
-    })
+            continue
+        seen.add(prompt.text + prompt.translation)
+        options.push({
+            text: prompt.text,
+            translation: prompt.translation || '',
+        })
+    }
+    return options
 })
 
 function getPromptIdsFromTag(promptTag: DeepReadonly<PromptTag>): string[] {
