@@ -1,11 +1,11 @@
 <template>
     <el-scrollbar class="flex flex-col gap-2 flex-1 min-h-0 pr-3">
         <div>
-            <el-rate v-model="promptRate" />
+            <el-rate v-model="promptRate" :max="10" />
         </div>
         <div>
             <el-text class="edit-header">提示词</el-text>
-            <el-button :icon="CopyDocument" link @click="copyPromptText(promptText, promptKind)" />
+            <el-button :icon="CopyDocument" link @click="copyPromptText(promptText)" />
             <el-segmented
                 v-model="promptKind"
                 :options="promptKindOptions"
@@ -223,6 +223,7 @@ import { getImageUrl, isValidUrl } from '@renderer/utils/utils'
 import { Language } from '@vicons/ionicons5'
 import { ElMessageBox } from 'element-plus'
 import { PromptKind } from '@shared/models/prompt'
+import log from 'electron-log/renderer'
 
 const props = defineProps<{
     promptId: string
@@ -240,10 +241,7 @@ const prompt = computed(() => {
 const dataStore = useDataStore()
 
 // 编辑 Prompt 相关数据
-function copyPromptText(text: string, kind: PromptKind): void {
-    if (kind === PromptKind.Lora) {
-        text = `<lora:${text}>`
-    }
+function copyPromptText(text: string): void {
     copyText(text)
 }
 const promptKind = computed({
@@ -251,10 +249,19 @@ const promptKind = computed({
         return prompt.value?.kind ?? PromptKind.Normal
     },
     set(newVal: PromptKind) {
-        dataStore.prompt.update({
-            id: props.promptId,
-            kind: newVal,
-        })
+        try {
+            dataStore.prompt.update({
+                id: props.promptId,
+                kind: newVal,
+            })
+        } catch (e) {
+            if (e === notFoundError) {
+                ElMessage.error('未找到对应的提示词')
+            } else {
+                ElMessage.error('未知错误')
+                log.error('未知错误: ', e)
+            }
+        }
     },
 })
 const promptKindOptions = [
@@ -275,33 +282,62 @@ const promptText = computed({
     get() {
         return prompt.value?.text ?? ''
     },
-    set(newVal: string) {
-        dataStore.prompt.update({
-            id: props.promptId,
-            text: newVal,
-        })
+    async set(newVal: string) {
+        try {
+            await dataStore.prompt.update({
+                id: props.promptId,
+                text: newVal,
+            })
+        } catch (e) {
+            if (e === existsError) {
+                ElMessage.error('已存在同名的提示词')
+            } else if (e === notFoundError) {
+                ElMessage.error('未找到对应的提示词')
+            } else {
+                ElMessage.error('未知错误')
+                log.error('未知错误: ', e)
+            }
+        }
     },
 })
 const promptTranslation = computed({
     get() {
         return prompt.value?.translation ?? ''
     },
-    set(newVal: string) {
-        dataStore.prompt.update({
-            id: props.promptId,
-            translation: newVal,
-        })
+    async set(newVal: string) {
+        try {
+            await dataStore.prompt.update({
+                id: props.promptId,
+                translation: newVal,
+            })
+        } catch (e) {
+            if (e === notFoundError) {
+                ElMessage.error('未找到对应的提示词')
+            } else {
+                ElMessage.error('未知错误')
+                log.error('未知错误: ', e)
+            }
+        }
     },
 })
 const promptDescription = computed({
     get() {
         return prompt.value?.description ?? ''
     },
-    set(newVal: string) {
-        dataStore.prompt.update({
-            id: props.promptId,
-            description: newVal,
-        })
+    async set(newVal: string) {
+        try {
+            await dataStore.prompt.update({
+                id: props.promptId,
+                description: newVal,
+            })
+        } catch (e) {
+            if (e === notFoundError) {
+                ElMessage.error('未找到对应的提示词')
+            } else {
+                ElMessage.error('未知错误')
+                log.error('未知错误: ', e)
+            }
+        }
     },
 })
 const tags = computed(() => dataStore.tag.readonly)
@@ -342,21 +378,39 @@ const promptTags = computed({
                 }
             }
         }
-        dataStore.prompt.update({
-            id: props.promptId,
-            tagIds: newVal.filter((t) => typeof t !== 'string').map((t) => t.id),
-        })
+        try {
+            await dataStore.prompt.update({
+                id: props.promptId,
+                tagIds: newVal.filter((t) => typeof t !== 'string').map((t) => t.id),
+            })
+        } catch (e) {
+            if (e === notFoundError) {
+                ElMessage.error('未找到对应的提示词')
+            } else {
+                ElMessage.error('未知错误')
+                log.error('未知错误: ', e)
+            }
+        }
     },
 })
 const promptSource = computed({
     get() {
         return prompt.value?.source ?? ''
     },
-    set(newVal: string) {
-        dataStore.prompt.update({
-            id: props.promptId,
-            source: newVal,
-        })
+    async set(newVal: string) {
+        try {
+            await dataStore.prompt.update({
+                id: props.promptId,
+                source: newVal,
+            })
+        } catch (e) {
+            if (e === notFoundError) {
+                ElMessage.error('未找到对应的提示词')
+            } else {
+                ElMessage.error('未知错误')
+                log.error('未知错误: ', e)
+            }
+        }
     },
 })
 const promptSourceValid = computed(() => isValidUrl(promptSource.value))
@@ -364,12 +418,21 @@ const promptRelatedTexts = computed({
     get() {
         return (prompt.value?.relatedTexts ?? []) as string[]
     },
-    set(newVal: string[]) {
+    async set(newVal: string[]) {
         newVal = newVal.map((t) => t.trim())
-        dataStore.prompt.update({
-            id: props.promptId,
-            relatedTexts: newVal,
-        })
+        try {
+            await dataStore.prompt.update({
+                id: props.promptId,
+                relatedTexts: newVal,
+            })
+        } catch (e) {
+            if (e === notFoundError) {
+                ElMessage.error('未找到对应的提示词')
+            } else {
+                ElMessage.error('未知错误')
+                log.error('未知错误: ', e)
+            }
+        }
     },
 })
 const examples = computed(() => {
