@@ -478,6 +478,21 @@ function findPromptTagAndReplace(newTag: PromptTag): void {
     }
     editor.value = editorClone
 }
+function getPromptTagText(item: Wrapper): string {
+    let text = ''
+    if (item.kind === Kind.Group) {
+        text += '⣿\t'
+    }
+    if (item.kind === Kind.Default) {
+        text += promptTagToString(item.promptTag, true, true, false, false)
+    } else {
+        if (isEolPromptTag(item.promptTag)) {
+            return '<WRONG>'
+        }
+        text += item.promptTag.text
+    }
+    return text
+}
 </script>
 <template>
     <vue-draggable
@@ -556,12 +571,7 @@ function findPromptTagAndReplace(newTag: PromptTag): void {
                             v-else
                             :search-words="[searchText]"
                             :auto-escape="true"
-                            :text-to-highlight="
-                                (item.kind === Kind.Group ? '⣿\t' : '') +
-                                (item.kind === Kind.Default
-                                    ? promptTagToString(item.promptTag)
-                                    : item.promptTag.text)
-                            "
+                            :text-to-highlight="getPromptTagText(item)"
                             class="flex-1 block font-[500]"
                             :class="{
                                 'text-teal-800!': item.kind === Kind.Group,
@@ -616,7 +626,7 @@ function findPromptTagAndReplace(newTag: PromptTag): void {
                             <div class="dropdown-menu-group">
                                 <el-dropdown-item
                                     v-if="canAddWeight(item.promptTag)"
-                                    @click="addPromptTagWeight(item.promptTag, 0.05)"
+                                    @click="addPromptTagWeight(item.promptTag, 0.1)"
                                 >
                                     <el-icon class="mr-0!" size="large"><ChevronUp /></el-icon>
                                 </el-dropdown-item>
@@ -628,7 +638,7 @@ function findPromptTagAndReplace(newTag: PromptTag): void {
                                 </el-dropdown-item>
                                 <el-dropdown-item
                                     v-if="canAddWeight(item.promptTag)"
-                                    @click="addPromptTagWeight(item.promptTag, -0.05)"
+                                    @click="addPromptTagWeight(item.promptTag, -0.1)"
                                 >
                                     <el-icon class="mr-0!" size="large"><ChevronDown /></el-icon>
                                 </el-dropdown-item>

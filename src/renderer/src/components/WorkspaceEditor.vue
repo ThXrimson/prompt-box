@@ -139,13 +139,12 @@
 
                     <!-- 切换正向、负向编辑器 -->
                     <el-switch
-                        :model-value="isPositiveEditor"
+                        v-model="isPositiveEditor"
                         inline-prompt
                         active-text="POSITIVE"
                         inactive-text="NEGATIVE"
                         style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
                         class="[&_.is-text]:font-mono [&_.is-text]:italic"
-                        @update:model-value="switchEditor($event as boolean)"
                     />
 
                     <el-tooltip
@@ -275,11 +274,6 @@ const currentEditor = computed({
         }
     },
 })
-
-// 切换正向、负向编辑器
-const switchEditor = (value: boolean): void => {
-    isPositiveEditor.value = value
-}
 
 // 编辑模式输入文字
 const specialTexts = computed(() => {

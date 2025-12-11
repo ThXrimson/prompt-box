@@ -156,7 +156,8 @@ export function promptTagToString(
     includeWeight: boolean = true,
     hideWeightIfDefault: boolean = true,
     includeBrackets: boolean = true,
-    ignoreDisabled: boolean = false
+    ignoreDisabled: boolean = false,
+    useTranslation: boolean = false
 ): string {
     if (ignoreDisabled && tag.disabled) {
         return ''
@@ -180,7 +181,8 @@ export function promptTagToString(
             prefix = ''
             suffix = ''
         }
-        return `${prefix}${tag.text}${weightStr}${suffix}`
+        const text = useTranslation && tag.translation.length > 0 ? tag.translation : tag.text
+        return `${prefix}${text}${weightStr}${suffix}`
     } else if (isGroupPromptTag(tag)) {
         const text = tag.subTags
             .map((sub) =>
