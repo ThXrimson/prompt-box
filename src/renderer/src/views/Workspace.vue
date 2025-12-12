@@ -6,23 +6,24 @@
                 <el-text
                     truncated
                     class="font-bold! cursor-pointer max-w-24!"
-                    @click="handleOpenWorkspaceNameDialog"
+                    @click="openWorkspaceNameDialog"
                 >
-                    {{ workspace.name || '未命名' }}
+                    {{ workspace?.name || '未命名' }}
                 </el-text>
                 <el-dialog v-model="showWorkspaceNameDialog" title="编辑工作区名称">
                     <el-input
                         v-model="tempWorkspaceText"
                         placeholder="请输入工作区名称"
                         clearable
-                        @keyup.enter="handleConfirmEditWorkspaceName(tempWorkspaceText)"
-                        @keyup.esc.stop.prevent="handleCancelEditWorkspaceName"
+                        spellcheck="false"
+                        @keyup.enter="confirmEditWorkspaceName(tempWorkspaceText)"
+                        @keyup.esc.stop.prevent="showWorkspaceNameDialog = false"
                     />
                     <template #footer>
-                        <el-button @click="handleCancelEditWorkspaceName">取消</el-button>
+                        <el-button @click="showWorkspaceNameDialog = false">取消</el-button>
                         <el-button
                             type="primary"
-                            @click="handleConfirmEditWorkspaceName(tempWorkspaceText)"
+                            @click="confirmEditWorkspaceName(tempWorkspaceText)"
                         >
                             确认
                         </el-button>
@@ -38,13 +39,13 @@
                     title="标签管理"
                     @keyup.esc.stop.prevent="tagDialogVisible = false"
                 >
-                    <tag-editor />
+                    <TagEditor />
                 </el-dialog>
 
                 <el-select-v2
                     model-value=""
                     :options="searchPromptOptions"
-                    :filter-method="findPromptByTextOrTranslation"
+                    :filter-method="(query) => (searchPromptInput = query)"
                     :props="{
                         label: 'text',
                         value: 'text',
@@ -53,7 +54,7 @@
                     placeholder="查找提示词"
                     clearable
                     class="flex-1 min-w-0"
-                    @update:model-value="handleFindPromptAndScroll($event)"
+                    @update:model-value="findPromptAndScroll($event)"
                 >
                     <template #default="{ item }">
                         <span style="margin-right: 8px">{{ item.text }}</span>
@@ -71,340 +72,317 @@
                         value: 'id',
                     }"
                     filterable
-                    :filter-method="findTagByTextOrPinyin"
+                    :filter-method="(query) => (filterFocusTagInput = query)"
                     placeholder="查找标签"
                     clearable
                     class="flex-1 min-w-0"
-                    @update:model-value="handleFindTag"
+                    @update:model-value="findTag"
                 />
 
                 <el-select-v2
-                    :model-value="workspace.tagIDs"
-                    :options="tagAddOptions"
+                    v-model="workspaceTagIds"
+                    :options="tagOptions"
                     :props="{
                         label: 'text',
                         value: 'id',
                     }"
                     filterable
-                    :filter-method="filterTagsByTextOrPinyin"
+                    :filter-method="(query) => (tagFilterInput = query)"
                     placeholder="选择标签"
                     multiple
                     collapse-tags-tooltip
                     clearable
                     collapse-tags
                     class="flex-1 min-w-0"
-                    @update:model-value="handleSelectTags($event as string[])"
                 >
                     <template #header>
-                        <el-checkbox
-                            v-model="selectAllTags"
-                            :indeterminate="indeterminateAll"
-                            @change="handleCheckAllTags"
-                        >
+                        <el-checkbox v-model="selectAllTags" :indeterminate="indeterminateAll">
                             全选
                         </el-checkbox>
-                        <el-checkbox v-model="selectUsedTags" @change="handleCheckUsedTags">
-                            已使用
-                        </el-checkbox>
+                        <el-checkbox v-model="selectUsedTags"> 已使用 </el-checkbox>
                     </template>
                 </el-select-v2>
             </div>
         </navigator>
         <!-- 标签列表 -->
         <div class="flex-1 flex overflow-auto mt-2 gap-1">
-            <tag-list
+            <TagList
                 ref="tag-list"
-                :tag-i-ds="workspace.tagIDs"
-                :selected-i-d="selectedTagID"
-                class="flex-1 min-w-0 max-w-3xs"
-                @update:tag-i-ds="handleReorderTags($event)"
-                @close-tag="handleCloseTag($event)"
-                @select="selectedTagID = $event"
+                v-model:tag-ids="workspaceTagIds"
+                :selected-id="selectedTagId"
+                class="flex-1 min-w-0 max-w-[12rem]"
+                @close-tag="(id) => closeTag(id)"
+                @select="(id) => (selectedTagId = id)"
             />
-            <tag-collection
+            <TagCollection
                 ref="tag-collection"
-                :tag="
-                    storage.getTagByID(selectedTagID) ?? storage.getTagByID(UNCATEGORIZED_TAG_ID)!
-                "
-                :existing-prompt-i-ds="existingPromptIDs"
+                :tag="selectedTag"
+                :used-prompt-ids="usedPromptIds"
                 class="flex-1 min-w-0"
-                @add-to-workspace="editor?.addText($event)"
+                @add-to-workspace="(prompt) => editor?.addPromptTag(prompt)"
             />
         </div>
         <!-- 工作区编辑器 -->
-        <workspace-editor
+        <WorkspaceEditor
             ref="editor"
-            :positive-editor="workspace.positiveEditor"
-            :negative-editor="workspace.negativeEditor"
-            @update-positive-editor="updateWorkspace({ positiveEditor: $event })"
-            @update-negative-editor="updateWorkspace({ negativeEditor: $event })"
-            @existing-prompt-change="handleExistingPromptChange($event)"
+            :workspace-id="workspaceId"
+            @select-prompt="(promptId) => tagCollection?.selectPrompt(promptId)"
         />
     </div>
 </template>
 
 <script setup lang="ts">
-import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/storage'
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { useDataStore } from '@renderer/stores/data'
+import { computed, DeepReadonly, nextTick, ref, useTemplateRef } from 'vue'
 import { Discount } from '@element-plus/icons-vue'
-import { CheckboxValueType, ElMessage } from 'element-plus'
-import type { Workspace } from '@shared/types'
+import { ElMessage } from 'element-plus'
 import TagEditor from '@renderer/components/TagEditor.vue'
-import { pinyinIncludes, pinyinIncludesWithFirstLetter } from '@renderer/utils/pinyin-includes'
+import { matchTextPlus } from '@renderer/utils/pinyin-includes'
 import TagList from '@renderer/components/TagList.vue'
+import { newUncategorizedTag, UNCATEGORIZED_TAG_ID } from '@shared/models/tag'
+import { clone, intersection, isNil, uniq, xor } from 'lodash'
+import {
+    isGroupPromptTag,
+    isLoraPromptTag,
+    isMonoPromptTag,
+    isSpecialPromptTag,
+    PromptTag,
+} from '@shared/models/prompt-tag'
 
-const storage = useStorage()
+const dataStore = useDataStore()
+const workspace = computed(() => {
+    return dataStore.workspace.readonly.find((w) => w.id === props.workspaceId)
+})
+const workspaceTagIds = computed({
+    get() {
+        return (clone(workspace.value?.tagIds) as string[]) || []
+    },
+    set(newVal) {
+        if (isNil(workspace.value)) {
+            ElMessage.error('工作区不存在')
+            return
+        }
+        dataStore.workspace.update({
+            id: workspace.value.id,
+            tagIds: newVal as string[],
+        })
+    },
+})
+const workspaceTags = computed(() =>
+    dataStore.tag.readonly.filter((t) => workspaceTagIds.value.includes(t.id))
+)
 
-const selectedTagID = ref(UNCATEGORIZED_TAG_ID)
-
-const tagAddOptions = ref(Array.from(storage.tags.values()))
+const selectedTagId = ref(UNCATEGORIZED_TAG_ID)
+const selectedTag = computed(() => {
+    return (
+        dataStore.tag.readonly.find((tag) => tag.id === selectedTagId.value) ??
+        newUncategorizedTag()
+    )
+})
+const tagFilterInput = ref('')
+const tagOptions = computed(() => {
+    return [newUncategorizedTag()].concat(...dataStore.tag.readonly).filter((tag) => {
+        return matchTextPlus(tag.text, tagFilterInput.value)
+    })
+})
 
 const editor = useTemplateRef('editor')
 
 const props = defineProps<{
-    workspaceID: string
+    workspaceId: string
 }>()
 
 const tempWorkspaceText = ref('')
 const showWorkspaceNameDialog = ref(false)
 
-const workspace = ref(defaultWorkspace())
-
-const workspaceTags = computed(() => {
-    return workspace.value.tagIDs
-        .map((id) => storage.getTagByID(id))
-        .filter((tag) => tag !== undefined)
+const filterFocusTagInput = ref('')
+const tagFocusOptions = computed(() => {
+    return workspaceTags.value.filter((tag) => matchTextPlus(tag.text, filterFocusTagInput.value))
 })
-const tagFocusOptions = ref(workspaceTags.value)
 
 const tagDialogVisible = ref(false)
 
-function handleCloseTag(tagID: string): void {
-    updateWorkspace({
-        tagIDs: workspace.value?.tagIDs.filter((id) => id !== tagID) || [],
-    })
-}
-
-async function updateWorkspace(newWorkspace: {
-    name?: string
-    positiveEditor?: string
-    negativeEditor?: string
-    tagIDs?: string[]
-}): Promise<void> {
-    if (!workspace.value.id) {
+async function closeTag(tagId: string): Promise<void> {
+    if (isNil(workspace.value)) {
+        ElMessage.error('工作区不存在')
         return
     }
-    workspace.value.name = newWorkspace.name || workspace.value.name
-    workspace.value.positiveEditor = newWorkspace.positiveEditor || workspace.value.positiveEditor
-    workspace.value.negativeEditor = newWorkspace.negativeEditor || workspace.value.negativeEditor
-    workspace.value.tagIDs = newWorkspace.tagIDs || workspace.value.tagIDs
-    const w = await storage.updateWorkspace({
+    await dataStore.workspace.update({
         id: workspace.value.id,
-        name: workspace.value.name,
-        positiveEditor: workspace.value.positiveEditor,
-        negativeEditor: workspace.value.negativeEditor,
-        tagIDs: workspace.value.tagIDs,
+        tagIds: workspaceTagIds.value.filter((id) => id !== tagId),
     })
-    if (!w) {
-        ElMessage.error('更新工作区失败')
-    } else {
-        workspace.value = w
-    }
 }
 
-function handleOpenWorkspaceNameDialog(): void {
-    tempWorkspaceText.value = workspace.value.name
+function openWorkspaceNameDialog(): void {
+    tempWorkspaceText.value = workspace.value?.name ?? '未知工作区'
     showWorkspaceNameDialog.value = true
 }
 
-function handleConfirmEditWorkspaceName(name: string): void {
+async function confirmEditWorkspaceName(name: string): Promise<void> {
     if (!name.trim()) {
         ElMessage.warning('工作区名称不能为空')
         return
     }
-    updateWorkspace({ name })
-    showWorkspaceNameDialog.value = false
-    workspace.value.name = storage.getWorkspaceByID(props.workspaceID)?.name || '未命名'
-}
-
-function handleCancelEditWorkspaceName(): void {
-    showWorkspaceNameDialog.value = false
-}
-
-const existingPromptIDs = ref<Set<string>>(new Set())
-function handleExistingPromptChange(promptIDs: string[]): void {
-    existingPromptIDs.value.clear()
-    for (const id of promptIDs) {
-        existingPromptIDs.value.add(id)
+    if (isNil(workspace.value)) {
+        ElMessage.error('工作区不存在')
+        return
     }
+    await dataStore.workspace.update({
+        id: workspace.value.id,
+        name,
+    })
+    showWorkspaceNameDialog.value = false
 }
 
 const tagCollection = useTemplateRef('tag-collection')
-async function handleFindPromptAndScroll(prompt: string): Promise<void> {
+async function findPromptAndScroll(text: string): Promise<void> {
     for (const tag of workspaceTags.value) {
-        const prompts = storage.getPromptsByTag(tag.id)
-        const index = prompts.findIndex((p) => p.text === prompt)
+        const prompts = dataStore.prompt.readonly.filter((p) => p.tagIds.includes(tag.id))
+        const index = prompts.findIndex((p) => p.text === text)
         if (index !== -1) {
-            selectedTagID.value = tag.id
-            await nextTick()
-            tagCollection.value?.scrollPromptIntoView(prompt)
+            selectedTagId.value = tag.id
+            nextTick(() => {
+                tagListRef.value?.scrollTagIntoView(tag.id)
+                tagCollection.value?.scrollPromptIntoView(text)
+            })
+            return
+        }
+    }
+    for (const tag of dataStore.tag.readonly) {
+        if (workspaceTagIds.value.includes(tag.id)) {
+            continue
+        }
+        const prompts = dataStore.prompt.readonly.filter((p) => p.tagIds.includes(tag.id))
+        const index = prompts.findIndex((p) => p.text === text)
+        if (!isNil(workspace.value) && index !== -1) {
+            dataStore.workspace.update({
+                id: workspace.value.id,
+                tagIds: [...workspaceTagIds.value, tag.id],
+            })
+            selectedTagId.value = tag.id
+            nextTick(() => {
+                tagListRef.value?.scrollTagIntoView(tag.id)
+                tagCollection.value?.scrollPromptIntoView(text)
+            })
             return
         }
     }
 }
 
-function defaultWorkspace(): Workspace {
-    return {
-        id: '',
-        name: '',
-        positiveEditor: '',
-        negativeEditor: '',
-        tagIDs: [],
-        createTime: 0,
-        updateTime: 0,
-    }
-}
-
-const searchPromptOptions = ref<{ text: string; translation: string }[]>([])
-const loadSearchPromptOptions = (): void => {
+const searchPromptInput = ref('')
+const searchPromptOptions = computed(() => {
     const options: { text: string; translation: string }[] = []
-    workspaceTags.value.forEach((tag) => {
-        const prompts = storage.getPromptsByTag(tag.id)
-        prompts.forEach((prompt) => {
-            if (!options.find((o) => o.text === prompt.text)) {
-                options.push({
-                    text: prompt.text,
-                    translation: prompt.translation || '',
-                })
-            }
-        })
-    })
-    searchPromptOptions.value = options
-}
-
-// 根据拼音查找标签
-const findTagByTextOrPinyin = (text: string): void => {
-    tagFocusOptions.value = workspaceTags.value.filter((tag) => {
-        return (
-            tag.text.includes(text) ||
-            pinyinIncludes(tag.text, text) ||
-            pinyinIncludesWithFirstLetter(tag.text, text)
+    const seen = new Set<string>()
+    for (const prompt of dataStore.prompt.readonly) {
+        if (seen.has(prompt.text + prompt.translation)) continue
+        if (
+            !(
+                matchTextPlus(prompt.text, searchPromptInput.value) ||
+                matchTextPlus(prompt.translation, searchPromptInput.value)
+            )
         )
-    })
-}
-
-// 根据提示词内容或翻译查找提示词
-const findPromptByTextOrTranslation = (text: string): void => {
-    const options: { text: string; translation: string }[] = []
-    workspaceTags.value.forEach((tag) => {
-        const prompts = storage.getPromptsByTag(tag.id)
-        prompts.forEach((prompt) => {
-            if (
-                prompt.text.toLowerCase().includes(text.toLowerCase()) ||
-                (prompt.translation &&
-                    (prompt.translation.includes(text.toLowerCase()) ||
-                        pinyinIncludes(prompt.translation, text) ||
-                        pinyinIncludesWithFirstLetter(prompt.translation, text)))
-            ) {
-                options.push({
-                    text: prompt.text,
-                    translation: prompt.translation || '',
-                })
-            }
+            continue
+        seen.add(prompt.text + prompt.translation)
+        options.push({
+            text: prompt.text,
+            translation: prompt.translation || '',
         })
-    })
-    searchPromptOptions.value = options
-}
-
-// 全选、已使用标签
-const selectAllTags = ref(false)
-const selectUsedTags = ref(false)
-const indeterminateAll = ref(false)
-const usedTagIDs = computed(() => {
-    const usedTagIDs = new Set<string>()
-    storage.prompts.forEach((prompt) => {
-        if (!existingPromptIDs.value.has(prompt.id)) return
-        prompt.tagIDs.forEach((tagID) => {
-            usedTagIDs.add(tagID)
-        })
-    })
-    return Array.from(usedTagIDs)
+    }
+    return options
 })
 
-function handleCheckAllTags(value: CheckboxValueType): void {
-    selectUsedTags.value = false
-    if (value) {
-        workspace.value.tagIDs = storage.tags
-            .values()
-            .map((tag) => tag.id)
-            .toArray()
-    } else {
-        workspace.value.tagIDs.length = 0
+function getPromptIdsFromTag(promptTag: DeepReadonly<PromptTag>): string[] {
+    const ids = [] as string[]
+    if (isMonoPromptTag(promptTag)) {
+        for (const prompt of dataStore.prompt.readonly) {
+            if (prompt.text === promptTag.text) {
+                ids.push(prompt.id)
+            }
+        }
+    } else if (isGroupPromptTag(promptTag)) {
+        for (const sub of promptTag.subTags) {
+            for (const prompt of dataStore.prompt.readonly) {
+                if (prompt.text === sub.text) {
+                    ids.push(prompt.id)
+                }
+            }
+        }
+    } else if (isLoraPromptTag(promptTag)) {
+        for (const prompt of dataStore.prompt.readonly) {
+            if (prompt.text === promptTag.text) {
+                ids.push(prompt.id)
+            }
+        }
+    } else if (isSpecialPromptTag(promptTag)) {
+        for (const prompt of dataStore.prompt.readonly) {
+            if (prompt.text === promptTag.text) {
+                ids.push(prompt.id)
+            }
+        }
     }
-    indeterminateAll.value =
-        workspace.value.tagIDs.length > 0 && workspace.value.tagIDs.length < storage.tags.size
-    updateWorkspace({})
+    return ids
 }
-
-function handleCheckUsedTags(value: CheckboxValueType): void {
-    indeterminateAll.value = false
-    selectAllTags.value = false
-    if (value) {
-        workspace.value.tagIDs = usedTagIDs.value.filter((id) => storage.tags.has(id))
-    } else {
-        workspace.value.tagIDs.length = 0
+const usedPromptIds = computed(() => {
+    if (isNil(workspace.value)) {
+        return []
     }
-    updateWorkspace({})
-}
+    const ids = [] as string[]
+    for (const promptTag of workspace.value.positive) {
+        ids.push(...getPromptIdsFromTag(promptTag))
+    }
+    for (const promptTag of workspace.value.negative) {
+        ids.push(...getPromptIdsFromTag(promptTag))
+    }
+    return uniq(ids)
+})
+const usedTagIds = computed(() => {
+    const ids = [] as string[]
+    for (const prompt of dataStore.prompt.readonly) {
+        if (usedPromptIds.value.includes(prompt.id)) {
+            ids.push(...prompt.tagIds)
+        }
+    }
+    return uniq(ids)
+})
 
-watch(
-    () => props.workspaceID,
-    () => {
-        workspace.value = storage.getWorkspaceByID(props.workspaceID) ?? defaultWorkspace()
-        if (!workspace.value.id) {
-            ElMessage.error('工作区未找到')
+// 全选、已使用标签
+const selectAllTags = computed({
+    get() {
+        const allTagIds = dataStore.tag.readonly.map((tag) => tag.id)
+        return xor(workspaceTagIds.value, allTagIds).length === 0
+    },
+    set(value: boolean) {
+        if (value) {
+            const allTagIds = dataStore.tag.readonly.map((tag) => tag.id)
+            workspaceTagIds.value = allTagIds
         } else {
-            loadSearchPromptOptions()
+            workspaceTagIds.value = []
         }
     },
-    { immediate: true }
+})
+const indeterminateAll = computed(
+    () => intersection(workspaceTagIds.value, usedTagIds.value).length !== 0
 )
-
-const handleReorderTags = (tagIDs: string[]): void => {
-    updateWorkspace({ tagIDs })
-}
-
-const handleSelectTags = (tagIDs: string[]): void => {
-    if (tagIDs.length > workspaceTags.value.length) {
-        const val = tagIDs[tagIDs.length - 1]
-        tagIDs.length--
-        tagIDs.unshift(val)
-        updateWorkspace({ tagIDs })
-    } else if (tagIDs.length < workspaceTags.value.length) {
-        updateWorkspace({ tagIDs })
-    }
-}
-
-function filterTagsByTextOrPinyin(text: string): void {
-    tagAddOptions.value.length = 0
-    for (const tag of storage.tags.values()) {
-        if (
-            tag.text.includes(text) ||
-            pinyinIncludes(tag.text, text) ||
-            pinyinIncludesWithFirstLetter(tag.text, text)
-        ) {
-            tagAddOptions.value.push(tag)
+const selectUsedTags = computed({
+    get() {
+        return xor(workspaceTagIds.value, usedTagIds.value).length === 0
+    },
+    set(value: boolean) {
+        if (value) {
+            workspaceTagIds.value = usedTagIds.value
+        } else {
+            workspaceTagIds.value = []
         }
-    }
-}
+    },
+})
 
 const tagListRef = useTemplateRef('tag-list')
-function handleFindTag(tagID: string): void {
-    if (!tagID) {
-        selectedTagID.value = UNCATEGORIZED_TAG_ID
+function findTag(tagId: string): void {
+    if (!tagId) {
+        selectedTagId.value = UNCATEGORIZED_TAG_ID
         return
     }
-    selectedTagID.value = tagID
-    tagListRef.value?.scrollTagIntoView(tagID)
+    selectedTagId.value = tagId
+    tagListRef.value?.scrollTagIntoView(tagId)
 }
 </script>

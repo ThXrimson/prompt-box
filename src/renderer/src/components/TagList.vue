@@ -1,30 +1,25 @@
 <template>
     <el-scrollbar class="border-2 rounded-md border-gray-200">
-        <vue-draggable
-            :model-value="tagIDs"
-            :animation="50"
-            class="flex flex-col gap-1 p-2 pr-2.5"
-            @update:model-value="emit('update:tagIDs', $event)"
-        >
+        <vue-draggable v-model="tagIds" :animation="50" class="flex flex-col gap-1 p-2 pr-2.5">
             <div
-                v-for="tagID in tagIDs"
-                :ref="tagIDRefs.set"
-                :key="tagID"
-                :tag-id="tagID"
+                v-for="tagId in tagIds"
+                :ref="tagIdRefs.set"
+                :key="tagId"
+                :tag-id="tagId"
                 class="flex flex-1 cursor-pointer rounded-md p-2 justify-between items-center-safe transition-colors"
                 :class="{
-                    'bg-teal-400 hover:bg-teal-600': selectedID !== tagID,
-                    'bg-sky-400 hover:bg-sky-600': selectedID === tagID,
+                    'bg-teal-400 hover:bg-teal-600': selectedId !== tagId,
+                    'bg-sky-400 hover:bg-sky-600': selectedId === tagId,
                 }"
-                @click="emit('select', tagID)"
+                @click="emit('select', tagId)"
             >
                 <el-text class="text-white! font-bold!">
-                    {{ getTagText(tagID) }}
+                    {{ getTagText(tagId) }}
                 </el-text>
                 <el-icon
                     size="20px"
                     class="rounded-full hover:bg-teal-800"
-                    @click.stop="emit('closeTag', tagID)"
+                    @click.stop="emit('closeTag', tagId)"
                 >
                     <close class="text-white!" />
                 </el-icon>
@@ -35,27 +30,28 @@
 
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
-import { useStorage } from '@renderer/stores/storage'
+import { useDataStore } from '@renderer/stores/data'
 import { Close } from '@element-plus/icons-vue'
 import { useTemplateRefsList } from '@vueuse/core'
+import { UNCATEGORIZED_TAG_ID } from '@shared/models/tag'
 
 defineProps<{
-    tagIDs: string[]
-    selectedID: string
+    selectedId: string
 }>()
+
+const tagIds = defineModel<string[]>('tag-ids', { required: true })
 
 const emit = defineEmits<{
-    (e: 'update:tagIDs', tagIDs: string[]): void
-    (e: 'closeTag', tagID: string): void
-    (e: 'select', tagID: string): void
+    (e: 'closeTag', tagId: string): void
+    (e: 'select', tagId: string): void
 }>()
 
-const tagIDRefs = useTemplateRefsList()
+const tagIdRefs = useTemplateRefsList()
 
 defineExpose({
-    scrollTagIntoView(tagID: string): void {
-        for (const ref of tagIDRefs.value) {
-            if (ref.getAttribute('tag-id') === tagID) {
+    scrollTagIntoView(tagId: string): void {
+        for (const ref of tagIdRefs.value) {
+            if (ref.getAttribute('tag-id') === tagId) {
                 ref.scrollIntoView({
                     behavior: 'smooth',
                     block: 'center',
@@ -67,9 +63,12 @@ defineExpose({
     },
 })
 
-const storage = useStorage()
+const dataStore = useDataStore()
 
-function getTagText(tagID: string): string {
-    return storage.getTagByID(tagID)?.text ?? 'undefined'
+function getTagText(tagId: string): string {
+    if (tagId === UNCATEGORIZED_TAG_ID) {
+        return '未分类'
+    }
+    return dataStore.tag.readonly.find((t) => t.id === tagId)?.text ?? 'undefined'
 }
 </script>

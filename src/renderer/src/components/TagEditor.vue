@@ -9,6 +9,7 @@
                         <el-input
                             v-if="editingTag[scope.row.id]"
                             v-model="editingTagText[scope.row.id]"
+                            spellcheck="false"
                         />
                         <el-text v-else>{{ scope.row.text }}</el-text>
                     </template>
@@ -23,12 +24,12 @@
                                 'text-gray-400!': editingTag[scope.row.id],
                             }"
                             :disabled="scope.row.id === UNCATEGORIZED_TAG_ID"
-                            @click="handleEditTag(scope.row.id)"
+                            @click="editTag(scope.row.id)"
                         />
 
                         <el-popconfirm
                             title="确定从该提示词中删除此示例？"
-                            @confirm="handelDeleteTag(scope.row.id)"
+                            @confirm="deleteTag(scope.row.id)"
                         >
                             <template #reference>
                                 <el-button
@@ -50,43 +51,46 @@
         title="添加标签"
         @keyup.esc.stop.prevent="showAddTagDialog = false"
     >
-        <el-input v-model="addTag" placeholder="输入标签名称" clearable @keyup.enter="handleAddTag">
+        <el-input v-model="addTag" placeholder="输入标签名称" clearable @keyup.enter="createTag">
             <template #prefix>
-                <el-button :icon="Plus" link @click="handleAddTag" />
+                <el-button :icon="Plus" link @click="createTag" />
             </template>
         </el-input>
     </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/storage'
+import { useDataStore } from '@renderer/stores/data'
 import { EditPen, Delete, Plus } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
+import { UNCATEGORIZED_TAG_ID } from '@shared/models/tag'
+import { isNil } from 'lodash'
+import log from 'electron-log/renderer'
 
-const storage = useStorage()
+const dataStore = useDataStore()
 
 const tagCounter = computed(() => {
     const tagCounter: Record<string, number> = {}
-    storage.tags.forEach((tag) => {
+    for (const tag of dataStore.tag.readonly) {
         tagCounter[tag.id] = 0
-    })
-    storage.prompts.forEach((prompt) => {
-        if (prompt.tagIDs.length === 0) {
+    }
+    for (const prompt of dataStore.prompt.readonly) {
+        if (prompt.tagIds.length === 0) {
             tagCounter[UNCATEGORIZED_TAG_ID] = (tagCounter[UNCATEGORIZED_TAG_ID] || 0) + 1 // 统计无标签的提示词
-            return
+            continue
         }
-        prompt.tagIDs.forEach((id) => {
+        prompt.tagIds.forEach((id) => {
             if (tagCounter[id]) {
                 tagCounter[id]++
             } else {
                 tagCounter[id] = 1
             }
         })
-    })
+    }
     return Object.entries(tagCounter).map(([id, count]) => ({
         id,
         count,
-        text: storage.tags.get(id)?.text || '未知标签',
+        text: dataStore.tag.readonly.find((t) => t.id === id)?.text || '未知标签',
     }))
 })
 const editingTag = ref<Record<string, boolean>>({})
@@ -100,18 +104,19 @@ function handleOpenAddTagInput(): void {
     addTag.value = ''
 }
 
-async function handleAddTag(): Promise<void> {
-    if (addTag.value.trim() === '') {
+async function createTag(): Promise<void> {
+    const tagText = addTag.value.trim()
+    if (tagText === '') {
         ElMessage.warning('标签名称不能为空')
         return
     }
-    if (storage.getTagIDIfExists(addTag.value.trim()) !== null) {
+    if (!isNil(dataStore.tag.readonly.find((t) => t.text === tagText))) {
         ElMessage.warning('标签已存在')
         showAddTagDialog.value = false
         addTag.value = ''
         return
     }
-    const newTag = await storage.addTag({ text: addTag.value.trim() })
+    const newTag = await dataStore.tag.create(tagText)
     if (newTag) {
         ElMessage.success('标签已添加')
         showAddTagDialog.value = false
@@ -130,29 +135,29 @@ onMounted(() => {
 })
 
 //region 操作Tag
-function handleEditTag(tagID: string): void {
-    if (editingTag.value[tagID]) {
+function editTag(tagId: string): void {
+    if (editingTag.value[tagId]) {
         // 如果已经处于编辑状态，保存修改
-        const newTagText = editingTagText.value[tagID].trim()
+        const newTagText = editingTagText.value[tagId].trim()
         if (newTagText) {
-            storage.updateTag({ id: tagID, text: newTagText }).then((res) => {
+            dataStore.tag.update({ id: tagId, text: newTagText }).then((res) => {
                 if (res) {
-                    editingTag.value[tagID] = false
+                    editingTag.value[tagId] = false
                 } else {
-                    console.error('更新 Tag 失败')
+                    log.error('更新 Tag 失败')
                 }
             })
         } else {
-            console.warn('Tag 文本不能为空')
-            editingTag.value[tagID] = false // 取消编辑状态
+            log.warn('Tag 文本不能为空')
+            editingTag.value[tagId] = false // 取消编辑状态
         }
     } else {
         // 否则进入编辑状态
-        editingTag.value[tagID] = true
+        editingTag.value[tagId] = true
     }
 }
-function handelDeleteTag(tagID: string): void {
-    storage.deleteTag(tagID).then((success) => {
+function deleteTag(tagId: string): void {
+    dataStore.tag.delete(tagId).then((success) => {
         if (success) {
             ElMessage.success('Tag 删除成功')
         } else {

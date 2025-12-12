@@ -1,0 +1,175 @@
+<template>
+    <div class="my-2 mx-2 flex-1 min-h-0 min-w-0 flex flex-col">
+        <div class="flex flex-col flex-1 min-h-0">
+            <div>
+                <el-button
+                    type="success"
+                    :icon="CirclePlusFilled"
+                    class="mb-2 self-start!"
+                    @click="createExample"
+                >
+                    添加示例
+                </el-button>
+
+                <el-button
+                    type="success"
+                    :icon="DeleteFilled"
+                    class="mb-2 self-start!"
+                    @click="deleteEmptyExamples"
+                >
+                    删除空示例
+                </el-button>
+            </div>
+
+            <el-scrollbar
+                v-if="examples.length > 0"
+                class="flex-1 min-h-0 border-2 border-gray-200 rounded-md px-1"
+                view-class="columns-4 gap-1"
+            >
+                <template v-for="example in currentExamples" :key="example.id">
+                    <el-image
+                        v-if="!isNil(exampleIdToCoverUrl.get(example.id))"
+                        :src="exampleIdToCoverUrl.get(example.id)!"
+                        class="m-1 rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300"
+                        fit="contain"
+                        loading="lazy"
+                        @click="currentExampleId = example.id"
+                    />
+                    <div
+                        v-else
+                        class="m-1 h-40 flex justify-center items-center bg-gray-300 text-gray-400 rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300"
+                        @click="currentExampleId = example.id"
+                    >
+                        Empty
+                    </div>
+                </template>
+            </el-scrollbar>
+            <div class="flex justify-center-safe items-center-safe">
+                <el-tooltip content="左键封面打开预览；右键封面打开画廊" placement="top">
+                    <el-button circle :icon="Information" size="small" />
+                </el-tooltip>
+                <el-button
+                    :disabled="isNil(currentExampleId) && isNil(lastExampleId)"
+                    circle
+                    :icon="isNil(currentExampleId) ? CaretUp : CaretDown"
+                    size="small"
+                    @click="switchExamplePanel"
+                />
+                <el-pagination
+                    v-model:current-page="currentPage"
+                    :page-size="pageSize"
+                    class="flex-0.25 min-h-0 justify-center-safe"
+                    layout="prev, pager, next"
+                    :total="examples.length"
+                />
+            </div>
+            <ExampleView
+                v-if="currentExampleId"
+                :example-id="currentExampleId"
+                class="flex-0.5 min-h-0 justify-center-safe"
+            />
+        </div>
+    </div>
+</template>
+
+<script setup lang="ts">
+import { useDataStore } from '@renderer/stores/data'
+import { computed, ref } from 'vue'
+import { CirclePlusFilled, DeleteFilled } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
+import ExampleView from '@renderer/components/ExampleView.vue'
+import { createError, notFoundError } from '@renderer/stores/error'
+import { Nullish } from 'utility-types'
+import { isNil } from 'lodash'
+import { getImageUrl } from '@renderer/utils/utils'
+import { CaretUp, CaretDown, Information } from '@vicons/ionicons5'
+
+const dataStore = useDataStore()
+
+const examples = computed(() => {
+    return dataStore.example.readonly.toSorted((a, b) => b.updateTime - a.updateTime)
+})
+const currentPage = ref(1)
+const pageSize = 10
+const currentExamples = computed(() => {
+    const start = (currentPage.value - 1) * pageSize
+    const end = start + pageSize
+    return examples.value.slice(start, end)
+})
+
+const exampleIdToCoverUrl = computed(() => {
+    const m = new Map<string, string | Nullish>()
+    for (const example of examples.value) {
+        if (example.imageIds.length === 0) {
+            m.set(example.id, undefined)
+            continue
+        }
+        const coverImageId = example.imageIds[0]
+        const image = dataStore.image.readonly.find((i) => i.id === coverImageId)
+        if (isNil(image)) {
+            m.set(example.id, undefined)
+            continue
+        }
+        m.set(example.id, getImageUrl(image.fileName))
+    }
+    return m
+})
+
+let lastExampleId = ref<string | Nullish>(null)
+const currentExampleId = ref<string | Nullish>(null)
+function switchExamplePanel(): void {
+    if (isNil(currentExampleId.value)) {
+        currentExampleId.value = lastExampleId.value
+        lastExampleId.value = null
+    } else {
+        lastExampleId.value = currentExampleId.value
+        currentExampleId.value = null
+    }
+}
+
+async function createExample(): Promise<void> {
+    try {
+        await dataStore.example.create({})
+        ElMessage.success('添加示例成功')
+    } catch (err) {
+        if (err === createError) {
+            ElMessage.error('添加示例失败')
+            return
+        } else {
+            ElMessage.error(`添加示例失败：${err}`)
+            return
+        }
+    }
+}
+
+async function deleteEmptyExamples(): Promise<void> {
+    const emptyExamples = dataStore.example.readonly.filter(
+        (example) =>
+            example.positive.length === 0 &&
+            example.negative.length === 0 &&
+            example.extra === '' &&
+            example.imageIds.length === 0
+    )
+    if (emptyExamples.length === 0) {
+        ElMessage.info('没有空示例可删除')
+        return
+    }
+    try {
+        await ElMessageBox.confirm(`确定删除 ${emptyExamples.length} 个空示例？`, '删除空示例', {
+            confirmButtonText: '删除',
+            cancelButtonText: '取消',
+            type: 'warning',
+        })
+        await dataStore.example.deleteMany(emptyExamples.map((e) => e.id))
+        ElMessage.success(`已删除 ${emptyExamples.length} 个空示例`)
+    } catch (error) {
+        if (error === 'cancel') {
+            return
+        } else if (error === notFoundError) {
+            ElMessage.error('删除空示例失败：示例不存在')
+        } else {
+            ElMessage.error(`删除空示例失败：${error}`)
+        }
+    }
+}
+</script>

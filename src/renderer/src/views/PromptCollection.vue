@@ -8,13 +8,13 @@
                         <template #dropdown>
                             <el-dropdown-menu>
                                 <el-dropdown-item @click="handleSortByText">
-                                    <el-text :class="{ 'text-blue-400!': sortType === 'text' }">
+                                    <el-text :class="{ 'text-blue-400!': sortKind === 'text' }">
                                         {{ `名称${sortByTextAsc ? '升序' : '降序'}` }}
                                     </el-text>
                                 </el-dropdown-item>
                                 <el-dropdown-item @click="handleSortByTime">
-                                    <el-text :class="{ 'text-blue-400!': sortType === 'time' }">
-                                        {{ `时间${sortByTimeAsc ? '升序' : '降序'}` }}
+                                    <el-text :class="{ 'text-blue-400!': sortKind === 'time' }">
+                                        {{ `时间${sortByCreateTimeAsc ? '升序' : '降序'}` }}
                                     </el-text>
                                 </el-dropdown-item>
                             </el-dropdown-menu>
@@ -34,24 +34,10 @@
                 </el-dialog>
 
                 <el-select-v2
-                    v-model="filteredTagIDs"
-                    :options="tagOptions"
-                    :props="{
-                        label: 'text',
-                        value: 'id',
-                    }"
+                    v-model="filteredTagIds"
+                    :options="filterTagOptions"
                     filterable
-                    :filter-method="
-                        (text) => {
-                            tagOptions = allTags.filter((tag) => {
-                                return (
-                                    tag.text.includes(text) ||
-                                    pinyinIncludes(tag.text, text) ||
-                                    pinyinIncludesWithFirstLetter(tag.text, text)
-                                )
-                            })
-                        }
-                    "
+                    :filter-method="filterTagMethod"
                     placeholder="过滤标签"
                     style="width: 240px"
                     multiple
@@ -61,7 +47,7 @@
                     :reserve-keyword="false"
                 />
 
-                <el-input v-model="searchTerm" placeholder="搜索提示词">
+                <el-input v-model="searchPromptInput" spellcheck="false" placeholder="搜索提示词">
                     <template #prefix>
                         <el-icon class="cursor-pointer">
                             <Search />
@@ -81,7 +67,7 @@
                     type="success"
                     :icon="CirclePlusFilled"
                     class="flex w-full h-[30px] py-1 px-2"
-                    @click="handleAddPrompt"
+                    @click="createPrompt"
                 >
                     添加提示词
                 </el-button>
@@ -89,20 +75,21 @@
                     v-else
                     ref="promptInput"
                     v-model="newPromptText"
-                    @keyup.enter="handleConfirmAddPrompt"
-                    @keyup.esc="handleCancelAddPrompt"
+                    spellcheck="false"
+                    @keyup.enter="confirmCreatePrompt"
+                    @keyup.esc="cancelCreatePrompt"
                 >
                     <template #suffix>
                         <div class="flex items-center gap-1">
                             <el-icon
                                 class="cursor-pointer hover:text-gray-500!"
-                                @click="handleConfirmAddPrompt"
+                                @click="confirmCreatePrompt"
                             >
                                 <Check />
                             </el-icon>
                             <el-icon
                                 class="cursor-pointer hover:text-gray-500!"
-                                @click="handleCancelAddPrompt"
+                                @click="cancelCreatePrompt"
                             >
                                 <Close />
                             </el-icon>
@@ -113,15 +100,15 @@
                 <el-divider class="my-2!" />
 
                 <div
-                    v-for="(prompt, index) in promptsView"
+                    v-for="(prompt, index) in promptViews"
                     :key="prompt.id"
-                    @click="handleSelectPrompt(prompt.id)"
+                    @click="selectPrompt(prompt.id)"
                 >
                     <div
                         class="flex justify-between items-center-safe w-full h-fit py-1 px-2 rounded border-gray-200 hover:bg-gray-100 focus:bg-gray-200 cursor-pointer [&_.delete-button]:hover:opacity-100!"
                         :class="{
-                            'bg-gray-200': selectedPromptID === prompt.id,
-                            'hover:bg-gray-300': selectedPromptID === prompt.id,
+                            'bg-gray-200': selectedPromptId === prompt.id,
+                            'hover:bg-gray-300': selectedPromptId === prompt.id,
                         }"
                     >
                         <div class="flex flex-col flex-1 min-w-0">
@@ -139,13 +126,13 @@
                         <el-popconfirm
                             title="确定删除此提示词？"
                             :hide-after="0"
-                            @confirm="handleDeletePrompt(prompt.id)"
+                            @confirm.stop="deletePrompt(prompt.id)"
                         >
                             <template #reference>
                                 <el-icon
                                     class="delete-button opacity-0! text-gray-400! hover:text-gray-600! transition-colors duration-200"
                                     :class="{
-                                        'opacity-100!': selectedPromptID === prompt.id,
+                                        'opacity-100!': selectedPromptId === prompt.id,
                                     }"
                                 >
                                     <Delete />
@@ -154,13 +141,13 @@
                         </el-popconfirm>
                     </div>
 
-                    <el-divider v-if="index < promptsView.length - 1" class="my-2!" />
+                    <el-divider v-if="index < promptViews.length - 1" class="my-2!" />
                 </div>
             </el-scrollbar>
             <el-scrollbar
                 class="bg-white border-2 box-border border-gray-200 rounded-lg p-3 flex-1"
             >
-                <prompt-editor v-if="selectedPromptID !== null" :prompt-i-d="selectedPromptID" />
+                <PromptDetail v-if="!isNil(selectedPromptId)" :prompt-id="selectedPromptId" />
             </el-scrollbar>
         </div>
     </div>
@@ -177,105 +164,114 @@ import {
     Discount,
     Delete,
 } from '@element-plus/icons-vue'
-import { computed, nextTick, ref, useTemplateRef } from 'vue'
-import { UNCATEGORIZED_TAG_ID, useStorage } from '@renderer/stores/storage'
+import { computed, DeepReadonly, nextTick, ref, useTemplateRef } from 'vue'
+import { useDataStore } from '@renderer/stores/data'
 import TagEditor from '@renderer/components/TagEditor.vue'
-import { pinyinIncludes, pinyinIncludesWithFirstLetter } from '@renderer/utils/pinyin-includes'
-import type { Prompt } from '@shared/types'
+import { matchTextPlus } from '@renderer/utils/pinyin-includes'
+import type { Prompt } from '@shared/models/prompt'
+import { isNil } from 'lodash'
+import { UNCATEGORIZED_TAG_ID } from '@shared/models/tag'
+import { createError, existsError, notFoundError } from '@renderer/stores/error'
+import log from 'electron-log/renderer'
 
-interface PromptView {
-    id: string
-    text: string
-    translation: string
-    description: string
-    tags: {
-        id: string
-        text: string
-    }[]
-    exampleIDs: string[]
-    insertTime: number
+const dataStore = useDataStore()
+
+const searchPromptInput = ref<string>('')
+const filteredTagIds = ref<string[]>([])
+const selectedPromptId = ref<string | null>(null)
+
+const filterTagInput = ref<string>('')
+function filterTagMethod(text: string): void {
+    filterTagInput.value = text
 }
-
-const storage = useStorage()
-
-const searchTerm = ref<string>('')
-const filteredTagIDs = ref<string[]>([])
-const selectedPromptID = ref<string | null>(null)
-
-const allTags = computed(() => {
-    return Array.from(storage.tags.values())
+const filterTagOptions = computed(() => {
+    return [
+        {
+            label: '未分类',
+            value: UNCATEGORIZED_TAG_ID,
+        },
+        ...dataStore.tag.readonly
+            .filter((tag) => {
+                return matchTextPlus(tag.text, filterTagInput.value)
+            })
+            .map((tag) => {
+                return {
+                    label: tag.text,
+                    value: tag.id,
+                }
+            }),
+    ]
 })
-const tagOptions = ref(allTags.value)
 
-const promptsView = computed(() => {
-    const tagSet = new Set(filteredTagIDs.value)
-    return Array.from(storage.prompts.values())
-        .filter((prompt) => {
-            if (searchTerm.value.trim() === '') {
-                return true
-            }
-            return promptContains(prompt, searchTerm.value.trim().toLowerCase())
-        })
-        .filter((prompt) => {
-            if (filteredTagIDs.value.length === 0) {
-                return true
-            }
-            if (tagSet.has(UNCATEGORIZED_TAG_ID) && prompt.tagIDs.length === 0) {
-                // 未分类的提示词
-                return true
-            }
-            return prompt.tagIDs.some((id) => tagSet.has(id))
-        })
-        .map((prompt) => {
-            const tags = prompt.tagIDs
-                .map((id) => {
-                    const tag = storage.getTagByID(id)
-                    return tag ? { id: tag.id, text: tag.text } : null
-                })
-                .filter((tag): tag is { id: string; text: string } => tag !== null)
-
-            return {
-                ...prompt,
-                tags,
-            } as PromptView
-        })
-        .sort(
-            sortType.value === 'text'
-                ? sortByText(sortByTextAsc.value)
-                : sortByTime(sortByTimeAsc.value)
-        )
+const filterPromptMethod = (prompt: DeepReadonly<Prompt>, text: string): boolean => {
+    const promptText = prompt.text.trim().toLowerCase()
+    const translationText = prompt.translation?.trim().toLowerCase() || ''
+    return matchTextPlus(promptText, text) || matchTextPlus(translationText, text)
+}
+const promptViews = computed(() => {
+    const tagIdSet = new Set(filteredTagIds.value)
+    return (
+        dataStore.prompt.readonly
+            // 搜索过滤
+            .filter((prompt) => {
+                if (searchPromptInput.value.trim() === '') {
+                    return true
+                }
+                return filterPromptMethod(prompt, searchPromptInput.value.trim().toLowerCase())
+            })
+            // Tag 过滤
+            .filter((prompt) => {
+                if (tagIdSet.size === 0) {
+                    return true
+                }
+                if (tagIdSet.has(UNCATEGORIZED_TAG_ID) && prompt.tagIds.length === 0) {
+                    // 未分类的提示词
+                    return true
+                }
+                return prompt.tagIds.some((id) => tagIdSet.has(id))
+            })
+            .toSorted(
+                sortKind.value === 'text'
+                    ? sortByText(sortByTextAsc.value)
+                    : sortByCreateTime(sortByCreateTimeAsc.value)
+            )
+    )
 })
 
 const tagDialogVisible = ref(false)
 
 //#region 处理Prompt排序
 const sortByText = (asc: boolean) => {
-    return (a: PromptView, b: PromptView): number => {
+    return (a: DeepReadonly<Prompt>, b: DeepReadonly<Prompt>): number => {
         return a.text.localeCompare(b.text) * (asc ? 1 : -1)
     }
 }
-const sortByTime = (asc: boolean) => {
-    return (a: PromptView, b: PromptView): number => {
-        return (a.insertTime - b.insertTime) * (asc ? 1 : -1)
+const sortByCreateTime = (asc: boolean) => {
+    return (a: DeepReadonly<Prompt>, b: DeepReadonly<Prompt>): number => {
+        return (a.createTime - b.createTime) * (asc ? 1 : -1)
     }
 }
 const sortByTextAsc = ref(true)
-const sortByTimeAsc = ref(false)
-const sortType = ref<'text' | 'time'>('time')
+const sortByCreateTimeAsc = ref(false)
+const enum SortKind {
+    Text = 'text',
+    Time = 'time',
+}
+const sortKind = ref<SortKind>(SortKind.Time)
 function handleSortByText(): void {
-    if (sortType.value === 'text') {
+    if (sortKind.value === SortKind.Text) {
         sortByTextAsc.value = !sortByTextAsc.value
     } else {
-        sortByTimeAsc.value = true
-        sortType.value = 'text'
+        sortByCreateTimeAsc.value = true
+        sortKind.value = SortKind.Text
     }
 }
 function handleSortByTime(): void {
-    if (sortType.value === 'time') {
-        sortByTimeAsc.value = !sortByTimeAsc.value
+    if (sortKind.value === SortKind.Time) {
+        sortByCreateTimeAsc.value = !sortByCreateTimeAsc.value
     } else {
         sortByTextAsc.value = false
-        sortType.value = 'time'
+        sortKind.value = SortKind.Time
     }
 }
 //#endregion
@@ -285,69 +281,64 @@ const creatingPrompt = ref(false)
 const newPromptText = ref('')
 const promptInput = useTemplateRef('promptInput')
 
-function handleAddPrompt(): void {
+function createPrompt(): void {
     creatingPrompt.value = true
     nextTick(() => {
         promptInput.value?.focus()
     })
 }
 
-async function handleConfirmAddPrompt(): Promise<void> {
+async function confirmCreatePrompt(): Promise<void> {
     if (!creatingPrompt.value) return
-    if (newPromptText.value.trim() === '') {
+    const promptText = newPromptText.value.trim()
+    if (promptText === '') {
         creatingPrompt.value = false
         return
     }
-    if (storage.getPromptIDIfExists(newPromptText.value.trim()) !== null) {
-        ElMessage.warning('提示词已存在')
-        creatingPrompt.value = false
-        return
+    try {
+        await dataStore.prompt.create({
+            text: promptText,
+        })
+        newPromptText.value = ''
+        ElMessage.success('成功添加提示词')
+    } catch (err) {
+        if (err === existsError) {
+            ElMessage.warning('提示词已存在')
+        } else if (err === createError) {
+            ElMessage.error('添加提示词失败')
+        } else {
+            ElMessage.error('添加提示词失败，未知错误')
+            log.error('添加提示词失败，未知错误: ', err)
+        }
     }
-    const result = await storage.addPrompt({
-        text: newPromptText.value,
-    })
-    if (result) {
-        ElMessage.success('提示词已添加')
-        selectedPromptID.value = result.id
-    } else {
-        ElMessage.error('添加提示词失败')
-    }
-    newPromptText.value = ''
     creatingPrompt.value = false
 }
 
-function handleCancelAddPrompt(): void {
+function cancelCreatePrompt(): void {
     newPromptText.value = ''
     creatingPrompt.value = false
 }
 //#endregion
 
-function handleSelectPrompt(id: string): void {
-    if (selectedPromptID.value !== id) {
-        selectedPromptID.value = id
+function selectPrompt(id: string): void {
+    if (selectedPromptId.value !== id) {
+        selectedPromptId.value = id
     }
 }
 
-async function handleDeletePrompt(id: string): Promise<void> {
-    const res = await storage.deletePrompt(id)
-    if (res) {
-        if (selectedPromptID.value === id) {
-            selectedPromptID.value = null
-        }
+async function deletePrompt(id: string): Promise<void> {
+    try {
+        selectedPromptId.value = null
+        await dataStore.prompt.delete(id)
         ElMessage.success('成功删除提示词')
-    } else {
-        ElMessage.error('删除提示词失败')
+    } catch (err) {
+        if (err === notFoundError) {
+            ElMessage.warning('提示词不存在')
+        } else {
+            ElMessage.error('删除提示词失败，未知错误')
+            log.error('删除提示词失败，未知错误: ', err)
+        }
     }
-}
-
-const promptContains = (prompt: Prompt, text: string): boolean => {
-    return (
-        prompt.text.toLowerCase().includes(text) ||
-        (Boolean(prompt.translation) &&
-            (prompt.translation.toLowerCase().includes(text) ||
-                pinyinIncludes(prompt.translation, text) ||
-                pinyinIncludesWithFirstLetter(prompt.translation, text)))
-    )
 }
 </script>
 

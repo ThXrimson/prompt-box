@@ -1,24 +1,25 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
-  "include": [
-    "src/renderer/src/env.d.ts",
-    "src/renderer/src/**/*",
-    "src/renderer/src/**/*.vue",
-    "src/preload/index.d.ts",
-    "src/shared/types.d.ts",
-    "src/renderer/auto-imports.d.ts",
-    "src/renderer/components.d.ts",
-    "src/shared/ipc_channels.ts"
-  ],
-  "compilerOptions": {
-    "composite": true,
-    "baseUrl": ".",
-    "paths": {
-      "@renderer/*": [
-        "src/renderer/src/*",
-      ],
-      "@shared/*": ["src/shared/*"]
-    },
-    "types": ["element-plus/global"]
-  }
+    "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+    "include": [
+        "src/renderer/src/env.d.ts",
+        "src/renderer/src/**/*",
+        "src/renderer/src/**/*.vue",
+        "src/preload/index.d.ts",
+        "src/renderer/auto-imports.d.ts",
+        "src/renderer/components.d.ts",
+        "src/shared/**/*",
+        "src/types/preload.d.ts"
+    ],
+    "compilerOptions": {
+        "composite": true,
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "baseUrl": ".",
+        "paths": {
+            "@renderer/*": ["src/renderer/src/*"],
+            "@shared/*": ["src/shared/*"]
+        },
+        "typeRoots": ["./node_modules", "./src/types"],
+        "types": ["element-plus/global", "preload"]
+    }
 }

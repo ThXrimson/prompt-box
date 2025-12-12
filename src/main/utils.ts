@@ -12,8 +12,12 @@ export function getAppDir(): string {
         : (process.env.PORTABLE_EXECUTABLE_DIR ?? dirname(app.getPath('exe')))
 }
 
+export function getDataDir(): string {
+    return join(getAppDir(), 'data')
+}
+
 export function getImageDir(): string {
-    return join(getAppDir(), 'data', 'images')
+    return join(getDataDir(), 'images')
 }
 
 /**
@@ -60,4 +64,21 @@ export function getImageAsArrayBuffer(url: string): Promise<ArrayBuffer> {
 
         request.end()
     })
+}
+
+export const enum UrlKind {
+    Http = 'http',
+    File = 'file',
+    Unknown = 'unknown',
+}
+export function whichUrl(url: string): UrlKind {
+    try {
+        const u = new URL(url)
+        if (u.protocol.startsWith('http')) {
+            return UrlKind.Http
+        }
+        return UrlKind.File
+    } catch {
+        return UrlKind.Unknown
+    }
 }

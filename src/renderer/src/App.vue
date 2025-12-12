@@ -2,15 +2,15 @@
     <div class="flex justify-start h-full w-full gap-1">
         <el-menu :default-active="activeMenu" collapse @select="handleMenuSelect">
             <el-menu-item index="/prompt-collection">
-                <el-icon><prompt-icon /></el-icon>
+                <el-icon><Language /></el-icon>
                 <template #title> 提示词库 </template>
             </el-menu-item>
             <el-menu-item index="/workspaces">
-                <el-icon><workspace-icon /></el-icon>
+                <el-icon><WorkspaceIcon /></el-icon>
                 <template #title> 工作区 </template>
             </el-menu-item>
             <el-menu-item index="/examples">
-                <el-icon><document-icon /></el-icon>
+                <el-icon><DocumentIcon /></el-icon>
                 <template #title> 示例 </template>
             </el-menu-item>
         </el-menu>
@@ -22,29 +22,12 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useStorage } from '@renderer/stores/storage'
-import { ElLoading } from 'element-plus'
 import { Document as DocumentIcon } from '@element-plus/icons-vue'
-import PromptIcon from '@renderer/icons/Prompt.vue'
 import WorkspaceIcon from '@renderer/icons/Workspace.vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
+import { Language } from '@vicons/ionicons5'
 
-const storage = useStorage()
 const route = useRoute()
-
-const loadingInstance = ElLoading.service({ body: true })
-
-const initialized = ref(false)
-watch(
-    () => storage.initialized,
-    () => {
-        if (storage.initialized) {
-            initialized.value = true
-            loadingInstance.close()
-        }
-    },
-    { immediate: true }
-)
 
 const activeMenu = ref('/prompt-collection')
 watch(

@@ -6,10 +6,6 @@
 // biome-ignore lint: disable
 export {}
 declare global {
-    const ElButtonGroup: (typeof import('element-plus/es'))['ElButtonGroup']
-    const ElCheckboxGroup: (typeof import('element-plus/es'))['ElCheckboxGroup']
-    const ElCollection$1: (typeof import('element-plus/es'))['ElCollection$1']
-    const ElCollectionItem$1: (typeof import('element-plus/es'))['ElCollectionItem$1']
-    const ElLoading: (typeof import('element-plus/es'))['ElLoading']
-    const ElMessage: (typeof import('element-plus/es'))['ElMessage']
+  const ElMessage: typeof import('element-plus/es')['ElMessage']
+  const ElMessageBox: typeof import('element-plus/es')['ElMessageBox']
 }

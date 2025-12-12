@@ -32,11 +32,12 @@ export default tseslint.config(
                     },
                 },
             ],
-            '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+            '@typescript-eslint/no-unused-vars': 'off',
             'no-undef': 'off',
             'vue/html-indent': 'off',
             'vue/singleline-html-element-content-newline': 'off',
             'vue/max-attributes-per-line': 'off',
+            'vue/html-self-closing': 'off',
         },
     }
 )
