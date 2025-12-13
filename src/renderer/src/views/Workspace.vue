@@ -140,7 +140,7 @@ import TagEditor from '@renderer/components/TagEditor.vue'
 import { matchTextPlus } from '@renderer/utils/pinyin-includes'
 import TagList from '@renderer/components/TagList.vue'
 import { newUncategorizedTag, UNCATEGORIZED_TAG_ID } from '@shared/models/tag'
-import { clone, intersection, isNil, uniq, xor } from 'lodash'
+import { clone, difference, intersection, isNil, uniq, xor } from 'lodash'
 import {
     isGroupPromptTag,
     isLoraPromptTag,
@@ -162,15 +162,28 @@ const workspaceTagIds = computed({
             ElMessage.error('工作区不存在')
             return
         }
+        if (newVal.length <= workspaceTagIds.value.length) {
+            dataStore.workspace.update({
+                id: workspace.value.id,
+                tagIds: newVal,
+            })
+        }
+        const newItems = difference(newVal, workspaceTagIds.value)
         dataStore.workspace.update({
             id: workspace.value.id,
-            tagIds: newVal as string[],
+            tagIds: [...newItems, ...workspaceTagIds.value],
         })
     },
 })
-const workspaceTags = computed(() =>
-    dataStore.tag.readonly.filter((t) => workspaceTagIds.value.includes(t.id))
-)
+const workspaceTags = computed(() => {
+    const tags = dataStore.tag.readonly.filter((t) => workspaceTagIds.value.includes(t.id))
+    if (workspaceTagIds.value.includes(UNCATEGORIZED_TAG_ID)) {
+        tags.push(newUncategorizedTag())
+    }
+    return workspaceTagIds.value
+        .map((id) => tags.find((tag) => id === tag.id))
+        .filter((tag) => !isNil(tag))
+})
 
 const selectedTagId = ref(UNCATEGORIZED_TAG_ID)
 const selectedTag = computed(() => {
@@ -262,6 +275,21 @@ async function findPromptAndScroll(text: string): Promise<void> {
             selectedTagId.value = tag.id
             nextTick(() => {
                 tagListRef.value?.scrollTagIntoView(tag.id)
+                tagCollection.value?.scrollPromptIntoView(text)
+            })
+            return
+        }
+    }
+    for (const prompt of dataStore.prompt.readonly) {
+        if (prompt.tagIds.length !== 0) continue
+        if (prompt.text === text && !isNil(workspace.value?.id)) {
+            dataStore.workspace.update({
+                id: workspace.value.id,
+                tagIds: [UNCATEGORIZED_TAG_ID, ...workspaceTagIds.value],
+            })
+            selectedTagId.value = UNCATEGORIZED_TAG_ID
+            nextTick(() => {
+                tagListRef.value?.scrollTagIntoView(UNCATEGORIZED_TAG_ID)
                 tagCollection.value?.scrollPromptIntoView(text)
             })
             return

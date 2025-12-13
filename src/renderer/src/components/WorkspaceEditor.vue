@@ -178,6 +178,7 @@
                     clearable
                     spellcheck="false"
                     @keyup.enter="createPromptTag(searchText)"
+                    @keyup.esc="searchText = ''"
                 >
                     <template #prefix>
                         <el-icon class="cursor-pointer" @click.stop="copySearchText">

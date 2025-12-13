@@ -101,7 +101,7 @@ defineExpose({
         cardRef.value?.classList.add('glowing-bg')
         setTimeout(() => {
             cardRef.value?.classList.remove('glowing-bg')
-        }, 1000)
+        }, 2000)
     },
     promptText: props.prompt.text,
 })

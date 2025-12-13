@@ -1,4 +1,4 @@
-import { isNil } from 'lodash'
+import { cloneDeep, isNil } from 'lodash'
 import { DeepReadonly, Nullish } from 'utility-types'
 import { Decimal } from 'decimal.js'
 
@@ -402,31 +402,46 @@ export function addWeight(promptTag: PromptTag, delta: number = 0.1): PromptTag 
         }
         return newTag
     }
-    for (const [index, sub] of promptTag.subTags.entries()) {
-        const newSub = addWeight(sub, delta)
-        if (!isMonoPromptTag(newSub) && !isLoraPromptTag(newSub)) {
-            continue
+    if (isGroupPromptTag(promptTag)) {
+        const newSubTags = cloneDeep(promptTag.subTags)
+        for (const [index, sub] of newSubTags.entries()) {
+            const newSub = addWeight(sub, delta)
+            if (!isMonoPromptTag(newSub) && !isLoraPromptTag(newSub)) {
+                continue
+            }
+            newSubTags[index] = newSub
         }
-        promptTag.subTags[index] = newSub
+        return {
+            ...promptTag,
+            subTags: newSubTags,
+        }
     }
-    return {
-        ...promptTag,
-        subTags: promptTag.subTags,
-    }
+    return promptTag
 }
 
 export function clearWeight(promptTag: PromptTag): PromptTag {
-    const newTag = {
-        ...promptTag,
-        weight: '',
-        brackets: [],
+    if (isSpecialPromptTag(promptTag) || isEolPromptTag(promptTag)) return promptTag
+    if (isMonoPromptTag(promptTag)) {
+        return {
+            ...promptTag,
+            weight: '',
+            brackets: [],
+        }
+    }
+    if (isLoraPromptTag(promptTag)) {
+        return { ...promptTag, weight: '' }
     }
     if (isGroupPromptTag(promptTag)) {
+        const newTag = {
+            ...promptTag,
+            weight: '',
+        }
         ;(newTag as GroupPromptTag).subTags = promptTag.subTags.map(
             (sub) => clearWeight(sub) as SubTagPromptTag
         )
+        return newTag
     }
-    return newTag
+    return promptTag
 }
 
 export function addBrackets(promptTag: PromptTag, ...brackets: Bracket[]): PromptTag {
