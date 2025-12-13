@@ -13,6 +13,7 @@ import PromptLowdbService from '../services/prompt'
 import TagLowdbService from '../services/tag'
 import WorkspaceLowdbService from '../services/workspace'
 import log from 'electron-log/main'
+import { UNCATEGORIZED_TAG_ID } from '@shared/models/tag'
 
 export async function initHandlers(mainWindow: BrowserWindow): Promise<void> {
     const initPromise = (async () => {
@@ -64,6 +65,7 @@ export async function ensureDataConsistency(_mainWindow: BrowserWindow): Promise
     const allImages = await imageService.getAll()
 
     const tagIdSet = new Set(allTags.map((tag) => tag.id))
+    tagIdSet.add(UNCATEGORIZED_TAG_ID)
     const exampleIdSet = new Set(allExamples.map((example) => example.id))
     const imageIdSet = new Set(allImages.map((image) => image.id))
     for (const example of allExamples) {

@@ -18,7 +18,6 @@ export const useDataStore = defineStore('data', () => {
 
     const promptTextSet = new Set(prompts.value.map((prompt) => prompt.text))
 
-    // TODO 提供一个接口处理数据和文件的一致性
     window.api.prompt.onNotify((_event, newPrompts) => {
         prompts.value = newPrompts
         promptTextSet.clear()
