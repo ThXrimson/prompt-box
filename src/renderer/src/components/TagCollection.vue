@@ -141,7 +141,7 @@ const promptView = computed(() => {
 const promptImageFileName = computed(() => {
     const promptIdToImageFileName = {} as Record<string, string>
     for (const prompt of promptView.value) {
-        for (const exampleId of prompt.exampleIds) {
+        prompt: for (const exampleId of prompt.exampleIds) {
             const index = dataStore.example.readonly.findIndex((e) => e.id === exampleId)
             if (index === -1) {
                 continue
@@ -151,7 +151,7 @@ const promptImageFileName = computed(() => {
                 const image = dataStore.image.readonly.find((i) => i.id === imageId)
                 if (image) {
                     promptIdToImageFileName[prompt.id] = image.fileName
-                    break
+                    break prompt
                 }
             }
         }
