@@ -484,7 +484,7 @@ function getPromptTagText(item: Wrapper): string {
         text += '⣿\t'
     }
     if (item.kind === Kind.Default) {
-        text += promptTagToString(item.promptTag, true, true, false, false)
+        text += promptTagToString(item.promptTag, true, true, true)
     } else {
         if (isEolPromptTag(item.promptTag)) {
             return '<WRONG>'
