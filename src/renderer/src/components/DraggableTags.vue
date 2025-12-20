@@ -76,7 +76,7 @@ const { commit, canUndo, undo, canRedo, redo } = useManualRefHistory(editor, {
     capacity: 10,
 })
 const debouncedCommit = debounce(commit, 500)
-defineExpose({ canUndo, undo, canRedo, redo, collapseAll, uncollapseAll })
+defineExpose({ debouncedCommit, canUndo, undo, canRedo, redo, collapseAll, uncollapseAll })
 const flatEditor = computed({
     get() {
         return editor.value.flatMap((item): Wrapper[] => {
@@ -551,7 +551,11 @@ function getPromptTagText(item: Wrapper): string {
                                 !(item.kind === Kind.BorderEnd),
                         }"
                         @click.left="handleLeftClickPromptTag(item)"
-                        @click.right="copyText(promptTagToString(item.promptTag))"
+                        @click.right="
+                            copyText(
+                                promptTagToString(item.promptTag, true, true, true, true, false)
+                            )
+                        "
                         @mousedown.middle.prevent.stop="removePromptTag(item.promptTag.id)"
                     >
                         <span v-if="isEolPromptTag(item.promptTag)">EOL</span>

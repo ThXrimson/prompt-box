@@ -350,7 +350,7 @@ export function stringToEditor(str: string, specialWords: string[] = []): Prompt
             continue
         }
         const splitEol = segment.split(new RegExp(`(${EOL})`, 'g'))
-        for (const subSegment of splitEol) {
+        for (let subSegment of splitEol) {
             if (subSegment === EOL) {
                 tags.push({
                     id: crypto.randomUUID(),
@@ -359,6 +359,7 @@ export function stringToEditor(str: string, specialWords: string[] = []): Prompt
                 })
                 continue
             }
+            subSegment = subSegment.trim()
             for (const s of splitStringIgnoringBrackets(subSegment)) {
                 if (isLoraString(s)) {
                     const tag = stringToLoraPromptTag(s)

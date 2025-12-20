@@ -17,7 +17,7 @@
             <!-- 编辑框 -->
             <div class="flex-1 min-h-0">
                 <el-input
-                    v-if="editMode"
+                    v-show="editMode"
                     v-model="editorInput"
                     type="textarea"
                     resize="none"
@@ -26,7 +26,7 @@
                     class="h-full [&_.el-textarea\_\_inner]:h-full"
                 />
                 <el-scrollbar
-                    v-else
+                    v-show="!editMode"
                     class="border-none shadow-[0_0_0_1px_#e4e7ed] rounded-lg h-full"
                 >
                     <div class="h-full">
@@ -61,6 +61,14 @@
                         :hide-after="0"
                     >
                         <el-button :icon="Star" class="m-0!" />
+                    </el-tooltip>
+                    <el-tooltip
+                        content="克隆工作区"
+                        :enterable="false"
+                        placement="top-end"
+                        :hide-after="0"
+                    >
+                        <el-button :icon="DuplicateOutline" @click="cloneWorkspace" />
                     </el-tooltip>
                     <el-tooltip
                         content="撤回"
@@ -204,10 +212,10 @@
 
 <script setup lang="ts">
 import { CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
-import { computed, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
 import { ElInput, ElMessage } from 'element-plus'
-import { clone, isNil } from 'lodash'
+import { clone, isNil, cloneDeep } from 'lodash'
 import {
     editorToString,
     isLoraString,
@@ -228,11 +236,28 @@ import {
     ArrowRedoOutline,
     Expand,
     Contract,
+    DuplicateOutline,
 } from '@vicons/ionicons5'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
     workspaceId: string
 }>()
+const router = useRouter()
+async function cloneWorkspace(): Promise<void> {
+    const workspace = dataStore.workspace.readonly.find((w) => w.id === props.workspaceId)
+    if (isNil(workspace)) {
+        ElMessage.error('未找到该工作区')
+        return
+    }
+    const { id } = await dataStore.workspace.create({
+        name: `${workspace.name} - 副本`,
+        positive: cloneDeep(workspace.positive) as PromptTag[],
+        negative: cloneDeep(workspace.negative) as PromptTag[],
+        tagIds: cloneDeep(workspace.tagIds) as string[],
+    })
+    router.push(`/workspace/${id}`)
+}
 // TODO 处理 workspaceId 不合法的情况
 
 const emit = defineEmits<{
@@ -288,13 +313,20 @@ const specialTexts = computed(() => {
 })
 const editorInput = ref('')
 const editMode = ref(false)
+let beforeEdit = ''
 function switchEditMode(): void {
     if (editMode.value) {
-        // 切换到显示模式
-        currentEditor.value = stringToEditor(editorInput.value, specialTexts.value)
+        if (beforeEdit !== editorInput.value) {
+            // 切换到显示模式
+            currentEditor.value = stringToEditor(editorInput.value, specialTexts.value)
+            nextTick(() => {
+                draggableTagsRef.value?.debouncedCommit()
+            })
+        }
     } else {
         // 切换到编辑模式
         editorInput.value = editorToString(currentEditor.value, false)
+        beforeEdit = editorInput.value
     }
     editMode.value = !editMode.value
 }
