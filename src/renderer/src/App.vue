@@ -15,7 +15,11 @@
             </el-menu-item>
         </el-menu>
         <div class="flex flex-col flex-1 min-w-0 self-stretch my-1 mr-1">
-            <router-view />
+            <router-view v-slot="{ Component }">
+                <keep-alive>
+                    <component :is="Component" />
+                </keep-alive>
+            </router-view>
         </div>
     </div>
 </template>
