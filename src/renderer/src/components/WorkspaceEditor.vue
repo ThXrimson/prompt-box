@@ -30,12 +30,18 @@
                     class="border-none shadow-[0_0_0_1px_#e4e7ed] rounded-lg h-full"
                 >
                     <div class="h-full">
-                        <DraggableTags
-                            ref="draggableTagsRef"
-                            v-model="currentEditor"
-                            :search-text="searchText"
-                            @select-prompt="(promptId: string) => emit('selectPrompt', promptId)"
-                        />
+                        <keep-alive>
+                            <component
+                                :is="DraggableTags"
+                                :key="isPositiveEditor ? 'positive' : 'negative'"
+                                ref="draggableTagsRef"
+                                v-model="currentEditor"
+                                :search-text="searchText"
+                                @select-prompt="
+                                    (promptId: string) => emit('selectPrompt', promptId)
+                                "
+                            />
+                        </keep-alive>
                     </div>
                 </el-scrollbar>
             </div>
