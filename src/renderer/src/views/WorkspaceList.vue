@@ -22,13 +22,19 @@
             <div
                 v-for="workspace in workspaces"
                 :key="workspace.id"
-                class="flex justify-between items-center gap-2 p-2 border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors duration-200 rounded-md"
+                class="flex justify-between items-center p-2 py-4 border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors duration-200 rounded-md"
                 @click="routeToWorkspace(workspace.id)"
             >
-                <div class="flex flex-col gap-2">
+                <div class="flex flex-col mr-2">
                     <el-text class="text-lg! font-bold! self-start!">
                         {{ workspace.name || '未命名' }}
                     </el-text>
+                </div>
+                <div
+                    class="flex items-center h-full! p-2 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                    @click.stop="copyWorkspace(workspace.id)"
+                >
+                    <el-icon><CopyOutline /></el-icon>
                 </div>
                 <el-popconfirm
                     title="确定删除此工作区吗？"
@@ -37,7 +43,7 @@
                 >
                     <template #reference>
                         <div
-                            class="flex items-center gap-2 h-full! p-4 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                            class="flex items-center h-full! p-2 rounded-md hover:bg-gray-200 transition-colors duration-200"
                             @click.stop=""
                         >
                             <el-icon><Delete /></el-icon>
@@ -52,11 +58,14 @@
 <script setup lang="ts">
 import { useDataStore } from '@renderer/stores/data'
 import { computed, ref } from 'vue'
+import { CopyOutline } from '@vicons/ionicons5'
 import { Delete } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { CirclePlusFilled } from '@element-plus/icons-vue'
-import { notFoundError } from '@renderer/stores/error'
+import { createError, notFoundError } from '@renderer/stores/error'
 import log from 'electron-log/renderer'
+import { cloneDeep } from 'lodash'
+import { PromptTag } from '@shared/models/prompt-tag'
 
 const dataStore = useDataStore()
 
@@ -95,6 +104,40 @@ async function deleteWorkspace(workspaceId: string): Promise<void> {
         } else {
             log.error('删除工作区失败', err)
             ElMessage.error('删除工作区失败')
+        }
+    }
+}
+
+async function copyWorkspace(workspaceId: string): Promise<void> {
+    try {
+        const workspace = await dataStore.workspace.readonly.find((w) => w.id === workspaceId)
+        if (!workspace) {
+            ElMessage.error('工作区不存在')
+            return
+        }
+        let newWorkspaceName = `${workspace.name} (副本)`
+        while (await dataStore.workspace.readonly.find((w) => w.name === newWorkspaceName)) {
+            newWorkspaceName = `${newWorkspaceName} (副本)`
+        }
+        const newWorkspace = await dataStore.workspace.create({
+            name: newWorkspaceName,
+            positive: cloneDeep(workspace.positive) as PromptTag[],
+            negative: cloneDeep(workspace.negative) as PromptTag[],
+            tagIds: cloneDeep(workspace.tagIds) as string[],
+        })
+        if (newWorkspace) {
+            ElMessage.success('工作区已复制')
+        } else {
+            ElMessage.error('复制工作区失败')
+        }
+    } catch (err) {
+        if (err === notFoundError) {
+            ElMessage.error('工作区不存在')
+        } else if (err === createError) {
+            ElMessage.error('创建工作区失败')
+        } else {
+            log.error('复制工作区失败', err)
+            ElMessage.error('复制工作区失败')
         }
     }
 }
