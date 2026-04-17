@@ -17,9 +17,10 @@
         "build": "yarn run typecheck && electron-vite build",
         "postinstall": "electron-builder install-app-deps",
         "build:unpack": "yarn run build && electron-builder --dir",
-        "build:win": "yarn run build && electron-builder --win",
-        "build:mac": "yarn run build && electron-builder --mac",
-        "build:linux": "yarn run build && electron-builder --linux",
+        "build:win": "node scripts/build.js win",
+        "build:mac": "node scripts/build.js mac",
+        "build:linux": "node scripts/build.js linux",
+        "build:all": "node scripts/build.js all",
         "icon-build": "electron-icon-builder --input=resources/icon.png --output=build",
         "build:analyze": "electron-builder --dir --analyze"
     },
