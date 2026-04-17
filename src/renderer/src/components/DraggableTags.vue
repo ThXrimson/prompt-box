@@ -317,24 +317,24 @@ async function createPrompt(promptTag: PromptTag): Promise<void> {
 function getTagColor(item: Wrapper): string {
     const promptTag = item.promptTag
     if (promptTag.disabled) {
-        return 'gray'
+        return 'var(--color-gray-300)'
     }
     if (item.kind === Kind.BorderStart || item.kind === Kind.Group) {
-        return 'white'
+        return 'var(--color-gray-100)'
     }
     if (item.kind === Kind.BorderEnd) {
-        return 'black'
+        return 'var(--color-gray-800)'
     }
     if (isEolPromptTag(promptTag)) {
-        return 'black'
+        return 'var(--color-gray-800)'
     }
     if (isSpecialPromptTag(promptTag)) {
-        return 'brown'
+        return 'var(--color-warning)'
     }
     if (!isPromptTagCollected(item.promptTag)) {
-        return '#2D89BF'
+        return 'var(--color-primary-400)'
     }
-    return '#6CC33C'
+    return 'var(--color-tag-unselected)'
 }
 function copyText(text: string): void {
     window.api.other.copyToClipboard(text).then((res) => {
@@ -561,13 +561,13 @@ function getPromptTagText(item: Wrapper): string {
                         <span v-if="isEolPromptTag(item.promptTag)">EOL</span>
                         <span
                             v-else-if="item.kind === Kind.BorderStart"
-                            :class="{ 'text-teal-800!': !item.promptTag.disabled }"
+                            :class="{ 'text-(--color-gray-800)!': !item.promptTag.disabled }"
                         >
                             ▶ {{ item.promptTag.text }}
                         </span>
                         <span
                             v-else-if="item.kind === Kind.BorderEnd"
-                            class="text-gray-100! font-light"
+                            class="text-(--color-gray-100)! font-light"
                         >
                             ◀ {{ item.promptTag.text }}
                         </span>
@@ -578,7 +578,7 @@ function getPromptTagText(item: Wrapper): string {
                             :text-to-highlight="getPromptTagText(item)"
                             class="flex-1 block font-[500]"
                             :class="{
-                                'text-teal-800!': item.kind === Kind.Group,
+                                'text-(--color-gray-800)!': item.kind === Kind.Group,
                             }"
                         />
                     </el-tag>
@@ -715,17 +715,17 @@ function getPromptTagText(item: Wrapper): string {
         flex: 1;
         justify-content: center;
         height: 1.5rem;
-        border: 1px solid #eee;
+        border: 1px solid var(--color-border-light);
     }
 }
 .ghost-class {
     & :deep(.el-tag) {
-        box-shadow: 0px 0px 8px 0px #666;
+        box-shadow: var(--shadow-md);
     }
 }
 .tag-list-enter-active,
 .tag-list-leave-active {
-    transition: all 50ms ease-in-out;
+    transition: all 150ms ease-in-out;
 }
 .tag-list-enter-from {
     opacity: 0;

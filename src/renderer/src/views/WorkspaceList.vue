@@ -1,8 +1,8 @@
 <template>
-    <div class="flex flex-col gap-2 m-2 flex-1 min-h-0">
+    <div class="flex flex-col gap-2 m-1.5 flex-1 min-h-0">
         <div class="flex gap-2">
             <el-button
-                type="success"
+                type="primary"
                 :icon="CirclePlusFilled"
                 class="self-start!"
                 @click="createWorkspace(newWorkspaceName)"
@@ -22,7 +22,7 @@
             <div
                 v-for="workspace in workspaces"
                 :key="workspace.id"
-                class="flex justify-between items-center p-2 py-4 border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors duration-200 rounded-md"
+                class="flex justify-between items-center p-2 py-4 border border-(--color-border) hover:bg-(--color-gray-100) cursor-pointer transition-colors duration-200 rounded-(--radius-md) bg-(--color-bg-card) shadow-(--shadow-sm)"
                 @click="routeToWorkspace(workspace.id)"
             >
                 <div class="flex flex-col mr-2">
@@ -31,7 +31,7 @@
                     </el-text>
                 </div>
                 <div
-                    class="flex items-center h-full! p-2 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                    class="flex items-center h-full! p-2 rounded-md hover:bg-(--color-gray-200) transition-colors duration-200"
                     @click.stop="copyWorkspace(workspace.id)"
                 >
                     <el-icon><CopyOutline /></el-icon>
@@ -43,13 +43,17 @@
                 >
                     <template #reference>
                         <div
-                            class="flex items-center h-full! p-2 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                            class="flex items-center h-full! p-2 rounded-md hover:bg-(--color-gray-200) transition-colors duration-200"
                             @click.stop=""
                         >
                             <el-icon><Delete /></el-icon>
                         </div>
                     </template>
                 </el-popconfirm>
+            </div>
+            <div v-if="workspaces.length === 0" class="empty-state">
+                <el-icon class="empty-state-icon"><CirclePlusFilled /></el-icon>
+                <span class="empty-state-text">暂无工作区</span>
             </div>
         </el-scrollbar>
     </div>

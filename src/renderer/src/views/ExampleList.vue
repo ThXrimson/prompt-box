@@ -1,20 +1,18 @@
 <template>
-    <div class="my-2 mx-2 flex-1 min-h-0 min-w-0 flex flex-col">
+    <div class="m-1.5 flex-1 min-h-0 min-w-0 flex flex-col">
         <div class="flex flex-col flex-1 min-h-0">
-            <div>
+            <div class="flex gap-2 mb-2">
                 <el-button
-                    type="success"
+                    type="primary"
                     :icon="CirclePlusFilled"
-                    class="mb-2 self-start!"
                     @click="createExample"
                 >
                     添加示例
                 </el-button>
 
                 <el-button
-                    type="success"
+                    type="danger"
                     :icon="DeleteFilled"
-                    class="mb-2 self-start!"
                     @click="deleteEmptyExamples"
                 >
                     删除空示例
@@ -23,27 +21,31 @@
 
             <el-scrollbar
                 v-if="examples.length > 0"
-                class="flex-1 min-h-0 border-2 border-gray-200 rounded-md px-1"
+                class="flex-1 min-h-0 border border-(--color-border) rounded-(--radius-md) px-1"
                 view-class="columns-4 gap-1"
             >
                 <template v-for="example in currentExamples" :key="example.id">
                     <el-image
                         v-if="!isNil(exampleIdToCoverUrl.get(example.id))"
                         :src="exampleIdToCoverUrl.get(example.id)!"
-                        class="m-1 rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300"
+                        class="m-1 rounded-(--radius-md) cursor-pointer hover:shadow-(--shadow-lg) transition-shadow duration-300"
                         fit="contain"
                         loading="lazy"
                         @click="currentExampleId = example.id"
                     />
                     <div
                         v-else
-                        class="m-1 h-40 flex justify-center items-center bg-gray-300 text-gray-400 rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300"
+                        class="m-1 h-40 flex justify-center items-center bg-(--color-gray-200) text-(--color-text-tertiary) rounded-(--radius-md) cursor-pointer hover:shadow-(--shadow-lg) transition-shadow duration-300"
                         @click="currentExampleId = example.id"
                     >
-                        Empty
+                        <el-icon size="32"><ImageOutline /></el-icon>
                     </div>
                 </template>
             </el-scrollbar>
+            <div v-else class="empty-state">
+                <el-icon class="empty-state-icon"><CirclePlusFilled /></el-icon>
+                <span class="empty-state-text">暂无示例</span>
+            </div>
             <div class="flex justify-center-safe items-center-safe">
                 <el-tooltip content="左键封面打开预览；右键封面打开画廊" placement="top">
                     <el-button circle :icon="Information" size="small" />
@@ -82,7 +84,7 @@ import { createError, notFoundError } from '@renderer/stores/error'
 import { Nullish } from 'utility-types'
 import { isNil } from 'lodash'
 import { getImageUrl } from '@renderer/utils/utils'
-import { CaretUp, CaretDown, Information } from '@vicons/ionicons5'
+import { CaretUp, CaretDown, Information, ImageOutline } from '@vicons/ionicons5'
 import { DEFAULT_PAGE_SIZE } from '@shared/constants/app'
 
 const dataStore = useDataStore()

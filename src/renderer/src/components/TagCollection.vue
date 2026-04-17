@@ -1,7 +1,7 @@
 <template>
     <div
         ref="tag-card"
-        class="tag-collection flex h-full *:mr-2 border-2 border-gray-200 rounded-lg p-2 pr-0 bg-white"
+        class="tag-collection flex h-full *:mr-2 border border-(--color-border) rounded-(--radius-md) p-2 pr-0 bg-(--color-bg-card)"
         @click="handleClickBackground"
     >
         <div class="h-full flex-2 flex flex-col *:mr-2 gap-1.5">
@@ -42,10 +42,14 @@
                     @remove="removeThisTagId($event)"
                     @select="(promptId) => (selectedPromptId = promptId)"
                 />
+                <div v-if="promptView.length === 0" class="empty-state">
+                    <el-icon class="empty-state-icon"><Plus /></el-icon>
+                    <span class="empty-state-text">暂无提示词</span>
+                </div>
             </el-scrollbar>
         </div>
         <div v-if="!isNil(selectedPromptId)" class="h-full flex-1 flex flex-col min-w-90">
-            <el-scrollbar class="border-2 border-gray-200 rounded-lg p-2 mb-2">
+            <el-scrollbar class="border-2 border-(--color-border) rounded-lg p-2 mb-2">
                 <PromptDetail :prompt-id="selectedPromptId" />
             </el-scrollbar>
             <div class="flex">

@@ -1,5 +1,5 @@
 <template>
-    <div class="my-2 mx-2 flex-1 min-h-0 min-w-0 flex flex-col">
+    <div class="m-1.5 flex-1 min-h-0 min-w-0 flex flex-col">
         <navigator>
             <div class="flex gap-2 justify-between">
                 <el-tooltip content="排序" placement="bottom-start" :hide-after="0">
@@ -8,12 +8,12 @@
                         <template #dropdown>
                             <el-dropdown-menu>
                                 <el-dropdown-item @click="handleSortByText">
-                                    <el-text :class="{ 'text-blue-400!': sortKind === 'text' }">
+                                    <el-text :class="{ 'text-(--color-primary)!': sortKind === 'text' }">
                                         {{ `名称${sortByTextAsc ? '升序' : '降序'}` }}
                                     </el-text>
                                 </el-dropdown-item>
                                 <el-dropdown-item @click="handleSortByTime">
-                                    <el-text :class="{ 'text-blue-400!': sortKind === 'time' }">
+                                    <el-text :class="{ 'text-(--color-primary)!': sortKind === 'time' }">
                                         {{ `时间${sortByCreateTimeAsc ? '升序' : '降序'}` }}
                                     </el-text>
                                 </el-dropdown-item>
@@ -59,12 +59,12 @@
 
         <div class="flex justify-between gap-1 w-full mt-2 flex-1 min-h-0">
             <el-scrollbar
-                class="bg-white border-2 border-gray-200 rounded-lg p-3"
+                class="bg-(--color-bg-card) border border-(--color-border) rounded-(--radius-md) p-3"
                 view-class="flex flex-col w-50"
             >
                 <el-button
                     v-if="!creatingPrompt"
-                    type="success"
+                    type="primary"
                     :icon="CirclePlusFilled"
                     class="flex w-full h-[30px] py-1 px-2"
                     @click="createPrompt"
@@ -82,13 +82,13 @@
                     <template #suffix>
                         <div class="flex items-center gap-1">
                             <el-icon
-                                class="cursor-pointer hover:text-gray-500!"
+                                class="cursor-pointer hover:text-(--color-text-secondary)!"
                                 @click="confirmCreatePrompt"
                             >
                                 <Check />
                             </el-icon>
                             <el-icon
-                                class="cursor-pointer hover:text-gray-500!"
+                                class="cursor-pointer hover:text-(--color-text-secondary)!"
                                 @click="cancelCreatePrompt"
                             >
                                 <Close />
@@ -99,16 +99,21 @@
 
                 <el-divider class="my-2!" />
 
+                <div v-if="promptViews.length === 0" class="empty-state">
+                    <el-icon class="empty-state-icon"><Search /></el-icon>
+                    <span class="empty-state-text">暂无提示词</span>
+                </div>
+
                 <div
                     v-for="(prompt, index) in promptViews"
                     :key="prompt.id"
                     @click="selectPrompt(prompt.id)"
                 >
                     <div
-                        class="flex justify-between items-center-safe w-full h-fit py-1 px-2 rounded border-gray-200 hover:bg-gray-100 focus:bg-gray-200 cursor-pointer [&_.delete-button]:hover:opacity-100!"
+                        class="flex justify-between items-center-safe w-full h-fit py-1 px-2 rounded border-(--color-border) hover:bg-(--color-gray-100) focus:bg-(--color-primary-100) cursor-pointer [&_.delete-button]:hover:opacity-100!"
                         :class="{
-                            'bg-gray-200': selectedPromptId === prompt.id,
-                            'hover:bg-gray-300': selectedPromptId === prompt.id,
+                            'bg-(--color-primary-50)': selectedPromptId === prompt.id,
+                            'hover:bg-(--color-primary-100)': selectedPromptId === prompt.id,
                         }"
                     >
                         <div class="flex flex-col flex-1 min-w-0">
@@ -118,7 +123,7 @@
                             <el-text
                                 v-if="prompt.translation"
                                 truncated
-                                class="text-xs! text-gray-400! self-start!"
+                                class="text-xs! text-(--color-text-tertiary)! self-start!"
                             >
                                 {{ prompt.translation }}
                             </el-text>
@@ -130,7 +135,7 @@
                         >
                             <template #reference>
                                 <el-icon
-                                    class="delete-button opacity-0! text-gray-400! hover:text-gray-600! transition-colors duration-200"
+                                    class="delete-button opacity-0! text-(--color-text-tertiary)! hover:text-(--color-text-secondary)! transition-colors duration-200"
                                     :class="{
                                         'opacity-100!': selectedPromptId === prompt.id,
                                     }"
@@ -145,7 +150,7 @@
                 </div>
             </el-scrollbar>
             <el-scrollbar
-                class="bg-white border-2 box-border border-gray-200 rounded-lg p-3 flex-1"
+                class="bg-(--color-bg-card) border border-(--color-border) rounded-md p-3 flex-1"
             >
                 <PromptDetail v-if="!isNil(selectedPromptId)" :prompt-id="selectedPromptId" />
             </el-scrollbar>
@@ -350,7 +355,7 @@ async function deletePrompt(id: string): Promise<void> {
 }
 .preview-wrapper :deep(.preview-content) {
     min-height: 2.5rem;
-    @apply rounded border border-blue-100 p-2;
+    @apply rounded border border-(--color-primary-100) p-2;
 }
 .fade-enter-active,
 .fade-leave-active {
@@ -360,5 +365,23 @@ async function deletePrompt(id: string): Promise<void> {
 .fade-enter-from,
 .fade-leave-to {
     transform: translateX(100vw);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
+    color: var(--color-text-tertiary);
+}
+
+.empty-state-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-text {
+    font-size: 0.875rem;
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-    <el-scrollbar class="border-2 rounded-md border-gray-200">
+    <el-scrollbar class="border rounded-(--radius-md) border-(--color-border)">
         <vue-draggable v-model="tagIds" :animation="50" class="flex flex-col gap-1 p-2 pr-2.5">
             <div
                 v-for="tagId in tagIds"
@@ -8,8 +8,8 @@
                 :tag-id="tagId"
                 class="flex flex-1 cursor-pointer rounded-md p-2 justify-between items-center-safe transition-colors"
                 :class="{
-                    'bg-teal-400 hover:bg-teal-600': selectedId !== tagId,
-                    'bg-sky-400 hover:bg-sky-600': selectedId === tagId,
+                    'bg-(--color-tag-unselected) hover:bg-emerald-600': selectedId !== tagId,
+                    'bg-(--color-tag-selected) hover:bg-(--color-primary-500)': selectedId === tagId,
                 }"
                 @click="emit('select', tagId)"
             >
@@ -18,7 +18,7 @@
                 </el-text>
                 <el-icon
                     size="20px"
-                    class="rounded-full hover:bg-teal-800"
+                    class="rounded-full hover:bg-black/20"
                     @click.stop="emit('closeTag', tagId)"
                 >
                     <close class="text-white!" />

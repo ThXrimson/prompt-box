@@ -1,5 +1,5 @@
 <template>
-    <el-scrollbar class="w-fit border-gray-200 border-2 rounded-md pr-2">
+    <el-scrollbar class="w-fit border-(--color-border) border rounded-(--radius-md) pr-2">
         <vue-draggable
             v-model="images"
             :animation="100"
@@ -15,21 +15,21 @@
                     :src="getImageUrl(image.fileName)"
                     :preview-src-list="images.map((img) => getImageUrl(img.fileName))"
                     :initial-index="index"
-                    class="object-cover rounded-md border-1 border-gray-300"
+                    class="object-cover rounded-md border border-(--color-border-light)"
                     fit="cover"
                     loading="lazy"
                     hide-on-click-modal
                 />
                 <el-icon
                     size="1.2rem"
-                    class="delete-button absolute! top-1 right-1 rounded-full bg-gray-200 text-gray-600! opacity-0 transition-all duration-300 cursor-pointer hover:bg-gray-400"
+                    class="delete-button absolute! top-1 right-1 rounded-full bg-(--color-gray-100) text-(--color-text-secondary)! opacity-0 transition-all duration-300 cursor-pointer hover:bg-(--color-gray-300)"
                     @click="deleteImage(image.id)"
                 >
                     <Close />
                 </el-icon>
                 <el-icon
                     size="1.2rem"
-                    class="delete-button absolute! bottom-2 right-1 rounded-full p-[2px] bg-gray-200 text-gray-600! opacity-0 transition-all duration-300 cursor-pointer hover:bg-gray-400"
+                    class="delete-button absolute! bottom-2 right-1 rounded-full p-[2px] bg-(--color-gray-100) text-(--color-text-secondary)! opacity-0 transition-all duration-300 cursor-pointer hover:bg-(--color-gray-300)"
                     @click="handleCopyImageToClipboard(image.id)"
                 >
                     <SaveIcon />
@@ -39,7 +39,7 @@
                 v-for="i in loadingPlaceholder"
                 :key="i"
                 v-loading="true"
-                class="w-40! h-40! rounded-md bg-gray-400"
+                class="w-40! h-40! rounded-md bg-(--color-gray-300)"
             />
             <!-- 添加图片 -->
             <el-button
@@ -47,7 +47,7 @@
                 circle
                 type="primary"
                 size="large"
-                class="rounded-md absolute! bottom-2 right-2"
+                class="rounded-(--radius-md) absolute! bottom-2 right-2"
                 @click="handleOpenAddImageDialog"
             />
         </vue-draggable>

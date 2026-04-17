@@ -1,5 +1,5 @@
 <template>
-    <div class="flex gap-2">
+    <div class="flex gap-3">
         <ImageCover :src="coverUrl" @contextmenu="showGalleryDialog = true" />
         <div class="flex-1 min-w-0 flex flex-col gap-1">
             <div class="flex flex-col gap-1 flex-1 min-h-0">

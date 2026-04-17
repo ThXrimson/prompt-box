@@ -13,13 +13,13 @@
         </Teleport>
         <div
             ref="card"
-            class="max-w-100 flex gap-1 justify-between border border-gray-200 rounded-sm p-1.5 transition-all duration-300 relative"
+            class="max-w-100 flex gap-1 justify-between border rounded-md p-1.5 transition-all duration-300 relative"
             :class="{
-                'bg-orange-400 hover:bg-orange-500': selected,
-                'bg-teal-400 hover:bg-teal-500': !selected,
+                'bg-(--color-tag-selected) hover:bg-(--color-primary-500) border-(--color-primary-300)': selected,
+                'bg-(--color-tag-unselected) hover:bg-emerald-600 border-(--color-gray-200)': !selected,
             }"
         >
-            <div class="absolute! top-px right-[2px] flex gap-1 text-teal-800!">
+            <div class="absolute! top-px right-[2px] flex gap-1 text-(--color-text-primary)!">
                 <span
                     v-if="props.prompt.kind === PromptKind.Lora"
                     class="text-[9px] italic leading-[1.2]"
@@ -37,14 +37,14 @@
                 <el-text truncated class="text-white! font-bold self-auto!">
                     {{ prompt.text }}
                 </el-text>
-                <el-text truncated class="text-teal-100! font-light text-xs! self-auto!">
+                <el-text truncated class="text-white/70! font-light text-xs! self-auto!">
                     {{ prompt.translation === '' ? prompt.text : prompt.translation }}
                 </el-text>
             </div>
             <div class="flex items-center gap-1">
                 <el-tooltip content="添加到编辑栏" placement="top" :hide-after="0">
                     <el-icon
-                        class="text-white! hover:text-gray-700! cursor-pointer"
+                        class="text-white/80! hover:text-(--color-text-primary)! cursor-pointer"
                         @click="emit('addToWorkspace', cloneDeep(prompt) as Prompt)"
                     >
                         <AddCircleOutline />
@@ -52,7 +52,7 @@
                 </el-tooltip>
                 <el-tooltip content="复制到剪贴板" placement="top" :hide-after="0">
                     <el-icon
-                        class="text-white! hover:text-gray-700! cursor-pointer"
+                        class="text-white/80! hover:text-(--color-text-primary)! cursor-pointer"
                         @click="copyText(prompt.text)"
                     >
                         <CopyOutline />
@@ -65,7 +65,7 @@
                     @confirm="emit('remove', prompt.id)"
                 >
                     <template #reference>
-                        <el-icon class="text-white! hover:text-gray-700! cursor-pointer">
+                        <el-icon class="text-white/80! hover:text-(--color-text-primary)! cursor-pointer">
                             <RemoveCircleOutline />
                         </el-icon>
                     </template>
@@ -128,6 +128,6 @@ function openImage(): void {
 @reference 'tailwindcss';
 
 .glowing-bg {
-    @apply bg-blue-400;
+    @apply bg-(--color-primary-300);
 }
 </style>

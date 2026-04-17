@@ -142,7 +142,7 @@
                 </div>
                 <div
                     v-if="examples.length > 0"
-                    class="flex flex-col gap-2 flex-1 min-h-0 border-2 border-gray-200 rounded-md px-1"
+                    class="flex flex-col gap-2 flex-1 min-h-0 border-2 border-(--color-border) rounded-md px-1"
                 >
                     <div
                         v-for="example in examples"
@@ -166,7 +166,7 @@
         append-to-body
     >
         <el-scrollbar
-            class="flex-1 min-h-0 border-2 border-gray-200 rounded-md px-1"
+            class="flex-1 min-h-0 border-2 border-(--color-border) rounded-md px-1"
             view-class="columns-4 gap-1"
         >
             <template v-for="example in currentExampleCandidates" :key="example.id">
@@ -636,6 +636,11 @@ async function confirmCreateImage(): Promise<void> {
 @reference "tailwindcss"
 
 .edit-header {
-    font-weight: bold;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
 }
 </style>

@@ -1,6 +1,6 @@
 <template>
     <div class="flex flex-col gap-2">
-        <el-button :icon="Plus" @click="handleOpenAddTagInput">添加标签</el-button>
+        <el-button type="primary" :icon="Plus" @click="handleOpenAddTagInput">添加标签</el-button>
 
         <el-scrollbar view-class="h-[50vh]">
             <el-table :data="tagCounter">
@@ -21,7 +21,7 @@
                             size="small"
                             :icon="EditPen"
                             :class="{
-                                'text-gray-400!': editingTag[scope.row.id],
+                                'text-(--color-text-tertiary)!': editingTag[scope.row.id],
                             }"
                             :disabled="scope.row.id === UNCATEGORIZED_TAG_ID"
                             @click="editTag(scope.row.id)"

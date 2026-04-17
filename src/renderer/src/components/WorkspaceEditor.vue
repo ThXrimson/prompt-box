@@ -2,15 +2,15 @@
     <!-- 可拖动的handle -->
     <div
         ref="dragHandleRef"
-        class="mt-1 h-1 cursor-ns-resize rounded-t-lg flex items-center justify-center hover:[&>div]:bg-gray-600"
+        class="mt-1 h-2 cursor-ns-resize rounded-t-lg flex items-center justify-center hover:[&>div]:bg-(--color-primary)"
         @mousedown="startDragging"
     >
-        <div class="w-8 h-0.5 bg-gray-400 rounded" />
+        <div class="w-8 h-1 bg-(--color-gray-400) rounded" />
     </div>
     <!-- 编辑框容器 -->
     <div
         ref="containerRef"
-        class="flex flex-col bg-white rounded-lg shadow-md min-h-0"
+        class="flex flex-col bg-(--color-bg-card) rounded-(--radius-lg) shadow-(--shadow-md) min-h-0"
         :style="{ height: containerHeight + 'px' }"
     >
         <div class="flex flex-col gap-2 p-2 flex-1 min-h-0">
@@ -27,7 +27,7 @@
                 />
                 <el-scrollbar
                     v-show="!editMode"
-                    class="border-none shadow-[0_0_0_1px_#e4e7ed] rounded-lg h-full"
+                    class="border-none shadow-[0_0_0_1px_var(--color-border)] rounded-lg h-full"
                 >
                     <div class="h-full">
                         <keep-alive>
@@ -49,7 +49,6 @@
             <!-- 工具栏 -->
             <div class="flex justify-between gap-2">
                 <div class="flex gap-2 justify-start">
-                    <!-- TODO 暂时隐藏 -->
                     <el-tooltip
                         v-if="false"
                         content="添加为示例"
@@ -102,6 +101,7 @@
                             @click="draggableTagsRef?.redo()"
                         />
                     </el-tooltip>
+                    <div class="w-px h-6 bg-(--color-border) self-center mx-1"></div>
                     <el-tooltip
                         :content="!editMode ? '编辑模式' : '显示模式'"
                         :enterable="false"
@@ -123,16 +123,19 @@
                     >
                         <el-button :icon="CopyDocument" class="m-0!" @click="copyEditor" />
                     </el-tooltip>
-                    <!-- 去掉lora -->
+                    <div class="w-px h-6 bg-(--color-border) self-center mx-1"></div>
                     <el-switch
                         v-model="removeLora"
                         inline-prompt
                         active-text="去掉LORA"
                         inactive-text="保留LORA"
-                        style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+                        style="
+                            --el-switch-on-color: var(--color-success);
+                            --el-switch-off-color: var(--color-danger);
+                        "
                         class="[&_.is-text]:font-sans [&_.is-text]:italic"
                     />
-                    <!-- TODO 暂时隐藏 -->
+                    <div class="w-px h-6 bg-(--color-border) self-center mx-1"></div>
                     <el-tooltip
                         v-if="false"
                         content="复制Lora提示词"
@@ -150,17 +153,18 @@
                     >
                         <el-button class="m-0! italic" @click="addEolPromptTag">EOL</el-button>
                     </el-tooltip>
-
-                    <!-- 切换正向、负向编辑器 -->
                     <el-switch
                         v-model="isPositiveEditor"
                         inline-prompt
                         active-text="POSITIVE"
                         inactive-text="NEGATIVE"
-                        style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+                        style="
+                            --el-switch-on-color: var(--color-success);
+                            --el-switch-off-color: var(--color-danger);
+                        "
                         class="[&_.is-text]:font-mono [&_.is-text]:italic"
                     />
-
+                    <div class="w-px h-6 bg-(--color-border) self-center mx-1"></div>
                     <el-tooltip
                         content="展开所有"
                         :enterable="false"

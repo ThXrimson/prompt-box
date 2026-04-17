@@ -10,14 +10,15 @@
     />
     <div
         v-else
-        class="flex justify-center items-center w-40 h-40 bg-gray-300 text-gray-400 rounded-md cursor-pointer hover:shadow-lg transition-shadow duration-300"
+        class="flex justify-center items-center w-40 h-40 bg-(--color-gray-200) text-(--color-text-tertiary) rounded-(--radius-md) cursor-pointer hover:shadow-lg transition-shadow duration-300"
     >
-        Empty
+        <el-icon size="32"><ImageOutline /></el-icon>
     </div>
 </template>
 <script setup lang="ts">
 import { isNil } from 'lodash'
 import { Nullish } from 'utility-types'
+import { ImageOutline } from '@vicons/ionicons5'
 
 defineProps<{
     src: string | Nullish

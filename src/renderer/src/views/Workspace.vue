@@ -105,7 +105,7 @@
             </div>
         </navigator>
         <!-- 标签列表 -->
-        <div class="flex-1 flex overflow-auto mt-2 gap-1">
+        <div class="flex-1 flex overflow-auto mt-1.5 gap-1">
             <TagList
                 ref="tag-list"
                 v-model:tag-ids="workspaceTagIds"
