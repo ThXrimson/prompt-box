@@ -22,6 +22,8 @@ files:
     - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
     - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
     - '!data/'
+    - '!scripts/*'
+    - '!build/*.json'
 asarUnpack:
     - resources/**
 win:

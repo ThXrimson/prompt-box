@@ -35,4 +35,5 @@ export enum IpcChannel {
     CopyToClipboard = 'copy-to-clipboard',
     TranslateByDeepLX = 'translate-by-deep-lx',
     DataStoreReady = 'data-store-ready',
+    GetBuildInfo = 'get-build-info',
 }

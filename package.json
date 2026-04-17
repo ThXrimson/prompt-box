@@ -14,7 +14,7 @@
         "typecheck": "yarn run typecheck:node && yarn run typecheck:web",
         "start": "electron-vite preview",
         "dev": "electron-vite dev",
-        "build": "yarn run typecheck && electron-vite build",
+        "build": "node scripts/generate-build-info.mjs && yarn run typecheck && electron-vite build",
         "postinstall": "electron-builder install-app-deps",
         "build:unpack": "yarn run build && electron-builder --dir",
         "build:win": "yarn run build && electron-builder --win",

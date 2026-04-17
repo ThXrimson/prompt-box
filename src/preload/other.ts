@@ -2,6 +2,16 @@ import { IpcChannel } from '@shared/ipc-channel'
 import { ipcRenderer, webUtils } from 'electron/renderer'
 import { Nullish } from 'utility-types'
 
+export interface BuildInfo {
+    version: string
+    buildTime: string
+    git: {
+        hash: string
+        branch: string
+        dirty: boolean
+    }
+}
+
 export default {
     openImageDialog(): Promise<string | Nullish> {
         return ipcRenderer.invoke(IpcChannel.OpenImageDialog)
@@ -17,5 +27,8 @@ export default {
     },
     async sendDataStoreReady(): Promise<void> {
         await ipcRenderer.send(IpcChannel.DataStoreReady)
+    },
+    getBuildInfo(): Promise<BuildInfo> {
+        return ipcRenderer.invoke(IpcChannel.GetBuildInfo)
     },
 }
