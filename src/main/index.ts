@@ -7,6 +7,7 @@ import log from 'electron-log/main'
 import dayjs from 'dayjs'
 import { getImageDir, getAppDir } from './utils'
 import { initHandlers } from './handlers'
+import { WINDOW_CONFIG, LOG_CONFIG, FILE_CONFIG } from '@shared/constants/app'
 
 Menu.setApplicationMenu(null)
 
@@ -14,9 +15,8 @@ function init(): void {
     {
         // initialize log config
         log.initialize()
-        const logTemplate = '[{h}:{i}:{s}.{ms}] [{processType}] [{level}] {text}'
-        log.transports.console.format = logTemplate
-        log.transports.file.format = logTemplate
+        log.transports.console.format = LOG_CONFIG.template
+        log.transports.file.format = LOG_CONFIG.template
         log.transports.file.resolvePathFn = () => {
             return join(getAppDir(), 'logs', `${dayjs().format('YYYY-MM-DD')}.log`)
         }
@@ -27,10 +27,10 @@ function createWindow(): BrowserWindow {
     // Create the browser window.
     const mainWindow = new BrowserWindow({
         title: 'Prompt Box',
-        width: 1280,
-        height: 720,
-        minWidth: 800,
-        minHeight: 600,
+        width: WINDOW_CONFIG.width,
+        height: WINDOW_CONFIG.height,
+        minWidth: WINDOW_CONFIG.minWidth,
+        minHeight: WINDOW_CONFIG.minHeight,
         autoHideMenuBar: true,
         ...(process.platform === 'linux' ? { icon } : {}),
         webPreferences: {
@@ -73,10 +73,10 @@ protocol.registerSchemesAsPrivileged([
 app.whenReady().then(async () => {
     init()
 
-    protocol.handle('image', (request) => {
+    protocol.handle(FILE_CONFIG.imageProtocol, (request) => {
         const filePath = join(
             getImageDir(),
-            request.url.substring('image://'.length, request.url.length)
+            request.url.substring(FILE_CONFIG.imageProtocolPrefix.length, request.url.length)
         )
         // 确保请求路径没有 '../' 等来访问任意路径
         const safePath = normalize(filePath).replace(/^(\.\.(\/|\\|$))+/, '')

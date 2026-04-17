@@ -83,6 +83,7 @@ import { Nullish } from 'utility-types'
 import { isNil } from 'lodash'
 import { getImageUrl } from '@renderer/utils/utils'
 import { CaretUp, CaretDown, Information } from '@vicons/ionicons5'
+import { DEFAULT_PAGE_SIZE } from '@shared/constants/app'
 
 const dataStore = useDataStore()
 
@@ -90,7 +91,7 @@ const examples = computed(() => {
     return dataStore.example.readonly.toSorted((a, b) => b.updateTime - a.updateTime)
 })
 const currentPage = ref(1)
-const pageSize = 10
+const pageSize = DEFAULT_PAGE_SIZE
 const currentExamples = computed(() => {
     const start = (currentPage.value - 1) * pageSize
     const end = start + pageSize
