@@ -3,7 +3,10 @@ import { Example, NewExample, UpdateExample } from '@shared/models/example'
 import { BaseLowdbService } from './base-lowdb-service'
 import { DB_FILENAMES } from '@shared/constants/app'
 
-export default class ExampleLowdbService extends BaseLowdbService<Example> implements ExampleService {
+export default class ExampleLowdbService
+    extends BaseLowdbService<Example>
+    implements ExampleService
+{
     private static instance?: ExampleLowdbService
     protected dbFilename = DB_FILENAMES.example
 

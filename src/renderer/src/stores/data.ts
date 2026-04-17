@@ -42,16 +42,13 @@ export const useDataStore = defineStore('data', () => {
     })
 
     // 定时持久化数据
-    setInterval(
-        () => {
-            window.api.prompt.update(cloneDeep(prompts.value))
-            window.api.example.update(cloneDeep(examples.value))
-            window.api.tag.update(cloneDeep(tags.value))
-            window.api.workspace.update(cloneDeep(workspaces.value))
-            window.api.image.update(cloneDeep(images.value))
-        },
-        AUTO_SAVE_INTERVAL
-    )
+    setInterval(() => {
+        window.api.prompt.update(cloneDeep(prompts.value))
+        window.api.example.update(cloneDeep(examples.value))
+        window.api.tag.update(cloneDeep(tags.value))
+        window.api.workspace.update(cloneDeep(workspaces.value))
+        window.api.image.update(cloneDeep(images.value))
+    }, AUTO_SAVE_INTERVAL)
 
     const promptView = {
         ref: prompts,

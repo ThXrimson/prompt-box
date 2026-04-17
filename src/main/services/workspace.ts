@@ -3,7 +3,10 @@ import { Workspace, NewWorkspace, UpdateWorkspace } from '@shared/models/workspa
 import { BaseLowdbService } from './base-lowdb-service'
 import { DB_FILENAMES } from '@shared/constants/app'
 
-export default class WorkspaceLowdbService extends BaseLowdbService<Workspace> implements WorkspaceService {
+export default class WorkspaceLowdbService
+    extends BaseLowdbService<Workspace>
+    implements WorkspaceService
+{
     private static instance?: WorkspaceLowdbService
     protected dbFilename = DB_FILENAMES.workspace
 

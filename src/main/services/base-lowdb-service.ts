@@ -30,7 +30,9 @@ export abstract class BaseLowdbService<T extends BaseEntity> {
         return db.data
     }
 
-    protected async createEntities(items: Omit<T, 'id' | 'createTime' | 'updateTime'>[]): Promise<T[]> {
+    protected async createEntities(
+        items: Omit<T, 'id' | 'createTime' | 'updateTime'>[]
+    ): Promise<T[]> {
         const db = await this.getDb()
         const newItems: T[] = []
         const now = Date.now()
@@ -57,9 +59,7 @@ export abstract class BaseLowdbService<T extends BaseEntity> {
         return true
     }
 
-    protected async updateEntities(
-        updates: Partial<T> & { id: string }[]
-    ): Promise<T[]> {
+    protected async updateEntities(updates: Partial<T> & { id: string }[]): Promise<T[]> {
         const db = await this.getDb()
         const updatedItems: T[] = []
         const now = Date.now()
