@@ -3,7 +3,7 @@ import eslintPluginVue from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
 
 export default tseslint.config(
-    { ignores: ['**/node_modules', '**/dist', '**/out', 'scripts/**'] },
+    { ignores: ['**/node_modules', '**/dist', '**/out'] },
     tseslint.configs.recommended,
     eslintPluginVue.configs['flat/recommended'],
     {
