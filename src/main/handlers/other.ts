@@ -1,5 +1,4 @@
 import { IpcChannel } from '@shared/ipc-channel'
-import { BuildInfo, getBuildInfo } from '@shared/build-info'
 import log from 'electron-log/main'
 import { clipboard } from 'electron/common'
 import { BrowserWindow, dialog, ipcMain, net } from 'electron/main'
@@ -14,9 +13,6 @@ export function initOtherHandlers(_mainWindow: BrowserWindow): void {
     })
     ipcMain.handle(IpcChannel.TranslateByDeepLX, async (_event, text: string) => {
         return translateByDeepLX(text)
-    })
-    ipcMain.handle(IpcChannel.GetBuildInfo, async (): Promise<BuildInfo> => {
-        return getBuildInfo()
     })
 }
 async function openImageDialog(): Promise<string | Nullish> {
