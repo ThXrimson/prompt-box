@@ -1,10 +1,11 @@
 import { PromptService } from './interfaces/prompt'
 import { NewPrompt, Prompt, PromptKind, UpdatePrompt } from '@shared/models/prompt'
 import { BaseLowdbService } from './base-lowdb-service'
+import { DB_FILENAMES } from '@shared/constants/app'
 
 export default class PromptLowdbService extends BaseLowdbService<Prompt> implements PromptService {
     private static instance?: PromptLowdbService
-    protected dbFilename = 'prompt.json'
+    protected dbFilename = DB_FILENAMES.prompt
 
     protected getDefaultData(): Prompt[] {
         return []

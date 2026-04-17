@@ -1,10 +1,11 @@
 import { WorkspaceService } from './interfaces/workspace'
 import { Workspace, NewWorkspace, UpdateWorkspace } from '@shared/models/workspace'
 import { BaseLowdbService } from './base-lowdb-service'
+import { DB_FILENAMES } from '@shared/constants/app'
 
 export default class WorkspaceLowdbService extends BaseLowdbService<Workspace> implements WorkspaceService {
     private static instance?: WorkspaceLowdbService
-    protected dbFilename = 'workspace.json'
+    protected dbFilename = DB_FILENAMES.workspace
 
     protected getDefaultData(): Workspace[] {
         return []

@@ -1,10 +1,11 @@
 import { ExampleService } from './interfaces/example'
 import { Example, NewExample, UpdateExample } from '@shared/models/example'
 import { BaseLowdbService } from './base-lowdb-service'
+import { DB_FILENAMES } from '@shared/constants/app'
 
 export default class ExampleLowdbService extends BaseLowdbService<Example> implements ExampleService {
     private static instance?: ExampleLowdbService
-    protected dbFilename = 'example.json'
+    protected dbFilename = DB_FILENAMES.example
 
     protected getDefaultData(): Example[] {
         return []

@@ -1,10 +1,11 @@
 import { TagService } from './interfaces/tag'
 import { Tag, NewTag, UpdateTag } from '@shared/models/tag'
 import { BaseLowdbService } from './base-lowdb-service'
+import { DB_FILENAMES } from '@shared/constants/app'
 
 export default class TagLowdbService extends BaseLowdbService<Tag> implements TagService {
     private static instance?: TagLowdbService
-    protected dbFilename = 'tag.json'
+    protected dbFilename = DB_FILENAMES.tag
 
     protected getDefaultData(): Tag[] {
         return []
