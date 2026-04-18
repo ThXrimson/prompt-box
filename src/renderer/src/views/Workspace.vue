@@ -61,6 +61,7 @@
                     filterable
                     placeholder="查找提示词"
                     clearable
+                    data-search-input
                     class="flex-1 min-w-0"
                     @update:model-value="findPromptAndScroll($event)"
                 >

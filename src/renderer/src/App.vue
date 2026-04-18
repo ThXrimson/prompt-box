@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Document as DocumentIcon } from '@element-plus/icons-vue'
 import WorkspaceIcon from '@renderer/icons/Workspace.vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
@@ -130,11 +130,21 @@ function handleGlobalKeydown(e: KeyboardEvent): void {
         }
     }
     if (e.ctrlKey && e.key === 'f') {
-        e.preventDefault()
         const searchWrapper = document.querySelector('[data-search-input]')
         if (searchWrapper) {
+            e.preventDefault()
             const input = searchWrapper.querySelector('input')
             if (input) input.focus()
+        } else {
+            e.preventDefault()
+            router.push('/prompt-collection')
+            nextTick(() => {
+                const fallback = document.querySelector('[data-search-input]')
+                if (fallback) {
+                    const input = fallback.querySelector('input')
+                    if (input) input.focus()
+                }
+            })
         }
     }
     if (e.ctrlKey && e.key === '/') {
