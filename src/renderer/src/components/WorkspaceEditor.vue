@@ -1,272 +1,101 @@
 <template>
     <div class="shrink-0">
-    <!-- 可拖动的handle -->
-    <div
-        ref="dragHandleRef"
-        class="mt-1 h-2 cursor-ns-resize rounded-t-lg flex items-center justify-center hover:[&>div]:bg-(--color-primary)"
-        @mousedown="startDragging"
-    >
-        <div class="w-8 h-1 bg-(--color-gray-400) rounded" />
-    </div>
-    <!-- 编辑框容器 -->
-    <div
-        ref="containerRef"
-        class="flex flex-col bg-(--color-bg-card) rounded-(--radius-lg) shadow-(--shadow-md)"
-        :style="{ height: containerHeight + 'px' }"
-    >
-        <div class="flex flex-col gap-2 p-2 flex-1 min-h-0">
-            <!-- 编辑框 -->
-            <div class="flex-1 min-h-0">
-                <el-input
-                    v-show="editMode"
-                    v-model="editorInput"
-                    type="textarea"
-                    resize="none"
-                    :rows="5"
-                    spellcheck="false"
-                    class="h-full [&_.el-textarea\_\_inner]:h-full"
-                />
-                <el-scrollbar
-                    v-show="!editMode"
-                    class="border-none shadow-[0_0_0_1px_var(--color-border)] rounded-lg h-full"
-                >
-                    <div class="h-full">
-                        <keep-alive>
-                            <component
-                                :is="DraggableTags"
-                                :key="`${props.workspaceId}-${isPositiveEditor ? 'positive' : 'negative'}`"
-                                ref="draggableTagsRef"
-                                v-model="currentEditor"
-                                :search-text="searchText"
-                                @select-prompt="
-                                    (promptId: string) => emit('selectPrompt', promptId)
-                                "
-                            />
-                        </keep-alive>
-                    </div>
-                </el-scrollbar>
-            </div>
-
-            <!-- 工具栏 -->
-            <div class="flex justify-between gap-2">
-                <div class="flex gap-2 justify-start">
-                    <el-tooltip
-                        v-if="false"
-                        content="添加为示例"
-                        :enterable="false"
-                        placement="top-end"
-                        :hide-after="0"
-                    >
-                        <el-button :icon="Plus" />
-                    </el-tooltip>
-                    <el-tooltip
-                        v-if="false"
-                        content="选择示例为模板"
-                        :enterable="false"
-                        placement="top-end"
-                        :hide-after="0"
-                    >
-                        <el-button :icon="Star" class="m-0!" />
-                    </el-tooltip>
-                    <el-tooltip
-                        content="克隆工作区"
-                        :enterable="false"
-                        placement="top-end"
-                        :hide-after="0"
-                    >
-                        <el-button :icon="DuplicateOutline" @click="cloneWorkspace" />
-                    </el-tooltip>
-                    <el-tooltip
-                        content="撤回 (Ctrl+Z)"
-                        :enterable="false"
-                        placement="top-end"
-                        :hide-after="0"
-                    >
-                        <el-button
-                            :icon="ArrowUndoOutline"
-                            class="m-0!"
-                            :disabled="!draggableTagsRef?.canUndo"
-                            @click="draggableTagsRef?.undo()"
-                        />
-                    </el-tooltip>
-                    <el-tooltip
-                        content="重做 (Ctrl+Y)"
-                        :enterable="false"
-                        placement="top-end"
-                        :hide-after="0"
-                    >
-                        <el-button
-                            :icon="ArrowRedoOutline"
-                            class="m-0!"
-                            :disabled="!draggableTagsRef?.canRedo"
-                            @click="draggableTagsRef?.redo()"
-                        />
-                    </el-tooltip>
-                    <div class="w-px h-6 bg-(--color-border) self-center mx-1"></div>
-                    <el-tooltip
-                        :content="!editMode ? '编辑模式' : '显示模式'"
-                        :enterable="false"
-                        placement="top-start"
-                        :hide-after="0"
-                    >
-                        <el-button
-                            :icon="Edit"
-                            :type="!editMode ? 'default' : 'success'"
-                            class="m-0!"
-                            @click="switchEditMode"
-                        />
-                    </el-tooltip>
-                    <el-tooltip
-                        content="复制"
-                        :enterable="false"
-                        placement="top-start"
-                        :hide-after="0"
-                    >
-                        <el-button :icon="CopyDocument" class="m-0!" @click="copyEditor" />
-                    </el-tooltip>
-                    <div class="w-px h-6 bg-(--color-border) self-center mx-1"></div>
-                    <el-switch
-                        v-model="removeLora"
-                        inline-prompt
-                        active-text="去掉LORA"
-                        inactive-text="保留LORA"
-                        style="
-                            --el-switch-on-color: var(--color-success);
-                            --el-switch-off-color: var(--color-danger);
-                        "
-                        class="[&_.is-text]:font-sans [&_.is-text]:italic"
+        <EditorDragHandle @start-dragging="startDragging" />
+        <div
+            ref="containerRef"
+            class="flex flex-col bg-(--color-bg-card) rounded-(--radius-lg) shadow-(--shadow-md)"
+            :style="{ height: containerHeight + 'px' }"
+        >
+            <div class="flex flex-col gap-2 p-2 flex-1 min-h-0">
+                <div class="flex-1 min-h-0">
+                    <el-input
+                        v-show="editMode"
+                        v-model="editorInput"
+                        type="textarea"
+                        resize="none"
+                        :rows="5"
+                        spellcheck="false"
+                        class="h-full [&_.el-textarea\_\_inner]:h-full"
                     />
-                    <div class="w-px h-6 bg-(--color-border) self-center mx-1"></div>
-                    <el-tooltip
-                        v-if="false"
-                        content="复制Lora提示词"
-                        :enterable="false"
-                        placement="top-start"
-                        :hide-after="0"
+                    <el-scrollbar
+                        v-show="!editMode"
+                        class="border-none shadow-[0_0_0_1px_var(--color-border)] rounded-lg h-full"
                     >
-                        <el-button class="m-0!"> Lora </el-button>
-                    </el-tooltip>
-                    <el-tooltip
-                        content="添加换行"
-                        :enterable="false"
-                        placement="top-end"
-                        :hide-after="0"
-                    >
-                        <el-button class="m-0! italic" @click="addEolPromptTag">EOL</el-button>
-                    </el-tooltip>
-                    <el-switch
-                        v-model="isPositiveEditor"
-                        inline-prompt
-                        active-text="POSITIVE"
-                        inactive-text="NEGATIVE"
-                        style="
-                            --el-switch-on-color: var(--color-success);
-                            --el-switch-off-color: var(--color-danger);
-                        "
-                        class="[&_.is-text]:font-mono [&_.is-text]:italic"
-                    />
-                    <div class="w-px h-6 bg-(--color-border) self-center mx-1"></div>
-                    <el-tooltip
-                        content="展开所有"
-                        :enterable="false"
-                        placement="top-end"
-                        :hide-after="0"
-                    >
-                        <el-button
-                            :icon="Expand"
-                            class="m-0!"
-                            @click="draggableTagsRef?.uncollapseAll()"
-                        />
-                    </el-tooltip>
-                    <el-tooltip
-                        content="折叠所有"
-                        :enterable="false"
-                        placement="top-end"
-                        :hide-after="0"
-                    >
-                        <el-button
-                            :icon="Contract"
-                            class="m-0!"
-                            @click="draggableTagsRef?.collapseAll()"
-                        />
-                    </el-tooltip>
+                        <div class="h-full">
+                            <keep-alive>
+                                <component
+                                    :is="DraggableTags"
+                                    :key="`${props.workspaceId}-${isPositiveEditor ? 'positive' : 'negative'}`"
+                                    ref="draggableTagsRef"
+                                    v-model="currentEditor"
+                                    :search-text="searchText"
+                                    @select-prompt="(promptId: string) => emit('selectPrompt', promptId)"
+                                />
+                            </keep-alive>
+                        </div>
+                    </el-scrollbar>
                 </div>
-                <el-input
-                    v-model="searchText"
-                    placeholder="搜索或添加"
-                    clearable
-                    spellcheck="false"
-                    @keyup.enter="createPromptTag(searchText)"
-                    @keyup.esc="searchText = ''"
-                >
-                    <template #prefix>
-                        <el-icon class="cursor-pointer" @click.stop="copySearchText">
-                            <copy-document />
-                        </el-icon>
-                    </template>
-                </el-input>
-                <el-button
-                    :icon="containerHeight === MIN_HEIGHT ? CaretUp : CaretDown"
-                    circle
-                    @click="quickHide"
+
+                <EditorToolbar
+                    :edit-mode="editMode"
+                    :remove-lora="removeLora"
+                    :is-positive-editor="isPositiveEditor"
+                    :search-text="searchText"
+                    :container-height="containerHeight"
+                    :can-undo="draggableTagsRef?.canUndo ?? false"
+                    :can-redo="draggableTagsRef?.canRedo ?? false"
+                    :min-height="MIN_HEIGHT"
+                    @clone="cloneWorkspace"
+                    @undo="draggableTagsRef?.undo()"
+                    @redo="draggableTagsRef?.redo()"
+                    @toggle-edit-mode="switchEditMode"
+                    @copy="copyEditor"
+                    @update:remove-lora="removeLora = $event"
+                    @add-eol="addEolPromptTag"
+                    @update:is-positive-editor="isPositiveEditor = $event"
+                    @expand-all="draggableTagsRef?.uncollapseAll()"
+                    @collapse-all="draggableTagsRef?.collapseAll()"
+                    @update:search-text="searchText = $event"
+                    @create-tag="createPromptTag"
+                    @copy-search-text="copySearchText(searchText)"
+                    @toggle-height="quickHide"
                 />
-                <el-popover title="操作说明" placement="top-end" :width="220">
-                    <div class="text-sm leading-6">
-                        <div>🖱️ 单击 — 折叠/展开组</div>
-                        <div>🖱️ 双击 — 切换禁用</div>
-                        <div>🖱️ 右键 — 复制文本</div>
-                        <div>🖱️ 中键 — 删除标签</div>
-                        <div>🖱️ 悬停 — 打开菜单</div>
-                        <div>⌨️ Ctrl+Z — 撤销</div>
-                        <div>⌨️ Ctrl+Y — 重做</div>
-                        <div>⌨️ Ctrl+/ — 快捷键帮助</div>
-                    </div>
-                    <template #reference>
-                        <el-button :icon="Information" circle class="ml-0!" />
-                    </template>
-                </el-popover>
             </div>
         </div>
-    </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
-import { computed, nextTick, onActivated, onDeactivated, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
-import { ElInput, ElMessage } from 'element-plus'
 import { clone, isNil, cloneDeep } from 'lodash'
 import {
-    editorToString,
-    isLoraString,
-    newEolPromptTag,
     PromptTag,
-    stringToEditor,
     stringToLoraPromptTag,
     stringToMonoPromptTag,
     stringToSpecialPromptTag,
 } from '@shared/models/prompt-tag'
 import { Prompt, PromptKind } from '@shared/models/prompt'
 import DraggableTags from '@renderer/components/DraggableTags.vue'
-import {
-    Information,
-    CaretUp,
-    CaretDown,
-    ArrowUndoOutline,
-    ArrowRedoOutline,
-    Expand,
-    Contract,
-    DuplicateOutline,
-} from '@vicons/ionicons5'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { handleError } from '@renderer/utils/error-handler'
+import EditorDragHandle from '@renderer/components/EditorDragHandle.vue'
+import EditorToolbar from '@renderer/components/EditorToolbar.vue'
+import { useEditorDrag } from '@renderer/hooks/useEditorDrag'
+import { useEditorMode } from '@renderer/hooks/useEditorMode'
+import { useEditorShortcuts } from '@renderer/hooks/useEditorShortcuts'
+import { useEditorClipboard } from '@renderer/hooks/useEditorClipboard'
+import { useEditorSearch } from '@renderer/hooks/useEditorSearch'
 
 const props = defineProps<{
     workspaceId: string
 }>()
+
+const emit = defineEmits<{
+    selectPrompt: [promptId: string]
+}>()
+
 const router = useRouter()
-const route = useRoute()
 const dataStore = useDataStore()
 const workspace = computed(() =>
     dataStore.workspace.readonly.find((w) => w.id === props.workspaceId)
@@ -295,25 +124,16 @@ async function cloneWorkspace(): Promise<void> {
     }
 }
 
-const emit = defineEmits<{
-    selectPrompt: [promptId: string]
-}>()
-
-const draggableTagsRef = useTemplateRef('draggableTagsRef')
-
-// 切换正向、负向编辑器
 const isPositiveEditor = ref(true)
 const currentEditor = computed({
     get() {
-        {
-            const workspace = dataStore.workspace.readonly.find((w) => w.id === props.workspaceId)
-            if (isNil(workspace)) {
-                return []
-            }
-            return (
-                isPositiveEditor.value ? clone(workspace.positive) : clone(workspace.negative)
-            ) as PromptTag[]
+        const workspace = dataStore.workspace.readonly.find((w) => w.id === props.workspaceId)
+        if (isNil(workspace)) {
+            return []
         }
+        return (
+            isPositiveEditor.value ? clone(workspace.positive) : clone(workspace.negative)
+        ) as PromptTag[]
     },
     set(newVal: PromptTag[]) {
         const workspace = dataStore.workspace.readonly.find((w) => w.id === props.workspaceId)
@@ -334,7 +154,6 @@ const currentEditor = computed({
     },
 })
 
-// 编辑模式输入文字
 const specialTexts = computed(() => {
     const res = [] as string[]
     for (const prompt of dataStore.prompt.readonly) {
@@ -344,78 +163,26 @@ const specialTexts = computed(() => {
     }
     return res
 })
-const editorInput = ref('')
-const editMode = ref(false)
-let beforeEdit = ''
-function switchEditMode(): void {
-    if (editMode.value) {
-        if (beforeEdit !== editorInput.value) {
-            // 切换到显示模式
-            currentEditor.value = stringToEditor(editorInput.value, specialTexts.value)
-            nextTick(() => {
-                draggableTagsRef.value?.debouncedCommit()
-            })
-        }
-    } else {
-        // 切换到编辑模式
-        editorInput.value = editorToString(currentEditor.value, false)
-        beforeEdit = editorInput.value
-    }
-    editMode.value = !editMode.value
-}
 
-// 拖动相关的状态
-const MIN_HEIGHT = 56
 const containerRef = useTemplateRef<HTMLElement>('containerRef')
-const containerHeight = ref(200)
-onMounted(() => {
-    nextTick(() => {
-        if (containerRef.value) {
-            const height = containerRef.value.clientHeight
-            if (height > 0) {
-                containerHeight.value = height
-            }
-        }
-    })
-})
-const isDragging = ref(false)
-const startY = ref(0)
-const startHeight = ref(0)
-// 拖动功能
-function startDragging(event: MouseEvent): void {
-    isDragging.value = true
-    startY.value = event.clientY
-    startHeight.value = containerHeight.value
+const { MIN_HEIGHT, containerHeight, startDragging, quickHide } = useEditorDrag(containerRef)
 
-    document.addEventListener('mousemove', onDragging)
-    document.addEventListener('mouseup', stopDragging)
-    document.body.style.userSelect = 'none'
-    event.preventDefault()
-}
-function onDragging(event: MouseEvent): void {
-    if (!isDragging.value) return
+const draggableTagsRef = useTemplateRef('draggableTagsRef')
 
-    const deltaY = startY.value - event.clientY
-    // 最高 800px，最低 56px
+const { editorInput, editMode, switchEditMode } = useEditorMode(
+    currentEditor,
+    () => specialTexts.value,
+    draggableTagsRef,
+)
 
-    containerHeight.value = Math.max(MIN_HEIGHT, Math.min(800, startHeight.value + deltaY))
-}
-function stopDragging(): void {
-    isDragging.value = false
-    document.removeEventListener('mousemove', onDragging)
-    document.removeEventListener('mouseup', stopDragging)
-    document.body.style.userSelect = ''
-}
-let lastHeight: number
-function quickHide(): void {
-    if (containerHeight.value === MIN_HEIGHT) {
-        containerHeight.value = lastHeight
-        return
-    }
-    lastHeight = containerHeight.value
-    containerHeight.value = MIN_HEIGHT
-}
-// 拖动相关的状态
+const { removeLora, copyEditor, copySearchText } = useEditorClipboard(currentEditor)
+
+const { searchText, createPromptTag, addEolPromptTag } = useEditorSearch(
+    currentEditor,
+    () => specialTexts.value,
+)
+
+useEditorShortcuts(draggableTagsRef)
 
 defineExpose({
     addPromptTag: (prompt: Prompt) => {
@@ -439,91 +206,5 @@ defineExpose({
             currentEditor.value = editorClone
         }
     },
-})
-
-const searchText = ref('')
-
-function createPromptTag(text: string): void {
-    text = text.trim()
-    if (text === '') return
-    if (isLoraString(text)) {
-        const tag = stringToLoraPromptTag(text)
-        if (!isNil(tag)) {
-            const editorClone = clone(currentEditor.value)
-            editorClone.push(tag)
-            currentEditor.value = editorClone
-        }
-    } else if (specialTexts.value.includes(text)) {
-        const tag = stringToSpecialPromptTag(text)
-        const editorClone = clone(currentEditor.value)
-        editorClone.push(tag)
-        currentEditor.value = editorClone
-    } else {
-        const tags = stringToEditor(text)
-        const editorClone = clone(currentEditor.value)
-        editorClone.push(...tags)
-        currentEditor.value = editorClone
-    }
-}
-
-function addEolPromptTag(): void {
-    const editorClone = clone(currentEditor.value)
-    editorClone.push(newEolPromptTag())
-    currentEditor.value = editorClone
-}
-
-// 去掉 lora 的提示词
-const removeLora = ref(false)
-async function copyEditor(): Promise<void> {
-    try {
-        let candidates = currentEditor.value
-        const text = editorToString(candidates, true, removeLora.value)
-        const res = await window.api.other.copyToClipboard(text)
-        if (res) {
-            ElMessage.success('已复制到剪贴板')
-        } else {
-            ElMessage.warning('复制失败，请重试')
-        }
-    } catch (error) {
-        handleError(error, '复制失败')
-    }
-}
-
-async function copySearchText(): Promise<void> {
-    try {
-        if (searchText.value === '') return
-        const res = await window.api.other.copyToClipboard(searchText.value)
-        if (res) {
-            ElMessage.success('已复制到剪贴板')
-        } else {
-            ElMessage.warning('复制失败，请重试')
-        }
-    } catch (error) {
-        handleError(error, '复制失败')
-    }
-}
-
-function handleEditorKeydown(e: KeyboardEvent): void {
-    if (!route.path.startsWith('/workspace/')) return
-    if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
-        e.preventDefault()
-        if (draggableTagsRef.value?.canUndo) {
-            draggableTagsRef.value.undo()
-        }
-    }
-    if (e.ctrlKey && e.key === 'y') {
-        e.preventDefault()
-        if (draggableTagsRef.value?.canRedo) {
-            draggableTagsRef.value.redo()
-        }
-    }
-}
-
-onActivated(() => {
-    document.addEventListener('keydown', handleEditorKeydown)
-})
-
-onDeactivated(() => {
-    document.removeEventListener('keydown', handleEditorKeydown)
 })
 </script>

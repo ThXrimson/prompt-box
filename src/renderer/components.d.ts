@@ -9,6 +9,8 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     DraggableTags: typeof import('./src/components/DraggableTags.vue')['default']
+    EditorDragHandle: typeof import('./src/components/EditorDragHandle.vue')['default']
+    EditorToolbar: typeof import('./src/components/EditorToolbar.vue')['default']
     ElBreadcrumb: typeof import('element-plus/es')['ElBreadcrumb']
     ElBreadcrumbItem: typeof import('element-plus/es')['ElBreadcrumbItem']
     ElButton: typeof import('element-plus/es')['ElButton']
