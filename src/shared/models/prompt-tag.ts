@@ -226,13 +226,21 @@ export function editorToString(
         if (isGroupPromptTag(tag)) {
             const subTexts = tag.subTags
                 .filter((sub) => !(sub.disabled && removeDisabled))
-                .map((sub) => promptTagToString(sub, true, true, true, removeDisabled))
+                .map((sub) => {
+                    const s = promptTagToString(sub, true, true, true, removeDisabled)
+                    if (sub.disabled && !removeDisabled && s.length > 0) {
+                        return `${DISABLE_MARKER}${s}${DISABLE_MARKER}`
+                    }
+                    return s
+                })
                 .filter((s) => s.length > 0)
             if (subTexts.length > 0) {
                 if (includeGroupPattern) {
-                    segments.push(`【${tag.text}】`)
-                    segments.push(subTexts.join(', '))
-                    segments.push('【/】')
+                    let groupText = `【${tag.text}】${subTexts.join(', ')}【/】`
+                    if (tag.disabled && !removeDisabled) {
+                        groupText = `${DISABLE_MARKER}${groupText}${DISABLE_MARKER}`
+                    }
+                    segments.push(groupText)
                 } else {
                     segments.push(subTexts.join(', '))
                 }
@@ -243,14 +251,19 @@ export function editorToString(
                 segments.pop()
                 segments.push(' ')
             }
-            segments.push(tag.text)
+            const text = tag.disabled && !removeDisabled ? `${DISABLE_MARKER}${tag.text}${DISABLE_MARKER}` : tag.text
+            segments.push(text)
             segments.push('\n')
         } else if (isEolPromptTag(tag)) {
             segments.push('\n')
         } else {
             const s = promptTagToString(tag, true, true, true, removeDisabled)
             if (s.length > 0) {
-                segments.push(s)
+                if (tag.disabled && !removeDisabled) {
+                    segments.push(`${DISABLE_MARKER}${s}${DISABLE_MARKER}`)
+                } else {
+                    segments.push(s)
+                }
                 segments.push(', ')
             }
         }
@@ -327,11 +340,25 @@ export function stringToSpecialPromptTag(str: string): SpecialPromptTag {
 }
 const GROUP_OPEN_RE = /【(.+?)】/
 const GROUP_CLOSE = '【/】'
+const DISABLE_MARKER = '~~'
+
+function stripDisablePattern(s: string): { text: string; disabled: boolean } {
+    const trimmed = s.trim()
+    if (
+        trimmed.startsWith(DISABLE_MARKER) &&
+        trimmed.endsWith(DISABLE_MARKER) &&
+        trimmed.length > DISABLE_MARKER.length * 2
+    ) {
+        return { text: trimmed.slice(DISABLE_MARKER.length, -DISABLE_MARKER.length), disabled: true }
+    }
+    return { text: trimmed, disabled: false }
+}
 
 interface TextSegment {
     type: 'text' | 'group'
     text: string
     groupName?: string
+    disabled?: boolean
 }
 
 function splitGroupSpans(str: string): TextSegment[] {
@@ -363,8 +390,24 @@ function splitGroupSpans(str: string): TextSegment[] {
             break
         }
         const content = afterOpen.slice(0, closeIndex).trim()
-        result.push({ type: 'group', text: content, groupName })
-        remaining = afterOpen.slice(closeIndex + GROUP_CLOSE.length).replace(/^[, ]+/, '')
+        let afterClose = afterOpen.slice(closeIndex + GROUP_CLOSE.length)
+        let isDisabled = false
+        const lastResult = result[result.length - 1]
+        if (
+            lastResult &&
+            lastResult.type === 'text' &&
+            lastResult.text.endsWith(DISABLE_MARKER) &&
+            afterClose.startsWith(DISABLE_MARKER)
+        ) {
+            isDisabled = true
+            lastResult.text = lastResult.text.slice(0, -DISABLE_MARKER.length).replace(/[, ]+$/, '')
+            if (lastResult.text.length === 0) {
+                result.pop()
+            }
+            afterClose = afterClose.slice(DISABLE_MARKER.length)
+        }
+        result.push({ type: 'group', text: content, groupName, disabled: isDisabled })
+        remaining = afterClose.replace(/^[, ]+/, '')
     }
     return result
 }
@@ -409,15 +452,30 @@ export function stringToEditor(str: string, specialWords: string[] = []): Prompt
             })
             continue
         }
+        const { text: strippedSegment, disabled: isSegmentDisabled } = stripDisablePattern(segment)
+        if (isSegmentDisabled && specialWords.includes(strippedSegment)) {
+            tags.push({
+                id: crypto.randomUUID(),
+                text: strippedSegment,
+                disabled: true,
+                kind: PromptTagKind.Special,
+            })
+            continue
+        }
         const textSegments = splitGroupSpans(segment)
         for (const seg of textSegments) {
             if (seg.type === 'group' && seg.groupName && seg.groupName.length > 0) {
                 const subTags = parseContentToSubTags(seg.text)
+                if (seg.disabled) {
+                    for (const sub of subTags) {
+                        sub.disabled = true
+                    }
+                }
                 tags.push({
                     id: crypto.randomUUID(),
                     text: seg.groupName,
                     subTags,
-                    disabled: false,
+                    disabled: seg.disabled ?? false,
                     kind: PromptTagKind.Group,
                 })
             } else {
@@ -432,14 +490,17 @@ export function stringToEditor(str: string, specialWords: string[] = []): Prompt
 function parseContentToSubTags(content: string): (LoraPromptTag | MonoPromptTag)[] {
     const subTags = [] as (LoraPromptTag | MonoPromptTag)[]
     for (const s of splitStringIgnoringBrackets(content.trim())) {
-        if (isLoraString(s)) {
-            const tag = stringToLoraPromptTag(s)
+        const { text, disabled } = stripDisablePattern(s)
+        if (isLoraString(text)) {
+            const tag = stringToLoraPromptTag(text)
             if (!isNil(tag)) {
+                if (disabled) tag.disabled = true
                 subTags.push(tag)
             }
         } else {
-            const tag = stringToMonoPromptTag(s)
+            const tag = stringToMonoPromptTag(text)
             if (!isNil(tag)) {
+                if (disabled) tag.disabled = true
                 subTags.push(tag)
             }
         }
@@ -461,15 +522,18 @@ function parseContentToTags(content: string): PromptTag[] {
         }
         subSegment = subSegment.trim()
         for (const s of splitStringIgnoringBrackets(subSegment)) {
-            if (isLoraString(s)) {
-                const tag = stringToLoraPromptTag(s)
+            const { text, disabled } = stripDisablePattern(s)
+            if (isLoraString(text)) {
+                const tag = stringToLoraPromptTag(text)
                 if (!isNil(tag)) {
+                    if (disabled) tag.disabled = true
                     tags.push(tag)
                 }
                 continue
             }
-            const tag = stringToMonoPromptTag(s)
+            const tag = stringToMonoPromptTag(text)
             if (!isNil(tag)) {
+                if (disabled) tag.disabled = true
                 tags.push(tag)
             }
         }
