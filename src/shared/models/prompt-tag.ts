@@ -212,7 +212,8 @@ export function promptTagToString(
 export function editorToString(
     editor: PromptTag[],
     removeDisabled: boolean = true,
-    removeLora: boolean = false
+    removeLora: boolean = false,
+    includeGroupPattern: boolean = true
 ): string {
     const segments = [] as string[]
     for (const tag of editor) {
@@ -222,7 +223,22 @@ export function editorToString(
         if (removeLora && isLoraPromptTag(tag)) {
             continue
         }
-        if (isSpecialPromptTag(tag)) {
+        if (isGroupPromptTag(tag)) {
+            const subTexts = tag.subTags
+                .filter((sub) => !(sub.disabled && removeDisabled))
+                .map((sub) => promptTagToString(sub, true, true, true, removeDisabled))
+                .filter((s) => s.length > 0)
+            if (subTexts.length > 0) {
+                if (includeGroupPattern) {
+                    segments.push(`【${tag.text}】`)
+                    segments.push(subTexts.join(', '))
+                    segments.push('【/】')
+                } else {
+                    segments.push(subTexts.join(', '))
+                }
+                segments.push(', ')
+            }
+        } else if (isSpecialPromptTag(tag)) {
             if (segments.length > 0 && segments[segments.length - 1] === ', ') {
                 segments.pop()
                 segments.push(' ')
@@ -309,6 +325,50 @@ export function stringToSpecialPromptTag(str: string): SpecialPromptTag {
         kind: PromptTagKind.Special,
     }
 }
+const GROUP_OPEN_RE = /【(.+?)】/
+const GROUP_CLOSE = '【/】'
+
+interface TextSegment {
+    type: 'text' | 'group'
+    text: string
+    groupName?: string
+}
+
+function splitGroupSpans(str: string): TextSegment[] {
+    const result = [] as TextSegment[]
+    let remaining = str
+    while (remaining.length > 0) {
+        const openMatch = remaining.match(GROUP_OPEN_RE)
+        if (!openMatch || openMatch.index === undefined) {
+            const text = remaining.replace(/^[, ]+/, '').replace(/[, ]+$/, '')
+            if (text.length > 0) {
+                result.push({ type: 'text', text })
+            }
+            break
+        }
+        if (openMatch.index > 0) {
+            const before = remaining.slice(0, openMatch.index).replace(/[, ]+$/, '')
+            if (before.length > 0) {
+                result.push({ type: 'text', text: before })
+            }
+        }
+        const groupName = openMatch[1]
+        const afterOpen = remaining.slice(openMatch.index + openMatch[0].length)
+        const closeIndex = afterOpen.indexOf(GROUP_CLOSE)
+        if (closeIndex === -1) {
+            const text = remaining.replace(/^[, ]+/, '').replace(/[, ]+$/, '')
+            if (text.length > 0) {
+                result.push({ type: 'text', text })
+            }
+            break
+        }
+        const content = afterOpen.slice(0, closeIndex).trim()
+        result.push({ type: 'group', text: content, groupName })
+        remaining = afterOpen.slice(closeIndex + GROUP_CLOSE.length).replace(/^[, ]+/, '')
+    }
+    return result
+}
+
 export function stringToEditor(str: string, specialWords: string[] = []): PromptTag[] {
     str = str.trim()
     const segments = [] as string[]
@@ -349,29 +409,68 @@ export function stringToEditor(str: string, specialWords: string[] = []): Prompt
             })
             continue
         }
-        const splitEol = segment.split(new RegExp(`(${EOL})`, 'g'))
-        for (let subSegment of splitEol) {
-            if (subSegment === EOL) {
+        const textSegments = splitGroupSpans(segment)
+        for (const seg of textSegments) {
+            if (seg.type === 'group' && seg.groupName && seg.groupName.length > 0) {
+                const subTags = parseContentToSubTags(seg.text)
                 tags.push({
                     id: crypto.randomUUID(),
+                    text: seg.groupName,
+                    subTags,
                     disabled: false,
-                    kind: PromptTagKind.Eol,
+                    kind: PromptTagKind.Group,
                 })
-                continue
+            } else {
+                const parsedTags = parseContentToTags(seg.text)
+                tags.push(...parsedTags)
             }
-            subSegment = subSegment.trim()
-            for (const s of splitStringIgnoringBrackets(subSegment)) {
-                if (isLoraString(s)) {
-                    const tag = stringToLoraPromptTag(s)
-                    if (!isNil(tag)) {
-                        tags.push(tag)
-                    }
-                    continue
-                }
-                const tag = stringToMonoPromptTag(s)
+        }
+    }
+    return tags
+}
+
+function parseContentToSubTags(content: string): (LoraPromptTag | MonoPromptTag)[] {
+    const subTags = [] as (LoraPromptTag | MonoPromptTag)[]
+    for (const s of splitStringIgnoringBrackets(content.trim())) {
+        if (isLoraString(s)) {
+            const tag = stringToLoraPromptTag(s)
+            if (!isNil(tag)) {
+                subTags.push(tag)
+            }
+        } else {
+            const tag = stringToMonoPromptTag(s)
+            if (!isNil(tag)) {
+                subTags.push(tag)
+            }
+        }
+    }
+    return subTags
+}
+
+function parseContentToTags(content: string): PromptTag[] {
+    const tags = [] as PromptTag[]
+    const splitEol = content.split(new RegExp(`(${EOL})`, 'g'))
+    for (let subSegment of splitEol) {
+        if (subSegment === EOL) {
+            tags.push({
+                id: crypto.randomUUID(),
+                disabled: false,
+                kind: PromptTagKind.Eol,
+            })
+            continue
+        }
+        subSegment = subSegment.trim()
+        for (const s of splitStringIgnoringBrackets(subSegment)) {
+            if (isLoraString(s)) {
+                const tag = stringToLoraPromptTag(s)
                 if (!isNil(tag)) {
                     tags.push(tag)
                 }
+                continue
+            }
+            const tag = stringToMonoPromptTag(s)
+            if (!isNil(tag)) {
+                tags.push(tag)
             }
         }
     }

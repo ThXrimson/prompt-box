@@ -15,7 +15,7 @@ export function useEditorClipboard(
     async function copyEditor(): Promise<void> {
         try {
             const candidates = currentEditor.value
-            const text = editorToString(candidates, true, removeLora.value)
+            const text = editorToString(candidates, true, removeLora.value, false)
             const res = await window.api.other.copyToClipboard(text)
             if (res) {
                 ElMessage.success('已复制到剪贴板')
