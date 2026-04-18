@@ -58,6 +58,7 @@ const emit = defineEmits<{
 const dataStore = useDataStore()
 const editor = defineModel<PromptTag[]>({ required: true })
 const collapsed = ref<string[]>([])
+const clickTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 function collapseAll(): void {
     const res = [] as string[]
     for (const item of editor.value) {
@@ -381,6 +382,22 @@ function switchCollapse(promptTag: PromptTag): void {
         collapsed.value.push(promptTag.id)
     }
 }
+function handleClick(promptTag: PromptTag): void {
+    if (clickTimer.value !== null) {
+        clearTimeout(clickTimer.value)
+    }
+    clickTimer.value = setTimeout(() => {
+        clickTimer.value = null
+        switchCollapse(promptTag)
+    }, 250)
+}
+function handleDblClick(item: Wrapper): void {
+    if (clickTimer.value !== null) {
+        clearTimeout(clickTimer.value)
+        clickTimer.value = null
+    }
+    toggleDisable(item)
+}
 function canAddWeight(promptTag: PromptTag): boolean {
     return !isEolPromptTag(promptTag) && !isSpecialPromptTag(promptTag)
 }
@@ -540,8 +557,8 @@ function getPromptTagText(item: Wrapper): string {
                                 !(item.kind === Kind.BorderStart) &&
                                 !(item.kind === Kind.BorderEnd),
                         }"
-                        @click.left="switchCollapse(item.promptTag)"
-                        @dblclick.left="toggleDisable(item)"
+                        @click.left="handleClick(item.promptTag)"
+                        @dblclick.left="handleDblClick(item)"
                         @click.right="
                             copyText(
                                 promptTagToString(item.promptTag, true, true, true, true, false)
