@@ -22,23 +22,37 @@ defineProps<{
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 2rem 0;
+    padding: 3rem 0;
     color: var(--color-text-tertiary);
+    animation: empty-fade-in 0.4s ease-out;
 }
 
 .empty-state-icon {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
+    font-size: 3rem;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.35;
 }
 
 .empty-state-title {
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
 }
 
 .empty-state-description {
-    font-size: 0.75rem;
-    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+    margin-top: var(--spacing-xs);
     color: var(--color-text-tertiary);
-    opacity: 0.8;
+}
+
+@keyframes empty-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 </style>
