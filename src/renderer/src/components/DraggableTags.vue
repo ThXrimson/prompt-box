@@ -25,7 +25,6 @@ import { clone, cloneDeep, debounce, isNil } from 'lodash'
 import { Nullish } from 'utility-types'
 import { computed, nextTick, ref } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
-import { useHandleClickGesture } from '@renderer/hooks/useHandleClickGesture'
 import log from 'electron-log/renderer'
 import { PromptKind } from '@shared/models/prompt'
 import { createError, existsError } from '@renderer/stores/error'
@@ -34,6 +33,7 @@ import { VueDraggable } from 'vue-draggable-plus'
 import { ChevronUp, Refresh, ChevronDown } from '@vicons/ionicons5'
 import { useManualRefHistory } from '@vueuse/core'
 import { handleError } from '@renderer/utils/error-handler'
+import { ElMessageBox } from 'element-plus'
 // TODO 长按
 const enum Kind {
     Default = 'default',
@@ -156,77 +156,47 @@ function selectPrompt(item: PromptTag): void {
     }
 }
 
-const editingPromptTagId = ref<string | Nullish>(undefined)
-const editingPromptTagInput = ref('')
-function editPromptTag(item: PromptTag): void {
-    editingPromptTagId.value = item.id
-    if (isGroupPromptTag(item)) {
-        editingPromptTagInput.value = item.text
-    } else {
-        editingPromptTagInput.value = promptTagToString(item, true, true, true)
-    }
-    nextTick(() => {
-        const input = document.querySelector<HTMLInputElement>('.inline-edit-input')
-        input?.focus()
-        input?.select()
-    })
-}
-function cancelEditPrompt(): void {
-    editingPromptTagId.value = undefined
-    editingPromptTagInput.value = ''
-}
-const handleClickGesture = useHandleClickGesture(100)
-function handleLeftClickPromptTag(item: Wrapper): void {
-    handleClickGesture(
-        () => {
-            if (isEolPromptTag(item.promptTag)) {
-                return
-            }
-            if (isGroupPromptTag(item.promptTag)) {
-                switchCollapse(item.promptTag)
-                return
-            }
-            editPromptTag(item.promptTag)
-        },
-        () => {
-            const newTag = cloneDeep(item.promptTag)
-            newTag.disabled = !newTag.disabled
-            if (isGroupPromptTag(newTag)) {
-                for (const sub of newTag.subTags) {
-                    sub.disabled = newTag.disabled
-                }
-            }
-            findPromptTagAndReplace(newTag)
+async function editPromptTag(item: PromptTag): Promise<void> {
+    try {
+        const inputValue = isGroupPromptTag(item)
+            ? item.text
+            : promptTagToString(item, true, true, true)
+        const { value } = await ElMessageBox.prompt('请输入新内容', '编辑标签', {
+            inputValue,
+            confirmButtonText: '确认',
+            cancelButtonText: '取消',
+        })
+        if (value) {
+            replacePromptTagContent(item.id, value)
         }
-    )
-}
-function confirmEditPrompt(): void {
-    if (isNil(editingPromptTagId.value)) {
-        return
+    } catch {
+        // user cancelled
     }
+}
+function replacePromptTagContent(tagId: string, input: string): void {
     const editorClone = clone(editor.value)
     outer: for (const [i, tag] of editorClone.entries()) {
-        if (tag.id === editingPromptTagId.value) {
+        if (tag.id === tagId) {
             if (isGroupPromptTag(tag)) {
                 const newTag = cloneDeep(tag)
-                newTag.text = editingPromptTagInput.value
+                newTag.text = input
                 editorClone[i] = newTag
-            } else if (isLoraString(editingPromptTagInput.value)) {
-                const t = stringToLoraPromptTag(editingPromptTagInput.value)
+            } else if (isLoraString(input)) {
+                const t = stringToLoraPromptTag(input)
                 if (!isNil(t)) {
                     editorClone[i] = t
                 }
             } else {
-                const tags = stringToEditor(editingPromptTagInput.value)
+                const tags = stringToEditor(input)
                 editorClone.splice(i, 1, ...tags)
             }
             break
         }
         if (isGroupPromptTag(tag)) {
             for (const [j, subTag] of tag.subTags.entries()) {
-                if (subTag.id === editingPromptTagId.value) {
-                    if (isLoraString(editingPromptTagInput.value)) {
-                        const t = stringToLoraPromptTag(editingPromptTagInput.value)
+                if (subTag.id === tagId) {
+                    if (isLoraString(input)) {
+                        const t = stringToLoraPromptTag(input)
                         if (!isNil(t)) {
                             const newTag = clone(tag)
                             const newSubTags = clone(tag.subTags)
@@ -235,7 +205,7 @@ function confirmEditPrompt(): void {
                             editorClone[i] = newTag
                         }
                     } else {
-                        const tags = stringToEditor(editingPromptTagInput.value).filter(
+                        const tags = stringToEditor(input).filter(
                             (t) => isMonoPromptTag(t) || isLoraPromptTag(t)
                         )
                         const newTag = clone(tag)
@@ -250,9 +220,17 @@ function confirmEditPrompt(): void {
         }
     }
     editor.value = editorClone
-    editingPromptTagId.value = undefined
-    editingPromptTagInput.value = ''
     nextTick(() => debouncedCommit())
+}
+function toggleDisable(item: Wrapper): void {
+    const newTag = cloneDeep(item.promptTag)
+    newTag.disabled = !newTag.disabled
+    if (isGroupPromptTag(newTag)) {
+        for (const sub of newTag.subTags) {
+            sub.disabled = newTag.disabled
+        }
+    }
+    findPromptTagAndReplace(newTag)
 }
 function removePromptTag(id: string): void {
     const editorClone = clone(editor.value)
@@ -562,7 +540,8 @@ function getPromptTagText(item: Wrapper): string {
                                 !(item.kind === Kind.BorderStart) &&
                                 !(item.kind === Kind.BorderEnd),
                         }"
-                        @click.left="handleLeftClickPromptTag(item)"
+                        @click.left="switchCollapse(item.promptTag)"
+                        @dblclick.left="toggleDisable(item)"
                         @click.right="
                             copyText(
                                 promptTagToString(item.promptTag, true, true, true, true, false)
@@ -583,27 +562,16 @@ function getPromptTagText(item: Wrapper): string {
                         >
                             ◀ {{ item.promptTag.text }}
                         </span>
-                        <template v-else>
-                            <input
-                                v-if="editingPromptTagId === item.promptTag.id"
-                                v-model="editingPromptTagInput"
-                                class="inline-edit-input"
-                                spellcheck="false"
-                                @keyup.enter="confirmEditPrompt"
-                                @keyup.esc="cancelEditPrompt"
-                                @blur="confirmEditPrompt"
-                            />
-                            <Highlighter
-                                v-else
-                                :search-words="[searchText]"
-                                :auto-escape="true"
-                                :text-to-highlight="getPromptTagText(item)"
-                                class="flex-1 block font-[500]"
-                                :class="{
-                                    'text-(--color-gray-800)!': item.kind === Kind.Group,
-                                }"
-                            />
-                        </template>
+                        <Highlighter
+                            v-if="!isEolPromptTag(item.promptTag) && item.kind !== Kind.BorderStart && item.kind !== Kind.BorderEnd"
+                            :search-words="[searchText]"
+                            :auto-escape="true"
+                            :text-to-highlight="getPromptTagText(item)"
+                            class="flex-1 block font-[500]"
+                            :class="{
+                                'text-(--color-gray-800)!': item.kind === Kind.Group,
+                            }"
+                        />
                     </el-tag>
                     <template #dropdown>
                         <el-dropdown-menu
@@ -611,6 +579,12 @@ function getPromptTagText(item: Wrapper): string {
                             :item-classes="['px-2', 'py-1', 'whitespace-nowrap']"
                         >
                             <div class="dropdown-menu-group">
+                                <el-dropdown-item
+                                    v-if="!isEolPromptTag(item.promptTag) && !isSpecialPromptTag(item.promptTag)"
+                                    @click="editPromptTag(item.promptTag)"
+                                >
+                                    编辑
+                                </el-dropdown-item>
                                 <el-dropdown-item
                                     v-if="canCreateGroup(item.promptTag)"
                                     @click="createGroup(item.promptTag)"
@@ -626,16 +600,6 @@ function getPromptTagText(item: Wrapper): string {
                                     @click="disgroup(item.promptTag)"
                                 >
                                     解组
-                                </el-dropdown-item>
-                                <el-dropdown-item
-                                    v-if="
-                                        item.kind === Kind.Group ||
-                                        item.kind === Kind.BorderStart ||
-                                        item.kind === Kind.BorderEnd
-                                    "
-                                    @click="editPromptTag(item.promptTag)"
-                                >
-                                    命名
                                 </el-dropdown-item>
                                 <el-dropdown-item
                                     v-if="validPromptTagToCreate(item.promptTag)"
@@ -716,19 +680,6 @@ function getPromptTagText(item: Wrapper): string {
     </vue-draggable>
 </template>
 <style scoped>
-.inline-edit-input {
-    width: 80px;
-    min-width: 40px;
-    max-width: 200px;
-    padding: 0 4px;
-    border: none;
-    outline: none;
-    background: transparent;
-    font-size: inherit;
-    font-weight: inherit;
-    color: inherit;
-    font-family: inherit;
-}
 .dropdown-menu-group {
     display: flex;
     width: 100%;

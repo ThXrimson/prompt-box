@@ -6,7 +6,7 @@
         </div>
         <template v-else>
             <nav class="sidebar-nav">
-                <el-tooltip content="提示词库" placement="right">
+                <el-tooltip content="提示词库 (Ctrl+1)" placement="right">
                     <div
                         class="nav-item"
                         :class="{ 'nav-item--active': activeMenu === '/prompt-collection' }"
@@ -19,7 +19,7 @@
                         <Language class="nav-item__icon" />
                     </div>
                 </el-tooltip>
-                <el-tooltip :content="workspaceTooltip" placement="right">
+                <el-tooltip :content="workspaceTooltip + ' (Ctrl+2)'" placement="right">
                     <div
                         class="nav-item"
                         :class="{ 'nav-item--active': activeMenu === '/workspaces' }"
@@ -32,7 +32,7 @@
                         <WorkspaceIcon class="nav-item__icon" />
                     </div>
                 </el-tooltip>
-                <el-tooltip content="示例" placement="right">
+                <el-tooltip content="示例 (Ctrl+3)" placement="right">
                     <div
                         class="nav-item"
                         :class="{ 'nav-item--active': activeMenu === '/examples' }"
@@ -59,6 +59,7 @@
         <transition name="save-fade">
             <div v-if="showSaveIndicator" class="save-indicator">已保存</div>
         </transition>
+        <ShortcutHelpPanel v-model="showShortcutHelp" />
     </div>
 </template>
 
@@ -69,9 +70,11 @@ import WorkspaceIcon from '@renderer/icons/Workspace.vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { Language } from '@vicons/ionicons5'
 import { useDataStore } from '@renderer/stores/data'
+import ShortcutHelpPanel from '@renderer/components/ShortcutHelpPanel.vue'
 
 const dataStore = useDataStore()
 const showSaveIndicator = ref(false)
+const showShortcutHelp = ref(false)
 
 watch(() => dataStore.lastSaveTime, () => {
     showSaveIndicator.value = true
@@ -133,6 +136,10 @@ function handleGlobalKeydown(e: KeyboardEvent): void {
             const input = searchWrapper.querySelector('input')
             if (input) input.focus()
         }
+    }
+    if (e.ctrlKey && e.key === '/') {
+        e.preventDefault()
+        showShortcutHelp.value = !showShortcutHelp.value
     }
 }
 

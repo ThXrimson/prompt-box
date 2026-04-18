@@ -47,6 +47,7 @@ declare module 'vue' {
     PromptDetail: typeof import('./src/components/PromptDetail.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    ShortcutHelpPanel: typeof import('./src/components/ShortcutHelpPanel.vue')['default']
     TagCollection: typeof import('./src/components/TagCollection.vue')['default']
     TagEditor: typeof import('./src/components/TagEditor.vue')['default']
     TagList: typeof import('./src/components/TagList.vue')['default']

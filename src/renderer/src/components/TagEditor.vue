@@ -65,7 +65,6 @@ import { EditPen, Delete, Plus } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 import { UNCATEGORIZED_TAG_ID } from '@shared/models/tag'
 import { isNil } from 'lodash'
-import log from 'electron-log/renderer'
 
 const dataStore = useDataStore()
 
@@ -137,22 +136,23 @@ onMounted(() => {
 //region 操作Tag
 function editTag(tagId: string): void {
     if (editingTag.value[tagId]) {
-        // 如果已经处于编辑状态，保存修改
         const newTagText = editingTagText.value[tagId].trim()
         if (newTagText) {
             dataStore.tag.update({ id: tagId, text: newTagText }).then((res) => {
                 if (res) {
                     editingTag.value[tagId] = false
+                    ElMessage.success('标签更新成功')
                 } else {
-                    log.error('更新 Tag 失败')
+                    ElMessage.error('更新标签失败')
                 }
+            }).catch(() => {
+                ElMessage.error('更新标签失败')
             })
         } else {
-            log.warn('Tag 文本不能为空')
-            editingTag.value[tagId] = false // 取消编辑状态
+            ElMessage.warning('标签名称不能为空')
+            editingTag.value[tagId] = false
         }
     } else {
-        // 否则进入编辑状态
         editingTag.value[tagId] = true
     }
 }

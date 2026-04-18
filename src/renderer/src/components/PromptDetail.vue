@@ -580,6 +580,7 @@ async function addExample(exampleId: string): Promise<void> {
             id: props.promptId,
             exampleIds: [...dataStore.prompt.readonly[index].exampleIds, exampleId],
         })
+        ElMessage.success('添加示例成功')
     } catch (error) {
         if (error === notFoundError) {
             ElMessage.error('提示词不存在')
@@ -589,7 +590,6 @@ async function addExample(exampleId: string): Promise<void> {
             ElMessage.error('添加示例失败')
         }
     }
-    ElMessage.success('添加示例成功')
 }
 
 const createImageDialogVisible = ref(false)

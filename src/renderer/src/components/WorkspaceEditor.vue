@@ -34,7 +34,7 @@
                         <keep-alive>
                             <component
                                 :is="DraggableTags"
-                                :key="isPositiveEditor ? 'positive' : 'negative'"
+                                :key="`${props.workspaceId}-${isPositiveEditor ? 'positive' : 'negative'}`"
                                 ref="draggableTagsRef"
                                 v-model="currentEditor"
                                 :search-text="searchText"
@@ -77,7 +77,7 @@
                         <el-button :icon="DuplicateOutline" @click="cloneWorkspace" />
                     </el-tooltip>
                     <el-tooltip
-                        content="撤回"
+                        content="撤回 (Ctrl+Z)"
                         :enterable="false"
                         placement="top-end"
                         :hide-after="0"
@@ -90,7 +90,7 @@
                         />
                     </el-tooltip>
                     <el-tooltip
-                        content="重做"
+                        content="重做 (Ctrl+Y)"
                         :enterable="false"
                         placement="top-end"
                         :hide-after="0"
@@ -210,14 +210,16 @@
                     circle
                     @click="quickHide"
                 />
-                <el-popover title="操作说明" placement="top-end" :width="200">
+                <el-popover title="操作说明" placement="top-end" :width="220">
                     <div class="text-sm leading-6">
-                        <div>🖱️ 单击 — 编辑标签</div>
+                        <div>🖱️ 单击 — 折叠/展开组</div>
                         <div>🖱️ 双击 — 切换禁用</div>
                         <div>🖱️ 右键 — 复制文本</div>
                         <div>🖱️ 中键 — 删除标签</div>
+                        <div>🖱️ 悬停 — 打开菜单</div>
                         <div>⌨️ Ctrl+Z — 撤销</div>
                         <div>⌨️ Ctrl+Y — 重做</div>
+                        <div>⌨️ Ctrl+/ — 快捷键帮助</div>
                     </div>
                     <template #reference>
                         <el-button :icon="Information" circle class="ml-0!" />
@@ -231,7 +233,7 @@
 
 <script setup lang="ts">
 import { CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
-import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
+import { computed, nextTick, onActivated, onDeactivated, onMounted, ref, useTemplateRef } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
 import { ElInput, ElMessage } from 'element-plus'
 import { clone, isNil, cloneDeep } from 'lodash'
@@ -257,13 +259,14 @@ import {
     Contract,
     DuplicateOutline,
 } from '@vicons/ionicons5'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { handleError } from '@renderer/utils/error-handler'
 
 const props = defineProps<{
     workspaceId: string
 }>()
 const router = useRouter()
+const route = useRoute()
 const dataStore = useDataStore()
 const workspace = computed(() =>
     dataStore.workspace.readonly.find((w) => w.id === props.workspaceId)
@@ -501,6 +504,7 @@ async function copySearchText(): Promise<void> {
 }
 
 function handleEditorKeydown(e: KeyboardEvent): void {
+    if (!route.path.startsWith('/workspace/')) return
     if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
         e.preventDefault()
         if (draggableTagsRef.value?.canUndo) {
@@ -515,11 +519,11 @@ function handleEditorKeydown(e: KeyboardEvent): void {
     }
 }
 
-onMounted(() => {
+onActivated(() => {
     document.addEventListener('keydown', handleEditorKeydown)
 })
 
-onUnmounted(() => {
+onDeactivated(() => {
     document.removeEventListener('keydown', handleEditorKeydown)
 })
 </script>
