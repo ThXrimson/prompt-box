@@ -9,15 +9,49 @@ import {
     stringToSpecialPromptTag,
 } from '@shared/models/prompt-tag'
 
+const SEARCH_HISTORY_KEY = 'prompt-box:search-history'
+const SEARCH_HISTORY_LIMIT = 10
+
+function loadSearchHistory(): string[] {
+    try {
+        const raw = localStorage.getItem(SEARCH_HISTORY_KEY)
+        if (raw) {
+            return JSON.parse(raw) as string[]
+        }
+    } catch {}
+    return []
+}
+
+function saveSearchHistory(history: string[]): void {
+    try {
+        localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history))
+    } catch {}
+}
+
 export function useEditorSearch(
     currentEditor: WritableComputedRef<PromptTag[]>,
     specialTexts: () => string[],
 ): {
     searchText: Ref<string>
+    searchHistory: Ref<string[]>
     createPromptTag: (text: string) => void
+    confirmSearch: (text: string) => void
     addEolPromptTag: () => void
 } {
     const searchText = ref('')
+    const searchHistory = ref<string[]>(loadSearchHistory())
+
+    function addToHistory(text: string): void {
+        const trimmed = text.trim()
+        if (trimmed === '') return
+        const filtered = searchHistory.value.filter((item) => item !== trimmed)
+        filtered.unshift(trimmed)
+        if (filtered.length > SEARCH_HISTORY_LIMIT) {
+            filtered.length = SEARCH_HISTORY_LIMIT
+        }
+        searchHistory.value = filtered
+        saveSearchHistory(filtered)
+    }
 
     function createPromptTag(text: string): void {
         text = text.trim()
@@ -42,6 +76,14 @@ export function useEditorSearch(
         }
     }
 
+    function confirmSearch(text: string): void {
+        const trimmed = text.trim()
+        if (trimmed === '') return
+        addToHistory(trimmed)
+        createPromptTag(trimmed)
+        searchText.value = ''
+    }
+
     function addEolPromptTag(): void {
         const editorClone = clone(currentEditor.value)
         editorClone.push(newEolPromptTag())
@@ -50,7 +92,9 @@ export function useEditorSearch(
 
     return {
         searchText,
+        searchHistory,
         createPromptTag,
+        confirmSearch,
         addEolPromptTag,
     }
 }

@@ -388,7 +388,11 @@ function handleClick(promptTag: PromptTag): void {
     }
     clickTimer.value = setTimeout(() => {
         clickTimer.value = null
-        switchCollapse(promptTag)
+        if (isGroupPromptTag(promptTag)) {
+            switchCollapse(promptTag)
+        } else if (!isEolPromptTag(promptTag) && !isSpecialPromptTag(promptTag)) {
+            editPromptTag(promptTag)
+        }
     }, 250)
 }
 function handleDblClick(item: Wrapper): void {
@@ -601,6 +605,12 @@ function getPromptTagText(item: Wrapper): string {
                                     @click="editPromptTag(item.promptTag)"
                                 >
                                     编辑
+                                </el-dropdown-item>
+                                <el-dropdown-item
+                                    v-if="isGroupPromptTag(item.promptTag)"
+                                    @click="switchCollapse(item.promptTag)"
+                                >
+                                    {{ collapsed.includes(item.promptTag.id) ? '展开' : '折叠' }}
                                 </el-dropdown-item>
                                 <el-dropdown-item
                                     v-if="canCreateGroup(item.promptTag)"

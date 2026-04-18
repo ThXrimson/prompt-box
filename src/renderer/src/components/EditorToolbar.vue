@@ -144,21 +144,56 @@
                 />
             </el-tooltip>
         </div>
-        <el-input
-            :model-value="searchText"
-            placeholder="搜索或添加"
-            clearable
-            spellcheck="false"
-            @update:model-value="emit('update:searchText', $event)"
-            @keyup.enter="emit('createTag', searchText)"
-            @keyup.esc="emit('update:searchText', '')"
+        <el-popover
+            :visible="historyPopoverVisible"
+            placement="bottom-end"
+            :width="200"
+            :show-arrow="false"
+            :offset="4"
+            @after-leave="historyPopoverVisible = false"
         >
-            <template #prefix>
-                <el-icon class="cursor-pointer" @click.stop="emit('copySearchText')">
-                    <copy-document />
-                </el-icon>
+            <div class="flex flex-col gap-0.5 max-h-60 overflow-y-auto py-1">
+                <div class="px-2 pb-1 text-xs text-(--el-text-color-secondary) select-none">
+                    搜索历史
+                </div>
+                <div
+                    v-for="item in searchHistory"
+                    :key="item"
+                    class="px-2 py-1 cursor-pointer rounded text-sm hover:bg-(--el-fill-color) truncate transition-colors"
+                    @mousedown.prevent="onHistorySelect(item)"
+                >
+                    {{ item }}
+                </div>
+            </div>
+            <template #reference>
+                <el-input
+                    :model-value="searchText"
+                    placeholder="搜索或添加"
+                    clearable
+                    spellcheck="false"
+                    @update:model-value="emit('update:searchText', $event)"
+                    @keyup.enter="onConfirm"
+                    @keyup.esc="emit('update:searchText', '')"
+                    @focus="onInputFocus"
+                    @blur="onInputBlur"
+                >
+                    <template #prefix>
+                        <el-icon class="cursor-pointer" @click.stop="emit('copySearchText')">
+                            <copy-document />
+                        </el-icon>
+                    </template>
+                    <template #suffix>
+                        <el-icon
+                            v-if="searchText.trim()"
+                            class="cursor-pointer text-(--el-color-primary)"
+                            @click.stop="onConfirm"
+                        >
+                            <CircleCheck />
+                        </el-icon>
+                    </template>
+                </el-input>
             </template>
-        </el-input>
+        </el-popover>
         <el-button
             :icon="containerHeight === minHeight ? CaretUp : CaretDown"
             circle
@@ -166,7 +201,7 @@
         />
         <el-popover title="操作说明" placement="top-end" :width="220">
             <div class="text-sm leading-6">
-                <div>🖱️ 单击 — 折叠/展开组</div>
+                <div>🖱️ 单击 — 编辑标签 / 折叠组</div>
                 <div>🖱️ 双击 — 切换禁用</div>
                 <div>🖱️ 右键 — 复制文本</div>
                 <div>🖱️ 中键 — 删除标签</div>
@@ -183,7 +218,8 @@
 </template>
 
 <script setup lang="ts">
-import { CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
+import { ref } from 'vue'
+import { CircleCheck, CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
 import {
     Information,
     CaretUp,
@@ -195,11 +231,12 @@ import {
     DuplicateOutline,
 } from '@vicons/ionicons5'
 
-defineProps<{
+const props = defineProps<{
     editMode: boolean
     removeLora: boolean
     isPositiveEditor: boolean
     searchText: string
+    searchHistory: string[]
     containerHeight: number
     canUndo: boolean
     canRedo: boolean
@@ -218,10 +255,39 @@ const emit = defineEmits<{
     (e: 'expandAll'): void
     (e: 'collapseAll'): void
     (e: 'update:searchText', value: string): void
-    (e: 'createTag', text: string): void
+    (e: 'confirmSearch', text: string): void
     (e: 'copySearchText'): void
     (e: 'toggleHeight'): void
 }>()
+
+const historyPopoverVisible = ref(false)
+let inputFocused = false
+
+function onInputFocus(): void {
+    inputFocused = true
+    updatePopoverVisibility()
+}
+
+function onInputBlur(): void {
+    inputFocused = false
+    historyPopoverVisible.value = false
+}
+
+function updatePopoverVisibility(): void {
+    historyPopoverVisible.value = inputFocused && !props.searchText.trim() && props.searchHistory.length > 0
+}
+
+function onConfirm(): void {
+    const text = props.searchText.trim()
+    if (!text) return
+    emit('confirmSearch', text)
+    historyPopoverVisible.value = false
+}
+
+function onHistorySelect(item: string): void {
+    emit('confirmSearch', item)
+    historyPopoverVisible.value = false
+}
 
 function onUpdateRemoveLora(value: string | number | boolean): void {
     emit('update:removeLora', !!value)

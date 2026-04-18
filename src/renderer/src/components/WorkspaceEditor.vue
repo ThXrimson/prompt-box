@@ -41,6 +41,7 @@
                     :remove-lora="removeLora"
                     :is-positive-editor="isPositiveEditor"
                     :search-text="searchText"
+                    :search-history="searchHistory"
                     :container-height="containerHeight"
                     :can-undo="draggableTagsRef?.canUndo ?? false"
                     :can-redo="draggableTagsRef?.canRedo ?? false"
@@ -56,7 +57,7 @@
                     @expand-all="draggableTagsRef?.uncollapseAll()"
                     @collapse-all="draggableTagsRef?.collapseAll()"
                     @update:search-text="searchText = $event"
-                    @create-tag="createPromptTag"
+                    @confirm-search="confirmSearch"
                     @copy-search-text="copySearchText(searchText)"
                     @toggle-height="quickHide"
                 />
@@ -177,7 +178,7 @@ const { editorInput, editMode, switchEditMode } = useEditorMode(
 
 const { removeLora, copyEditor, copySearchText } = useEditorClipboard(currentEditor)
 
-const { searchText, createPromptTag, addEolPromptTag } = useEditorSearch(
+const { searchText, searchHistory, confirmSearch, addEolPromptTag } = useEditorSearch(
     currentEditor,
     () => specialTexts.value,
 )
