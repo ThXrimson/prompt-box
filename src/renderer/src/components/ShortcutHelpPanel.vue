@@ -2,7 +2,8 @@
     <el-dialog
         v-model="visible"
         title="快捷键"
-        width="420px"
+        width="min(420px, 90vw)"
+        align-center
         :show-close="true"
         @keyup.esc.stop.prevent="visible = false"
     >
@@ -10,32 +11,34 @@
             v-model="filter"
             placeholder="搜索快捷键..."
             clearable
-            class="mb-3"
+            class="mb-2"
         />
-        <div v-for="category in filteredCategories" :key="category" class="mb-3">
-            <div class="text-xs font-semibold text-(--color-text-tertiary) mb-1 uppercase tracking-wider">
-                {{ category }}
-            </div>
-            <div
-                v-for="shortcut in filteredShortcutsByCategory(category)"
-                :key="shortcut.id"
-                class="flex items-center justify-between py-1.5 px-2 rounded hover:bg-(--color-gray-50)"
-            >
-                <span class="text-sm text-(--color-text-primary)">{{ shortcut.description }}</span>
-                <div class="flex items-center gap-1">
-                    <span
-                        v-if="shortcut.when"
-                        class="text-xs text-(--color-text-tertiary) mr-1"
-                    >
-                        {{ shortcut.when }}
-                    </span>
-                    <kbd
-                        v-for="key in shortcut.keys.split('+')"
-                        :key="key"
-                        class="shortcut-key"
-                    >
-                        {{ key }}
-                    </kbd>
+        <div class="shortcut-list">
+            <div v-for="category in filteredCategories" :key="category" class="mb-2">
+                <div class="text-xs font-semibold text-(--color-text-tertiary) mb-0.5 uppercase tracking-wider">
+                    {{ category }}
+                </div>
+                <div
+                    v-for="shortcut in filteredShortcutsByCategory(category)"
+                    :key="shortcut.id"
+                    class="flex items-center justify-between py-1 px-2 rounded hover:bg-(--color-gray-50)"
+                >
+                    <span class="text-sm text-(--color-text-primary) truncate mr-2">{{ shortcut.description }}</span>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <span
+                            v-if="shortcut.when"
+                            class="text-xs text-(--color-text-tertiary) mr-1"
+                        >
+                            {{ shortcut.when }}
+                        </span>
+                        <kbd
+                            v-for="key in shortcut.keys.split('+')"
+                            :key="key"
+                            class="shortcut-key"
+                        >
+                            {{ key }}
+                        </kbd>
+                    </div>
                 </div>
             </div>
         </div>
@@ -75,6 +78,13 @@ function filteredShortcutsByCategory(category: string): ShortcutDef[] {
 </script>
 
 <style scoped>
+.shortcut-list {
+    max-height: min(50vh, 360px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+}
+
 .shortcut-key {
     display: inline-flex;
     align-items: center;
