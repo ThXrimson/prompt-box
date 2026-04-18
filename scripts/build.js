@@ -1,4 +1,6 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { execSync } = require('child_process')
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const process = require('process')
 
 // 生成 buildNumber：年月日时分秒

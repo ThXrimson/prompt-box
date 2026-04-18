@@ -18,14 +18,18 @@ function loadSearchHistory(): string[] {
         if (raw) {
             return JSON.parse(raw) as string[]
         }
-    } catch {}
+    } catch {
+        // localStorage access may fail in restricted environments
+    }
     return []
 }
 
 function saveSearchHistory(history: string[]): void {
     try {
         localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history))
-    } catch {}
+    } catch {
+        // localStorage access may fail in restricted environments
+    }
 }
 
 export function useEditorSearch(
