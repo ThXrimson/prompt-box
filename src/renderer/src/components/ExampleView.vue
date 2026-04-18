@@ -97,16 +97,22 @@ import { notFoundError } from '@renderer/stores/error'
 import log from 'electron-log/renderer'
 import ImageCover from './ImageCover.vue'
 import { UpdatePrompt } from '@shared/models/prompt'
+import { useRouter } from 'vue-router'
+import { handleError } from '@renderer/utils/error-handler'
 
 const props = defineProps<{
     exampleId: string
     promptId?: string
 }>()
-// TODO 处理 example 不存在的情况
+const router = useRouter()
 const dataStore = useDataStore()
 const example = computed(() =>
     dataStore.example.readonly.find((item) => item.id === props.exampleId)
 )
+if (isNil(example.value)) {
+    handleError('示例不存在或已被删除')
+    router.push('/examples')
+}
 
 const enum Tab {
     Positive = 'positive',

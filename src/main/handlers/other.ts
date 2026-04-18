@@ -66,10 +66,16 @@ function translateByDeepLX(text: string): Promise<string> {
             }),
             'UTF-8'
         )
+
+        const timeout = setTimeout(() => {
+            request.abort()
+        }, 10000)
+
         request.on('response', (response) => {
+            clearTimeout(timeout)
             if (response.statusCode !== 200) {
                 return reject(
-                    new Error(`Translation failed with status code: ${response.statusCode}`)
+                    new Error(`TRANSLATE_SERVICE_ERROR:${response.statusCode}`)
                 )
             }
             let data = ''
@@ -80,16 +86,21 @@ function translateByDeepLX(text: string): Promise<string> {
                 try {
                     const result = JSON.parse(data)
                     if (typeof result.data !== 'string') {
-                        reject(new Error('Invalid translation response format'))
+                        reject(new Error('TRANSLATE_INVALID_RESPONSE'))
                     }
                     resolve(result.data)
                 } catch (error) {
-                    reject(new Error(`Failed to parse translation response: ${error}`))
+                    reject(new Error('TRANSLATE_PARSE_ERROR'))
                 }
             })
         })
         request.on('error', (error) => {
-            reject(new Error(`Translation request failed: ${error.message}`))
+            clearTimeout(timeout)
+            reject(new Error(`TRANSLATE_NETWORK_ERROR:${error.message}`))
+        })
+        request.on('abort', () => {
+            clearTimeout(timeout)
+            reject(new Error('TRANSLATE_TIMEOUT'))
         })
         request.end()
     })

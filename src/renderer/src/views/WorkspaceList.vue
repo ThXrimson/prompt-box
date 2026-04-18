@@ -19,6 +19,10 @@
             />
         </div>
         <el-scrollbar class="flex-1 min-h-0" view-class="flex flex-wrap gap-2">
+            <template v-if="!dataStore.isDataLoaded">
+                <div v-for="i in 3" :key="i" class="skeleton-card skeleton w-full"></div>
+            </template>
+            <template v-else>
             <div
                 v-for="workspace in workspaces"
                 :key="workspace.id"
@@ -51,16 +55,15 @@
                     </template>
                 </el-popconfirm>
             </div>
-            <div v-if="workspaces.length === 0" class="empty-state">
-                <el-icon class="empty-state-icon"><CirclePlusFilled /></el-icon>
-                <span class="empty-state-text">暂无工作区</span>
-            </div>
+            <EmptyState v-if="workspaces.length === 0" :icon="CirclePlusFilled" title="暂无工作区" />
+            </template>
         </el-scrollbar>
     </div>
 </template>
 
 <script setup lang="ts">
 import { useDataStore } from '@renderer/stores/data'
+import EmptyState from '@renderer/components/EmptyState.vue'
 import { computed, ref } from 'vue'
 import { CopyOutline } from '@vicons/ionicons5'
 import { Delete } from '@element-plus/icons-vue'

@@ -42,10 +42,7 @@
                     @remove="removeThisTagId($event)"
                     @select="(promptId) => (selectedPromptId = promptId)"
                 />
-                <div v-if="promptView.length === 0" class="empty-state">
-                    <el-icon class="empty-state-icon"><Plus /></el-icon>
-                    <span class="empty-state-text">暂无提示词</span>
-                </div>
+                <EmptyState v-if="promptView.length === 0" :icon="Plus" title="暂无提示词" />
             </el-scrollbar>
         </div>
         <div v-if="!isNil(selectedPromptId)" class="h-full flex-1 flex flex-col min-w-90">
@@ -56,9 +53,15 @@
                 <el-button type="info" class="flex-1" @click="selectedPromptId = undefined">
                     <el-icon size="16"><CaretForward /></el-icon>
                 </el-button>
-                <el-button type="danger" class="flex-10" @click="deletePrompt(selectedPromptId)">
-                    删除
-                </el-button>
+                <el-popconfirm
+                    title="确定删除此提示词？"
+                    :hide-after="0"
+                    @confirm="deletePrompt(selectedPromptId!)"
+                >
+                    <template #reference>
+                        <el-button type="danger" class="flex-10">删除</el-button>
+                    </template>
+                </el-popconfirm>
             </div>
         </div>
     </div>
@@ -70,6 +73,7 @@ import { UNCATEGORIZED_TAG_ID, type Tag } from '@shared/models/tag'
 import { useDataStore } from '@renderer/stores/data'
 import { matchTextPlus } from '@renderer/utils/pinyin-includes'
 import PromptCard from '@renderer/components/PromptCard.vue'
+import EmptyState from '@renderer/components/EmptyState.vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElInput } from 'element-plus'
 import { useTemplateRefsList } from '@vueuse/core'
@@ -243,13 +247,8 @@ async function removeThisTagId(promptId: string): Promise<void> {
     }
 }
 async function deletePrompt(id: string): Promise<void> {
+    selectedPromptId.value = undefined
     try {
-        await ElMessageBox.confirm('确定删除此提示词？', '删除提示词', {
-            confirmButtonText: '删除',
-            cancelButtonText: '取消',
-            type: 'warning',
-        })
-        selectedPromptId.value = undefined
         const res = await dataStore.prompt.delete(id)
         if (res) {
             ElMessage.success('成功删除提示词')
@@ -257,9 +256,7 @@ async function deletePrompt(id: string): Promise<void> {
             ElMessage.error('删除提示词失败')
         }
     } catch (error) {
-        if (error !== 'cancel') {
-            ElMessage.error('删除提示词失败')
-        }
+        ElMessage.error('删除提示词失败')
     }
 }
 // 点击背景关闭 Prompt 侧栏

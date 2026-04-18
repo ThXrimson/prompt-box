@@ -20,7 +20,7 @@
             <div class="flex gap-1">
                 <el-text class="edit-header">翻译</el-text>
                 <el-tooltip content="点击使用 DeepLX 翻译" :hide-after="0" placement="top">
-                    <el-button link :icon="Language" @click="translateByDeepLX" />
+                    <el-button link :icon="Language" :loading="isTranslating" :disabled="isTranslating" @click="translateByDeepLX" />
                 </el-tooltip>
                 <el-button
                     :icon="CopyDocument"
@@ -209,7 +209,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
 import { CirclePlusFilled, CopyDocument, Warning } from '@element-plus/icons-vue'
 import { isNil } from 'lodash'
@@ -224,21 +224,27 @@ import { Language } from '@vicons/ionicons5'
 import { ElMessageBox } from 'element-plus'
 import { PromptKind } from '@shared/models/prompt'
 import log from 'electron-log/renderer'
+import { useRouter } from 'vue-router'
+import { handleError } from '@renderer/utils/error-handler'
 
 const props = defineProps<{
     promptId: string
 }>()
-// TODO 处理 id 不合法的情况
-const prompt = computed(() => {
-    const prompt_ = dataStore.prompt.readonly.find((p) => p.id === props.promptId)
-    if (isNil(prompt_)) {
-        ElMessage.error('未找到对应的提示词')
-        return null
-    }
-    return prompt_
-})
-
+const router = useRouter()
 const dataStore = useDataStore()
+const prompt = computed(() => {
+    return dataStore.prompt.readonly.find((p) => p.id === props.promptId) ?? null
+})
+watch(
+    () => prompt.value,
+    (val) => {
+        if (isNil(val)) {
+            handleError('提示词不存在或已被删除')
+            router.push('/prompt-collection')
+        }
+    },
+    { immediate: true }
+)
 
 // 编辑 Prompt 相关数据
 function copyPromptText(text: string): void {
@@ -498,12 +504,24 @@ async function changeTranslation(text: string): Promise<void> {
 }
 
 async function translateByDeepLX(): Promise<void> {
+    isTranslating.value = true
     try {
         const result = await window.api.other.translateByDeepLX(promptText.value)
         await changeTranslation(result)
-    } catch {
-        ElMessage.error('翻译失败')
+    } catch (error) {
+        const message = getTranslateErrorMessage(error)
+        ElMessage.error(message)
+    } finally {
+        isTranslating.value = false
     }
+}
+
+function getTranslateErrorMessage(error: unknown): string {
+    const msg = error instanceof Error ? error.message : ''
+    if (msg.startsWith('TRANSLATE_TIMEOUT')) return '翻译超时，请稍后重试'
+    if (msg.startsWith('TRANSLATE_SERVICE_ERROR')) return '翻译服务暂不可用'
+    if (msg.startsWith('TRANSLATE_NETWORK_ERROR')) return '网络错误，请检查网络连接'
+    return '翻译失败，请重试'
 }
 
 //#endregion
@@ -547,6 +565,7 @@ async function copyText(text?: string): Promise<void> {
 }
 
 const addExampleFromExistingVisible = ref(false)
+const isTranslating = ref(false)
 function handleOpenAddExampleFromExistingDialog(): void {
     addExampleFromExistingVisible.value = true
 }

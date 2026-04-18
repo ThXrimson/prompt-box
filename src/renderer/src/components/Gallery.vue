@@ -41,6 +41,9 @@
                 v-loading="true"
                 class="w-40! h-40! rounded-md bg-(--color-gray-300)"
             />
+            <div v-if="loadingPlaceholder > 0" class="text-center text-sm text-(--color-text-tertiary) py-1">
+                {{ loadingProgress || '加载中...' }}
+            </div>
             <!-- 添加图片 -->
             <el-button
                 :icon="Plus"
@@ -116,6 +119,7 @@ const addImageDialogVisible = ref(false)
 const candidateImage = ref<string>('')
 
 const loadingPlaceholder = ref(0)
+const loadingProgress = ref('')
 
 //#region 选择图片文件的函数
 function handlePaste(event: ClipboardEvent): void {
@@ -151,14 +155,19 @@ function handleOpenAddImageDialog(): void {
 
 async function handleConfirmAddExampleImage(): Promise<void> {
     loadingPlaceholder.value += 1
+    loadingProgress.value = '处理中...'
     addImageDialogVisible.value = false
     if (candidateImage.value === '') {
         ElMessage.warning('请输入图片路径或选择图片文件')
+        loadingPlaceholder.value -= 1
+        loadingProgress.value = ''
         return
     }
     const exampleIndex = dataStore.example.readonly.findIndex((e) => e.id === props.exampleId)
     if (exampleIndex === -1) {
         ElMessage.error('示例不存在')
+        loadingPlaceholder.value -= 1
+        loadingProgress.value = ''
         return
     }
     const image = await dataStore.image.create(candidateImage.value)
@@ -170,6 +179,7 @@ async function handleConfirmAddExampleImage(): Promise<void> {
         imageIds: [...dataStore.example.readonly[exampleIndex].imageIds, image.id],
     })
     loadingPlaceholder.value -= 1
+    loadingProgress.value = ''
     candidateImage.value = ''
 }
 

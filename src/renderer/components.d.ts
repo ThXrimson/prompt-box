@@ -9,6 +9,8 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     DraggableTags: typeof import('./src/components/DraggableTags.vue')['default']
+    ElBreadcrumb: typeof import('element-plus/es')['ElBreadcrumb']
+    ElBreadcrumbItem: typeof import('element-plus/es')['ElBreadcrumbItem']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElDialog: typeof import('element-plus/es')['ElDialog']
@@ -36,6 +38,7 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     ElText: typeof import('element-plus/es')['ElText']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    EmptyState: typeof import('./src/components/EmptyState.vue')['default']
     ExampleView: typeof import('./src/components/ExampleView.vue')['default']
     Gallery: typeof import('./src/components/Gallery.vue')['default']
     ImageCover: typeof import('./src/components/ImageCover.vue')['default']

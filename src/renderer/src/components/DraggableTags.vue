@@ -23,9 +23,8 @@ import {
 } from '@shared/models/prompt-tag'
 import { clone, cloneDeep, debounce, isNil } from 'lodash'
 import { Nullish } from 'utility-types'
-import { computed, nextTick, ref, useTemplateRef } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
-import { ElInput } from 'element-plus'
 import { useHandleClickGesture } from '@renderer/hooks/useHandleClickGesture'
 import log from 'electron-log/renderer'
 import { PromptKind } from '@shared/models/prompt'
@@ -34,6 +33,7 @@ import Highlighter from 'vue-highlight-words'
 import { VueDraggable } from 'vue-draggable-plus'
 import { ChevronUp, Refresh, ChevronDown } from '@vicons/ionicons5'
 import { useManualRefHistory } from '@vueuse/core'
+import { handleError } from '@renderer/utils/error-handler'
 // TODO 长按
 const enum Kind {
     Default = 'default',
@@ -156,24 +156,26 @@ function selectPrompt(item: PromptTag): void {
     }
 }
 
-const promptTagInput = useTemplateRef<InstanceType<typeof ElInput>>('promptTagInput')
-function onOpenEditDialog(): void {
-    promptTagInput.value?.focus()
-}
-// 是否正在编辑提示词
-const isEditingPromptTag = ref(false)
 const editingPromptTagId = ref<string | Nullish>(undefined)
 const editingPromptTagInput = ref('')
 function editPromptTag(item: PromptTag): void {
-    isEditingPromptTag.value = true
     editingPromptTagId.value = item.id
     if (isGroupPromptTag(item)) {
         editingPromptTagInput.value = item.text
     } else {
         editingPromptTagInput.value = promptTagToString(item, true, true, true)
     }
+    nextTick(() => {
+        const input = document.querySelector<HTMLInputElement>('.inline-edit-input')
+        input?.focus()
+        input?.select()
+    })
 }
-const handleClickGesture = useHandleClickGesture(200)
+function cancelEditPrompt(): void {
+    editingPromptTagId.value = undefined
+    editingPromptTagInput.value = ''
+}
+const handleClickGesture = useHandleClickGesture(100)
 function handleLeftClickPromptTag(item: Wrapper): void {
     handleClickGesture(
         () => {
@@ -199,7 +201,6 @@ function handleLeftClickPromptTag(item: Wrapper): void {
     )
 }
 function confirmEditPrompt(): void {
-    isEditingPromptTag.value = false
     if (isNil(editingPromptTagId.value)) {
         return
     }
@@ -249,6 +250,8 @@ function confirmEditPrompt(): void {
         }
     }
     editor.value = editorClone
+    editingPromptTagId.value = undefined
+    editingPromptTagInput.value = ''
     nextTick(() => debouncedCommit())
 }
 function removePromptTag(id: string): void {
@@ -341,7 +344,7 @@ function copyText(text: string): void {
         if (res) {
             ElMessage.success('已复制到剪贴板')
         } else {
-            ElMessage.error('复制失败')
+            ElMessage.error('复制失败，请重试')
         }
     })
 }
@@ -438,23 +441,32 @@ function clearPromptTagBrackets(promptTag: PromptTag): void {
     findPromptTagAndReplace(newTag)
     nextTick(() => debouncedCommit())
 }
+const translatingTagId = ref<string | Nullish>(undefined)
 async function translatePromptTag(promptTag: MonoPromptTag): Promise<void> {
-    let translation = ''
-    if (isLoraPromptTag(promptTag) || isMonoPromptTag(promptTag)) {
-        const prompt = dataStore.prompt.readonly.find((p) => p.text === promptTag.text)
-        if (!isNil(prompt)) {
-            translation = prompt.translation
+    translatingTagId.value = promptTag.id
+    try {
+        let translation = ''
+        if (isLoraPromptTag(promptTag) || isMonoPromptTag(promptTag)) {
+            const prompt = dataStore.prompt.readonly.find((p) => p.text === promptTag.text)
+            if (!isNil(prompt)) {
+                translation = prompt.translation
+            }
         }
+        if (translation.length <= 0) {
+            translation = await window.api.other.translateByDeepLX(promptTag.text)
+        }
+        const newTag = {
+            ...promptTag,
+            translation,
+        }
+        findPromptTagAndReplace(newTag)
+    } catch (error) {
+        handleError(error, '翻译失败')
+    } finally {
+        translatingTagId.value = undefined
     }
-    if (translation.length <= 0) {
-        translation = await window.api.other.translateByDeepLX(promptTag.text)
-    }
-    const newTag = {
-        ...promptTag,
-        translation,
-    }
-    findPromptTagAndReplace(newTag)
 }
+
 function findPromptTagAndReplace(newTag: PromptTag): void {
     const editorClone = clone(editor.value)
     outer: for (const [i, tag] of editorClone.entries()) {
@@ -528,7 +540,7 @@ function getPromptTagText(item: Wrapper): string {
                             },
                         ],
                     }"
-                    :show-timeout="300"
+                    :show-timeout="200"
                     :hide-timeout="50"
                     :hide-on-click="false"
                     :disabled="
@@ -571,16 +583,27 @@ function getPromptTagText(item: Wrapper): string {
                         >
                             ◀ {{ item.promptTag.text }}
                         </span>
-                        <Highlighter
-                            v-else
-                            :search-words="[searchText]"
-                            :auto-escape="true"
-                            :text-to-highlight="getPromptTagText(item)"
-                            class="flex-1 block font-[500]"
-                            :class="{
-                                'text-(--color-gray-800)!': item.kind === Kind.Group,
-                            }"
-                        />
+                        <template v-else>
+                            <input
+                                v-if="editingPromptTagId === item.promptTag.id"
+                                v-model="editingPromptTagInput"
+                                class="inline-edit-input"
+                                spellcheck="false"
+                                @keyup.enter="confirmEditPrompt"
+                                @keyup.esc="cancelEditPrompt"
+                                @blur="confirmEditPrompt"
+                            />
+                            <Highlighter
+                                v-else
+                                :search-words="[searchText]"
+                                :auto-escape="true"
+                                :text-to-highlight="getPromptTagText(item)"
+                                class="flex-1 block font-[500]"
+                                :class="{
+                                    'text-(--color-gray-800)!': item.kind === Kind.Group,
+                                }"
+                            />
+                        </template>
                     </el-tag>
                     <template #dropdown>
                         <el-dropdown-menu
@@ -633,18 +656,21 @@ function getPromptTagText(item: Wrapper): string {
                                     @click="addPromptTagWeight(item.promptTag, 0.1)"
                                 >
                                     <el-icon class="mr-0!" size="large"><ChevronUp /></el-icon>
+                                    <span class="text-xs">加重</span>
                                 </el-dropdown-item>
                                 <el-dropdown-item
                                     v-if="canAddWeight(item.promptTag)"
                                     @click="clearPromptTagWeight(item.promptTag)"
                                 >
                                     <el-icon class="mr-0!" size="large"><Refresh /></el-icon>
+                                    <span class="text-xs">重置</span>
                                 </el-dropdown-item>
                                 <el-dropdown-item
                                     v-if="canAddWeight(item.promptTag)"
                                     @click="addPromptTagWeight(item.promptTag, -0.1)"
                                 >
                                     <el-icon class="mr-0!" size="large"><ChevronDown /></el-icon>
+                                    <span class="text-xs">减轻</span>
                                 </el-dropdown-item>
                             </div>
                             <div class="dropdown-menu-group">
@@ -653,26 +679,30 @@ function getPromptTagText(item: Wrapper): string {
                                     @click="addPromptTagBrackets(item.promptTag, Bracket.Round)"
                                 >
                                     <span class="text-lg text-bold">()</span>
+                                    <span class="text-xs">圆括号</span>
                                 </el-dropdown-item>
                                 <el-dropdown-item
                                     v-if="isMonoPromptTag(item.promptTag)"
                                     @click="clearPromptTagBrackets(item.promptTag)"
                                 >
                                     <el-icon class="mr-0!" size="large"><Refresh /></el-icon>
+                                    <span class="text-xs">重置</span>
                                 </el-dropdown-item>
                                 <el-dropdown-item
                                     v-if="isMonoPromptTag(item.promptTag)"
                                     @click="addPromptTagBrackets(item.promptTag, Bracket.Square)"
                                 >
                                     <span class="text-lg text-bold">[]</span>
+                                    <span class="text-xs">方括号</span>
                                 </el-dropdown-item>
                             </div>
                             <div v-if="isMonoPromptTag(item.promptTag)" class="dropdown-menu-group">
                                 <el-dropdown-item
                                     v-if="!item.promptTag.translation"
+                                    :disabled="translatingTagId === item.promptTag.id"
                                     @click="translatePromptTag(item.promptTag)"
                                 >
-                                    翻译
+                                    {{ translatingTagId === item.promptTag.id ? '翻译中...' : '翻译' }}
                                 </el-dropdown-item>
                                 <div v-else class="flex-1 text-center italic">
                                     {{ item.promptTag.translation }}
@@ -683,30 +713,22 @@ function getPromptTagText(item: Wrapper): string {
                 </el-dropdown>
             </div>
         </TransitionGroup>
-        <el-dialog
-            v-model="isEditingPromptTag"
-            title="编辑提示词文本"
-            append-to-body
-            @keyup.esc.stop.prevent="isEditingPromptTag = false"
-            @opened="onOpenEditDialog"
-        >
-            <div class="flex flex-col gap-2">
-                <el-input
-                    ref="promptTagInput"
-                    v-model="editingPromptTagInput"
-                    placeholder="编辑提示词"
-                    spellcheck="false"
-                    @keyup.enter="confirmEditPrompt"
-                />
-            </div>
-            <template #footer>
-                <el-button type="primary" @click="confirmEditPrompt"> 确定 </el-button>
-                <el-button @click="isEditingPromptTag = false"> 取消 </el-button>
-            </template>
-        </el-dialog>
     </vue-draggable>
 </template>
 <style scoped>
+.inline-edit-input {
+    width: 80px;
+    min-width: 40px;
+    max-width: 200px;
+    padding: 0 4px;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    font-family: inherit;
+}
 .dropdown-menu-group {
     display: flex;
     width: 100%;

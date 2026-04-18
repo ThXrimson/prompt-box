@@ -1,5 +1,5 @@
 export function useHandleClickGesture(
-    delayMs: number = 250
+    delayMs: number = 100
 ): (handleSingleClick: () => void, handleDoubleClick: () => void) => void {
     let clickCount = 0
     let clickTimer: ReturnType<typeof setTimeout> | undefined = undefined

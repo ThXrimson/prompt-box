@@ -1,4 +1,5 @@
 <template>
+    <div class="shrink-0">
     <!-- 可拖动的handle -->
     <div
         ref="dragHandleRef"
@@ -10,7 +11,7 @@
     <!-- 编辑框容器 -->
     <div
         ref="containerRef"
-        class="flex flex-col bg-(--color-bg-card) rounded-(--radius-lg) shadow-(--shadow-md) min-h-0"
+        class="flex flex-col bg-(--color-bg-card) rounded-(--radius-lg) shadow-(--shadow-md)"
         :style="{ height: containerHeight + 'px' }"
     >
         <div class="flex flex-col gap-2 p-2 flex-1 min-h-0">
@@ -209,8 +210,15 @@
                     circle
                     @click="quickHide"
                 />
-                <el-popover title="操作" placement="top-end">
-                    左键编辑<br />右键复制<br />中键删除<br />双击左键切换禁用
+                <el-popover title="操作说明" placement="top-end" :width="200">
+                    <div class="text-sm leading-6">
+                        <div>🖱️ 单击 — 编辑标签</div>
+                        <div>🖱️ 双击 — 切换禁用</div>
+                        <div>🖱️ 右键 — 复制文本</div>
+                        <div>🖱️ 中键 — 删除标签</div>
+                        <div>⌨️ Ctrl+Z — 撤销</div>
+                        <div>⌨️ Ctrl+Y — 重做</div>
+                    </div>
                     <template #reference>
                         <el-button :icon="Information" circle class="ml-0!" />
                     </template>
@@ -218,11 +226,12 @@
             </div>
         </div>
     </div>
+    </div>
 </template>
 
 <script setup lang="ts">
 import { CopyDocument, Edit, Plus, Star } from '@element-plus/icons-vue'
-import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
 import { ElInput, ElMessage } from 'element-plus'
 import { clone, isNil, cloneDeep } from 'lodash'
@@ -249,32 +258,43 @@ import {
     DuplicateOutline,
 } from '@vicons/ionicons5'
 import { useRouter } from 'vue-router'
+import { handleError } from '@renderer/utils/error-handler'
 
 const props = defineProps<{
     workspaceId: string
 }>()
 const router = useRouter()
-async function cloneWorkspace(): Promise<void> {
-    const workspace = dataStore.workspace.readonly.find((w) => w.id === props.workspaceId)
-    if (isNil(workspace)) {
-        ElMessage.error('未找到该工作区')
-        return
-    }
-    const { id } = await dataStore.workspace.create({
-        name: `${workspace.name} - 副本`,
-        positive: cloneDeep(workspace.positive) as PromptTag[],
-        negative: cloneDeep(workspace.negative) as PromptTag[],
-        tagIds: cloneDeep(workspace.tagIds) as string[],
-    })
-    router.push(`/workspace/${id}`)
+const dataStore = useDataStore()
+const workspace = computed(() =>
+    dataStore.workspace.readonly.find((w) => w.id === props.workspaceId)
+)
+if (isNil(workspace.value)) {
+    handleError('工作区不存在或已被删除')
+    router.push('/workspaces')
 }
-// TODO 处理 workspaceId 不合法的情况
+
+async function cloneWorkspace(): Promise<void> {
+    try {
+        const workspace = dataStore.workspace.readonly.find((w) => w.id === props.workspaceId)
+        if (isNil(workspace)) {
+            handleError('未找到该工作区')
+            return
+        }
+        const { id } = await dataStore.workspace.create({
+            name: `${workspace.name} - 副本`,
+            positive: cloneDeep(workspace.positive) as PromptTag[],
+            negative: cloneDeep(workspace.negative) as PromptTag[],
+            tagIds: cloneDeep(workspace.tagIds) as string[],
+        })
+        router.push(`/workspace/${id}`)
+    } catch (error) {
+        handleError(error, '克隆工作区失败')
+    }
+}
 
 const emit = defineEmits<{
     selectPrompt: [promptId: string]
 }>()
-
-const dataStore = useDataStore()
 
 const draggableTagsRef = useTemplateRef('draggableTagsRef')
 
@@ -346,9 +366,14 @@ const MIN_HEIGHT = 56
 const containerRef = useTemplateRef<HTMLElement>('containerRef')
 const containerHeight = ref(200)
 onMounted(() => {
-    if (containerRef.value) {
-        containerHeight.value = containerRef.value.clientHeight
-    }
+    nextTick(() => {
+        if (containerRef.value) {
+            const height = containerRef.value.clientHeight
+            if (height > 0) {
+                containerHeight.value = height
+            }
+        }
+    })
 })
 const isDragging = ref(false)
 const startY = ref(0)
@@ -447,23 +472,54 @@ function addEolPromptTag(): void {
 // 去掉 lora 的提示词
 const removeLora = ref(false)
 async function copyEditor(): Promise<void> {
-    let candidates = currentEditor.value
-    const text = editorToString(candidates, true, removeLora.value)
-    const res = await window.api.other.copyToClipboard(text)
-    if (res) {
-        ElMessage.success('已复制到剪贴板')
-    } else {
-        ElMessage.warning('复制失败，请重试')
+    try {
+        let candidates = currentEditor.value
+        const text = editorToString(candidates, true, removeLora.value)
+        const res = await window.api.other.copyToClipboard(text)
+        if (res) {
+            ElMessage.success('已复制到剪贴板')
+        } else {
+            ElMessage.warning('复制失败，请重试')
+        }
+    } catch (error) {
+        handleError(error, '复制失败')
     }
 }
 
 async function copySearchText(): Promise<void> {
-    if (searchText.value === '') return
-    const res = await window.api.other.copyToClipboard(searchText.value)
-    if (res) {
-        ElMessage.success('已复制到剪贴板')
-    } else {
-        ElMessage.warning('复制失败，请重试')
+    try {
+        if (searchText.value === '') return
+        const res = await window.api.other.copyToClipboard(searchText.value)
+        if (res) {
+            ElMessage.success('已复制到剪贴板')
+        } else {
+            ElMessage.warning('复制失败，请重试')
+        }
+    } catch (error) {
+        handleError(error, '复制失败')
     }
 }
+
+function handleEditorKeydown(e: KeyboardEvent): void {
+    if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
+        e.preventDefault()
+        if (draggableTagsRef.value?.canUndo) {
+            draggableTagsRef.value.undo()
+        }
+    }
+    if (e.ctrlKey && e.key === 'y') {
+        e.preventDefault()
+        if (draggableTagsRef.value?.canRedo) {
+            draggableTagsRef.value.redo()
+        }
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('keydown', handleEditorKeydown)
+})
+
+onUnmounted(() => {
+    document.removeEventListener('keydown', handleEditorKeydown)
+})
 </script>

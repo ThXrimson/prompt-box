@@ -29,59 +29,76 @@ export async function initImageHandlers(_mainWindow: BrowserWindow): Promise<voi
     })
 }
 
-async function createImages(paths: string[]): Promise<Image[]> {
-    // 确保目录存在
-    await fs.mkdir(getImageDir(), { recursive: true })
-    const fileNames = [] as string[]
-    for (const path of paths) {
-        let imageFileName = ''
-        let fileCreated = false
-        switch (whichUrl(path)) {
-            case UrlKind.Http:
-                try {
-                    const data = await getImageAsArrayBuffer(path)
-                    const t = await fileType.fileTypeFromBuffer(data)
-                    if (t && t.mime.startsWith('image/')) {
+async function processSingleImage(path: string): Promise<string | null> {
+    let imageFileName = ''
+    let fileCreated = false
+    switch (whichUrl(path)) {
+        case UrlKind.Http:
+            try {
+                const data = await getImageAsArrayBuffer(path)
+                const t = await fileType.fileTypeFromBuffer(data)
+                if (t && t.mime.startsWith('image/')) {
+                    imageFileName = `${crypto.randomUUID()}.${t.ext}`
+                    await fs.writeFile(join(getImageDir(), imageFileName), Buffer.from(data))
+                    fileCreated = true
+                    return imageFileName
+                }
+            } catch (error) {
+                log.error('Failed to add image (%s) from URL:', path, error)
+                if (fileCreated) {
+                    await fs.unlink(join(getImageDir(), imageFileName))
+                }
+            }
+            break
+        case UrlKind.File:
+            try {
+                const fileStat = await fs.stat(path)
+                if (fileStat.isFile()) {
+                    const t = await fileType.fileTypeFromFile(path)
+                    if (!isNil(t) && t.mime.startsWith('image/')) {
                         imageFileName = `${crypto.randomUUID()}.${t.ext}`
-                        await fs.writeFile(join(getImageDir(), imageFileName), Buffer.from(data))
+                        await fs.copyFile(path, join(getImageDir(), imageFileName))
                         fileCreated = true
-                        fileNames.push(imageFileName)
-                    }
-                } catch (error) {
-                    log.error('Failed to add image (%s) from URL:', path, error)
-                    if (fileCreated) {
-                        // Clean up the file if it was created but not valid
-                        await fs.unlink(join(getImageDir(), imageFileName))
+                        return imageFileName
                     }
                 }
-                break
-            case UrlKind.File:
-                try {
-                    const fileStat = await fs.stat(path)
-                    if (fileStat.isFile()) {
-                        const t = await fileType.fileTypeFromFile(path)
-                        if (!isNil(t) && t.mime.startsWith('image/')) {
-                            imageFileName = `${crypto.randomUUID()}.${t.ext}`
-                            await fs.copyFile(path, join(getImageDir(), imageFileName))
-                            fileCreated = true
-                            fileNames.push(imageFileName)
-                        }
-                    }
-                } catch (error) {
-                    log.error('Failed to add image (%s) from file: %s', path, error)
-                    if (fileCreated) {
-                        // Clean up the file if it was created but not valid
-                        await fs.unlink(join(getImageDir(), imageFileName))
-                    }
+            } catch (error) {
+                log.error('Failed to add image (%s) from file: %s', path, error)
+                if (fileCreated) {
+                    await fs.unlink(join(getImageDir(), imageFileName))
                 }
-                break
-            case UrlKind.Unknown:
-                log.warn('Unknown URL kind for path: %s', path)
-                continue
+            }
+            break
+        case UrlKind.Unknown:
+            log.warn('Unknown URL kind for path: %s', path)
+            break
+    }
+    return null
+}
+
+async function createImages(paths: string[]): Promise<Image[]> {
+    await fs.mkdir(getImageDir(), { recursive: true })
+
+    const MAX_CONCURRENCY = 3
+    const results: string[] = []
+    let index = 0
+
+    async function processNext(): Promise<void> {
+        while (index < paths.length) {
+            const currentIndex = index++
+            const path = paths[currentIndex]
+            const fileName = await processSingleImage(path)
+            if (fileName) {
+                results.push(fileName)
+            }
         }
     }
+
+    const workers = Array.from({ length: Math.min(MAX_CONCURRENCY, paths.length) }, () => processNext())
+    await Promise.all(workers)
+
     const imageService = ImageLowdbService.getInstance()
-    return imageService.create(fileNames.map((fileName) => ({ fileName })))
+    return imageService.create(results.map((fileName) => ({ fileName })))
 }
 
 /**

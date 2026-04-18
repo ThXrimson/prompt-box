@@ -1,0 +1,32 @@
+# Checklist
+
+- [x] 数据索引：prompts/tags/examples/images/workspaces 均有 Map<id, entity> 索引，查找为 O(1)
+- [x] 脏数据标记：定时保存仅保存标记为脏的数据，未修改数据不执行 cloneDeep
+- [x] isDataLoaded 状态：数据首次加载完成后设为 true
+- [x] 全局加载指示器：应用启动时显示加载动画，数据加载完成后消失
+- [x] 骨架屏：PromptCollection/WorkspaceList/ExampleList 数据未加载时显示骨架屏
+- [x] 翻译操作反馈：翻译按钮有加载状态，翻译完成有成功/失败提示
+- [x] 图片批量添加进度：显示进度指示（处理中.../加载中...）
+- [x] 数据保存状态提示：保存完成后显示"已保存"淡入淡出提示
+- [x] 统一错误处理工具函数：核心异步操作使用统一的 handleError 函数
+- [x] TODO 场景补全：无效 ID/资源不存在场景有友好提示和返回导航
+- [x] DraggableTags 翻译错误处理：translatePromptTag 有 try/catch 和错误反馈
+- [x] WorkspaceEditor async 函数错误处理：copyEditor 等函数有 try/catch
+- [x] 单击延迟优化：单击操作在 100ms 内响应，无明显等待感
+- [x] 悬浮菜单响应：show-timeout 从 300ms 降至 200ms
+- [x] 全局键盘快捷键：Ctrl+1/2/3 切换页面，Ctrl+F 聚焦搜索框
+- [x] WorkspaceEditor 撤销/重做快捷键：Ctrl+Z/Y 绑定到撤销/重做
+- [x] Delete 键删除：选中项可按 Delete 键触发删除确认
+- [x] Escape 清空搜索：搜索框中按 Escape 清空搜索内容
+- [x] 删除确认统一：所有删除操作使用 el-popconfirm，无 ElMessageBox.confirm（Delete 键场景除外）
+- [x] 复制反馈统一：成功消息为"已复制到剪贴板"，失败消息为"复制失败，请重试"
+- [x] 搜索防抖：PromptCollection 和 Workspace 搜索输入有 300ms 防抖
+- [x] 面包屑导航：Workspace 页面顶部显示"工作区 > 工作区名称"面包屑
+- [x] 侧边栏 tooltip：Workspace 页面时侧边栏"工作区"项 tooltip 显示当前工作区名称
+- [x] EmptyState 组件：通用空状态组件创建完成，各页面统一使用
+- [x] 翻译超时：翻译请求 10 秒超时，超时后显示明确提示
+- [x] 翻译降级：翻译服务不可用时显示"翻译服务暂不可用"提示
+- [x] 图片并行处理：createImages 支持并行处理（最多 3 个并发）
+- [x] 操作提示：DraggableTags 悬浮菜单图标按钮有 tooltip 文字说明
+- [x] 编辑模式一致：标签编辑使用内联编辑（单击编辑、Enter 确认、Escape 取消）
+- [x] 应用可正常启动，所有功能正常工作，无回归问题

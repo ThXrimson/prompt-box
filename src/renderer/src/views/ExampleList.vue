@@ -10,17 +10,26 @@
                     添加示例
                 </el-button>
 
-                <el-button
-                    type="danger"
-                    :icon="DeleteFilled"
-                    @click="deleteEmptyExamples"
+                <el-popconfirm
+                    title="确定删除所有空示例？"
+                    :hide-after="0"
+                    @confirm="deleteEmptyExamples"
                 >
-                    删除空示例
-                </el-button>
+                    <template #reference>
+                        <el-button type="danger" :icon="DeleteFilled">删除空示例</el-button>
+                    </template>
+                </el-popconfirm>
             </div>
 
             <el-scrollbar
-                v-if="examples.length > 0"
+                v-if="!dataStore.isDataLoaded"
+                class="flex-1 min-h-0 border border-(--color-border) rounded-(--radius-md) px-1"
+                view-class="columns-4 gap-1"
+            >
+                <div v-for="i in 6" :key="i" class="m-1 h-40 skeleton rounded-(--radius-md)"></div>
+            </el-scrollbar>
+            <el-scrollbar
+                v-else-if="examples.length > 0"
                 class="flex-1 min-h-0 border border-(--color-border) rounded-(--radius-md) px-1"
                 view-class="columns-4 gap-1"
             >
@@ -42,10 +51,7 @@
                     </div>
                 </template>
             </el-scrollbar>
-            <div v-else class="empty-state">
-                <el-icon class="empty-state-icon"><CirclePlusFilled /></el-icon>
-                <span class="empty-state-text">暂无示例</span>
-            </div>
+            <EmptyState v-else :icon="CirclePlusFilled" title="暂无示例" />
             <div class="flex justify-center-safe items-center-safe">
                 <el-tooltip content="左键封面打开预览；右键封面打开画廊" placement="top">
                     <el-button circle :icon="Information" size="small" />
@@ -76,9 +82,9 @@
 
 <script setup lang="ts">
 import { useDataStore } from '@renderer/stores/data'
+import EmptyState from '@renderer/components/EmptyState.vue'
 import { computed, ref } from 'vue'
 import { CirclePlusFilled, DeleteFilled } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
 import ExampleView from '@renderer/components/ExampleView.vue'
 import { createError, notFoundError } from '@renderer/stores/error'
 import { Nullish } from 'utility-types'
@@ -158,17 +164,10 @@ async function deleteEmptyExamples(): Promise<void> {
         return
     }
     try {
-        await ElMessageBox.confirm(`确定删除 ${emptyExamples.length} 个空示例？`, '删除空示例', {
-            confirmButtonText: '删除',
-            cancelButtonText: '取消',
-            type: 'warning',
-        })
         await dataStore.example.deleteMany(emptyExamples.map((e) => e.id))
         ElMessage.success(`已删除 ${emptyExamples.length} 个空示例`)
     } catch (error) {
-        if (error === 'cancel') {
-            return
-        } else if (error === notFoundError) {
+        if (error === notFoundError) {
             ElMessage.error('删除空示例失败：示例不存在')
         } else {
             ElMessage.error(`删除空示例失败：${error}`)

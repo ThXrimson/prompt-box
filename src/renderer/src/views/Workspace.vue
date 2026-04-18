@@ -2,14 +2,22 @@
     <div class="my-2 mx-2 flex-1 min-h-0 min-w-0 flex flex-col">
         <!-- 导航栏 -->
         <navigator>
-            <div class="flex gap-2 justify-start">
-                <el-text
-                    truncated
-                    class="font-bold! cursor-pointer max-w-24!"
-                    @click="openWorkspaceNameDialog"
-                >
-                    {{ workspace?.name || '未命名' }}
-                </el-text>
+            <div class="flex gap-2 justify-start items-center">
+                <el-breadcrumb separator="/" class="workspace-breadcrumb">
+                    <el-breadcrumb-item>
+                        <span
+                            class="breadcrumb-link"
+                            @click="router.push('/workspaces')"
+                        >
+                            工作区
+                        </span>
+                    </el-breadcrumb-item>
+                    <el-breadcrumb-item>
+                        <span class="breadcrumb-current" @click="openWorkspaceNameDialog">
+                            {{ workspace?.name || '未命名' }}
+                        </span>
+                    </el-breadcrumb-item>
+                </el-breadcrumb>
                 <el-dialog v-model="showWorkspaceNameDialog" title="编辑工作区名称">
                     <el-input
                         v-model="tempWorkspaceText"
@@ -105,7 +113,7 @@
             </div>
         </navigator>
         <!-- 标签列表 -->
-        <div class="flex-1 flex overflow-auto mt-1.5 gap-1">
+        <div class="flex-1 min-h-0 flex overflow-auto mt-1.5 gap-1">
             <TagList
                 ref="tag-list"
                 v-model:tag-ids="workspaceTagIds"
@@ -133,7 +141,8 @@
 
 <script setup lang="ts">
 import { useDataStore } from '@renderer/stores/data'
-import { computed, DeepReadonly, nextTick, ref, useTemplateRef } from 'vue'
+import { computed, DeepReadonly, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { Discount } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import TagEditor from '@renderer/components/TagEditor.vue'
@@ -150,6 +159,7 @@ import {
 } from '@shared/models/prompt-tag'
 
 const dataStore = useDataStore()
+const router = useRouter()
 const workspace = computed(() => {
     return dataStore.workspace.readonly.find((w) => w.id === props.workspaceId)
 })
@@ -298,6 +308,14 @@ async function findPromptAndScroll(text: string): Promise<void> {
 }
 
 const searchPromptInput = ref('')
+const debouncedSearchInput = ref('')
+let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined
+watch(searchPromptInput, (val) => {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = setTimeout(() => {
+        debouncedSearchInput.value = val
+    }, 300)
+}, { immediate: true })
 const searchPromptOptions = computed(() => {
     const options: { text: string; translation: string }[] = []
     const seen = new Set<string>()
@@ -305,8 +323,8 @@ const searchPromptOptions = computed(() => {
         if (seen.has(prompt.text + prompt.translation)) continue
         if (
             !(
-                matchTextPlus(prompt.text, searchPromptInput.value) ||
-                matchTextPlus(prompt.translation, searchPromptInput.value)
+                matchTextPlus(prompt.text, debouncedSearchInput.value) ||
+                matchTextPlus(prompt.translation, debouncedSearchInput.value)
             )
         )
             continue
@@ -414,3 +432,36 @@ function findTag(tagId: string): void {
     tagListRef.value?.scrollTagIntoView(tagId)
 }
 </script>
+
+<style lang="css" scoped>
+.workspace-breadcrumb {
+    font-size: 13px;
+    line-height: 1;
+}
+
+.workspace-breadcrumb :deep(.el-breadcrumb__separator) {
+    color: var(--color-text-tertiary);
+    opacity: 0.5;
+}
+
+.breadcrumb-link {
+    cursor: pointer;
+    color: var(--color-text-tertiary);
+    transition: color 0.2s;
+}
+
+.breadcrumb-link:hover {
+    color: var(--color-primary);
+}
+
+.breadcrumb-current {
+    cursor: pointer;
+    color: var(--color-text-primary);
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.breadcrumb-current:hover {
+    color: var(--color-primary);
+}
+</style>

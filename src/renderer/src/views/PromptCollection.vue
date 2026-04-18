@@ -47,7 +47,7 @@
                     :reserve-keyword="false"
                 />
 
-                <el-input v-model="searchPromptInput" spellcheck="false" placeholder="搜索提示词">
+                <el-input v-model="searchPromptInput" spellcheck="false" placeholder="搜索提示词" data-search-input @keyup.esc="searchPromptInput = ''">
                     <template #prefix>
                         <el-icon class="cursor-pointer">
                             <Search />
@@ -99,10 +99,10 @@
 
                 <el-divider class="my-2!" />
 
-                <div v-if="promptViews.length === 0" class="empty-state">
-                    <el-icon class="empty-state-icon"><Search /></el-icon>
-                    <span class="empty-state-text">暂无提示词</span>
-                </div>
+                <template v-if="!dataStore.isDataLoaded">
+                    <div v-for="i in 5" :key="i" class="skeleton skeleton-card mb-2"></div>
+                </template>
+                <EmptyState v-else-if="promptViews.length === 0" :icon="Search" title="暂无提示词" />
 
                 <div
                     v-for="(prompt, index) in promptViews"
@@ -160,6 +160,7 @@
 
 <script setup lang="ts">
 import Navigator from '@renderer/components/Navigator.vue'
+import EmptyState from '@renderer/components/EmptyState.vue'
 import {
     Search,
     CirclePlusFilled,
@@ -169,12 +170,13 @@ import {
     Discount,
     Delete,
 } from '@element-plus/icons-vue'
-import { computed, DeepReadonly, nextTick, ref, useTemplateRef } from 'vue'
+import { computed, DeepReadonly, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 import { useDataStore } from '@renderer/stores/data'
 import TagEditor from '@renderer/components/TagEditor.vue'
 import { matchTextPlus } from '@renderer/utils/pinyin-includes'
 import type { Prompt } from '@shared/models/prompt'
 import { isNil } from 'lodash'
+import { ElMessageBox } from 'element-plus'
 import { UNCATEGORIZED_TAG_ID } from '@shared/models/tag'
 import { createError, existsError, notFoundError } from '@renderer/stores/error'
 import log from 'electron-log/renderer'
@@ -182,8 +184,17 @@ import log from 'electron-log/renderer'
 const dataStore = useDataStore()
 
 const searchPromptInput = ref<string>('')
+const debouncedSearchInput = ref<string>('')
 const filteredTagIds = ref<string[]>([])
 const selectedPromptId = ref<string | null>(null)
+
+let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined
+watch(searchPromptInput, (val) => {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = setTimeout(() => {
+        debouncedSearchInput.value = val
+    }, 300)
+}, { immediate: true })
 
 const filterTagInput = ref<string>('')
 function filterTagMethod(text: string): void {
@@ -219,10 +230,10 @@ const promptViews = computed(() => {
         dataStore.prompt.readonly
             // 搜索过滤
             .filter((prompt) => {
-                if (searchPromptInput.value.trim() === '') {
+                if (debouncedSearchInput.value.trim() === '') {
                     return true
                 }
-                return filterPromptMethod(prompt, searchPromptInput.value.trim().toLowerCase())
+                return filterPromptMethod(prompt, debouncedSearchInput.value.trim().toLowerCase())
             })
             // Tag 过滤
             .filter((prompt) => {
@@ -345,6 +356,28 @@ async function deletePrompt(id: string): Promise<void> {
         }
     }
 }
+
+function handleDeleteKey(e: KeyboardEvent): void {
+    if (e.key === 'Delete' && selectedPromptId.value) {
+        const target = e.target as HTMLElement
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+        ElMessageBox.confirm('确定删除此提示词？', '删除提示词', {
+            confirmButtonText: '删除',
+            cancelButtonText: '取消',
+            type: 'warning',
+        }).then(() => {
+            deletePrompt(selectedPromptId.value!)
+        }).catch(() => {})
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('keydown', handleDeleteKey)
+})
+
+onUnmounted(() => {
+    document.removeEventListener('keydown', handleDeleteKey)
+})
 </script>
 
 <style lang="css" scoped>
@@ -365,23 +398,5 @@ async function deletePrompt(id: string): Promise<void> {
 .fade-enter-from,
 .fade-leave-to {
     transform: translateX(100vw);
-}
-
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem 0;
-    color: var(--color-text-tertiary);
-}
-
-.empty-state-icon {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
-
-.empty-state-text {
-    font-size: 0.875rem;
 }
 </style>
