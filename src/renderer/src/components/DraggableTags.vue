@@ -57,19 +57,19 @@ const emit = defineEmits<{
 
 const dataStore = useDataStore()
 const editor = defineModel<PromptTag[]>({ required: true })
-const collapsed = ref<string[]>([])
+const expanded = ref<string[]>([])
 const clickTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 function collapseAll(): void {
+    expanded.value = []
+}
+function uncollapseAll(): void {
     const res = [] as string[]
     for (const item of editor.value) {
         if (isGroupPromptTag(item)) {
             res.push(item.id)
         }
     }
-    collapsed.value = res
-}
-function uncollapseAll(): void {
-    collapsed.value = []
+    expanded.value = res
 }
 const disableDropdown = ref(false)
 const { commit, canUndo, undo, canRedo, redo } = useManualRefHistory(editor, {
@@ -82,7 +82,7 @@ const flatEditor = computed({
     get() {
         return editor.value.flatMap((item): Wrapper[] => {
             if (isGroupPromptTag(item)) {
-                if (collapsed.value.includes(item.id)) {
+                if (!expanded.value.includes(item.id)) {
                     return [
                         {
                             promptTag: item,
@@ -376,10 +376,10 @@ function switchCollapse(promptTag: PromptTag): void {
     if (!isGroupPromptTag(promptTag)) {
         return
     }
-    if (collapsed.value.includes(promptTag.id)) {
-        collapsed.value = collapsed.value.filter((id) => id !== promptTag.id)
+    if (expanded.value.includes(promptTag.id)) {
+        expanded.value = expanded.value.filter((id) => id !== promptTag.id)
     } else {
-        collapsed.value.push(promptTag.id)
+        expanded.value.push(promptTag.id)
     }
 }
 function handleClick(promptTag: PromptTag): void {
@@ -610,7 +610,7 @@ function getPromptTagText(item: Wrapper): string {
                                     v-if="isGroupPromptTag(item.promptTag)"
                                     @click="switchCollapse(item.promptTag)"
                                 >
-                                    {{ collapsed.includes(item.promptTag.id) ? '展开' : '折叠' }}
+                                    {{ expanded.includes(item.promptTag.id) ? '折叠' : '展开' }}
                                 </el-dropdown-item>
                                 <el-dropdown-item
                                     v-if="canCreateGroup(item.promptTag)"
